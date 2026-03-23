@@ -9,9 +9,10 @@ import {
   Users,
   Award,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import DestinationCard from "@/components/DestinationCard";
-import { experiences } from "@/data/experiences";
+import { experiencesService } from "@/services/experiences.service";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ctaBg from "@/assets/cta-bg.jpg";
@@ -168,6 +169,13 @@ function StatItem({
 
 const Index = () => {
   const [current, setCurrent] = useState(0);
+
+  // featured experiences from API
+  const { data: featuredData } = useQuery({
+    queryKey: ["experiences-featured"],
+    queryFn: () => experiencesService.getAll({ limit: 4, sort: "-ratingsAverage" }),
+  });
+  const featuredExperiences = featuredData?.data.data.data ?? [];
 
   // hero auto-slide
   useEffect(() => {
@@ -442,17 +450,22 @@ const Index = () => {
               featCards.isVisible ? "visible" : ""
             }`}
           >
-            {experiences.slice(0, 4).map((exp) => (
-              <DestinationCard
-                key={exp.id}
-                id={exp.id}
-                image={exp.image}
-                location={exp.location}
-                title={exp.title}
-                description={exp.description}
-                reviewCount={exp.reviewCount}
-              />
-            ))}
+            {featuredExperiences.length > 0
+              ? featuredExperiences.map((exp) => (
+                  <DestinationCard
+                    key={exp._id}
+                    id={exp._id}
+                    image={exp.imageCover}
+                    location={exp.location}
+                    title={exp.title}
+                    description={exp.summary || exp.description}
+                    reviewCount={exp.ratingsQuantity}
+                  />
+                ))
+              : Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-[400px] rounded-2xl bg-surface-container animate-pulse" />
+                ))
+            }
           </div>
           <div
             className={`text-center mt-10 reveal ${featTitle.isVisible ? "visible" : ""}`}

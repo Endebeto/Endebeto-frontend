@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { MapPin, ChevronLeft, ChevronRight, Star, ChevronDown, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { experiences, type Experience } from "@/data/experiences";
+import { experiencesService, type Experience } from "@/services/experiences.service";
 
 /* ─── constants ─────────────────────────────────────────── */
 
@@ -15,7 +16,6 @@ const SORT_OPTIONS = [
 ];
 
 const PAGE_SIZE = 8;
-const MAX_PRICE = Math.max(...experiences.map((e) => e.price));
 
 /* ─── useOutsideClick ───────────────────────────────────── */
 
@@ -72,18 +72,25 @@ function FilterDropdown({
 /* ─── card ──────────────────────────────────────────────── */
 
 function ExperienceBrowseCard({ exp }: { exp: Experience }) {
+  const badge =
+    exp.ratingsAverage >= 4.9
+      ? "Top Rated"
+      : exp.ratingsAverage >= 4.7
+      ? "Popular"
+      : null;
+
   return (
-    <Link to={`/experiences/${exp.id}`} className="group cursor-pointer block">
+    <Link to={`/experiences/${exp._id}`} className="group cursor-pointer block">
       <div className="relative aspect-[3/4] rounded-2xl overflow-hidden mb-2.5 shadow-sm group-hover:shadow-lg transition-all duration-500">
         <img
-          src={exp.image}
+          src={exp.imageCover}
           alt={exp.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
         />
-        {exp.badge && (
+        {badge && (
           <div className="absolute top-3 left-3">
             <span className="bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
-              {exp.badge}
+              {badge}
             </span>
           </div>
         )}
@@ -100,7 +107,7 @@ function ExperienceBrowseCard({ exp }: { exp: Experience }) {
           </h3>
           <div className="flex items-center gap-0.5 font-bold shrink-0 text-xs text-on-tertiary-container">
             <Star className="h-3 w-3 fill-current" />
-            {exp.rating}
+            {exp.ratingsAverage.toFixed(1)}
           </div>
         </div>
         <p className="text-on-surface-variant text-xs mb-1.5 flex items-center gap-1">
@@ -136,38 +143,59 @@ function SkeletonCard() {
 /* ─── page ──────────────────────────────────────────────── */
 
 const Experiences = () => {
-  const [sortBy, setSortBy]           = useState("Newest First");
-  const [sortOpen, setSortOpen]       = useState(false);
-  const [locationQ, setLocationQ]     = useState("");
-  const [minPrice, setMinPrice]       = useState(0);
-  const [maxPrice, setMaxPrice]       = useState(MAX_PRICE);
-  const [minRating, setMinRating]     = useState(0);
-  const [page, setPage]               = useState(1);
-  const [loading]                     = useState(false);
+  const [sortBy, setSortBy]       = useState("Newest First");
+  const [sortOpen, setSortOpen]   = useState(false);
+  const [locationQ, setLocationQ] = useState("");
+  const [minPrice, setMinPrice]   = useState(0);
+  const [maxPriceFilter, setMaxPriceFilter] = useState(0);
+  const [minRating, setMinRating] = useState(0);
+  const [page, setPage]           = useState(1);
 
   const sortRef = useRef<HTMLDivElement>(null!);
   useOutsideClick(sortRef, () => setSortOpen(false));
 
+  /* fetch all experiences (scheduled, up to 200) */
+  const { data: queryData, isLoading } = useQuery({
+    queryKey: ["experiences"],
+    queryFn: () => experiencesService.getAll({ limit: 200 }),
+  });
+
+  const allExperiences = queryData?.data.data.data ?? [];
+
+  /* derive MAX_PRICE from fetched data (fallback 10000) */
+  const MAX_PRICE = useMemo(
+    () => (allExperiences.length > 0 ? Math.max(...allExperiences.map((e) => e.price)) : 10000),
+    [allExperiences]
+  );
+
+  /* initialise maxPriceFilter once data arrives */
+  useEffect(() => {
+    if (allExperiences.length > 0 && maxPriceFilter === 0) {
+      setMaxPriceFilter(MAX_PRICE);
+    }
+  }, [MAX_PRICE, allExperiences.length, maxPriceFilter]);
+
   /* active filter flags */
   const locationActive = locationQ.trim() !== "";
-  const priceActive    = minPrice > 0 || maxPrice < MAX_PRICE;
+  const priceActive    = minPrice > 0 || (maxPriceFilter > 0 && maxPriceFilter < MAX_PRICE);
   const ratingActive   = minRating > 0;
 
   const clearAll = () => {
-    setLocationQ(""); setMinPrice(0); setMaxPrice(MAX_PRICE); setMinRating(0); setPage(1);
+    setLocationQ(""); setMinPrice(0); setMaxPriceFilter(MAX_PRICE); setMinRating(0); setPage(1);
   };
   const anyActive = locationActive || priceActive || ratingActive;
 
   /* filter + sort */
-  const filtered = experiences
+  const filtered = allExperiences
     .filter((e) => {
       if (locationActive && !e.location.toLowerCase().includes(locationQ.toLowerCase())) return false;
-      if (e.price < minPrice || e.price > maxPrice) return false;
-      if (e.rating < minRating) return false;
+      if (e.price < minPrice) return false;
+      if (maxPriceFilter > 0 && e.price > maxPriceFilter) return false;
+      if (e.ratingsAverage < minRating) return false;
       return true;
     })
     .sort((a, b) => {
-      if (sortBy === "Highest Rating")     return b.rating - a.rating;
+      if (sortBy === "Highest Rating")     return b.ratingsAverage - a.ratingsAverage;
       if (sortBy === "Price: Low to High") return a.price - b.price;
       if (sortBy === "Price: High to Low") return b.price - a.price;
       return 0;
@@ -244,7 +272,7 @@ const Experiences = () => {
                       <input
                         type="number"
                         min={0}
-                        max={maxPrice}
+                        max={maxPriceFilter}
                         value={minPrice}
                         onChange={(e) => { setMinPrice(Number(e.target.value)); setPage(1); }}
                         className="w-full text-xs border border-outline-variant/40 rounded-lg px-2 py-1 bg-surface-container focus:outline-none focus:ring-1 focus:ring-primary/30"
@@ -256,17 +284,17 @@ const Experiences = () => {
                         type="number"
                         min={minPrice}
                         max={MAX_PRICE}
-                        value={maxPrice}
-                        onChange={(e) => { setMaxPrice(Number(e.target.value)); setPage(1); }}
+                        value={maxPriceFilter}
+                        onChange={(e) => { setMaxPriceFilter(Number(e.target.value)); setPage(1); }}
                         className="w-full text-xs border border-outline-variant/40 rounded-lg px-2 py-1 bg-surface-container focus:outline-none focus:ring-1 focus:ring-primary/30"
                       />
                     </div>
                   </div>
                   <p className="text-[10px] text-on-surface-variant text-center">
-                    {minPrice.toLocaleString()} – {maxPrice.toLocaleString()} ETB
+                    {minPrice.toLocaleString()} – {maxPriceFilter.toLocaleString()} ETB
                   </p>
                   {priceActive && (
-                    <button onClick={() => { setMinPrice(0); setMaxPrice(MAX_PRICE); }} className="mt-2 text-[10px] text-on-surface-variant hover:text-primary flex items-center gap-1">
+                    <button onClick={() => { setMinPrice(0); setMaxPriceFilter(MAX_PRICE); }} className="mt-2 text-[10px] text-on-surface-variant hover:text-primary flex items-center gap-1">
                       <X className="h-3 w-3" /> Reset
                     </button>
                   )}
@@ -350,8 +378,8 @@ const Experiences = () => {
                 )}
                 {priceActive && (
                   <span className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
-                    💰 {minPrice.toLocaleString()}–{maxPrice.toLocaleString()} ETB
-                    <button onClick={() => { setMinPrice(0); setMaxPrice(MAX_PRICE); }}><X className="h-2.5 w-2.5" /></button>
+                    💰 {minPrice.toLocaleString()}–{maxPriceFilter.toLocaleString()} ETB
+                    <button onClick={() => { setMinPrice(0); setMaxPriceFilter(MAX_PRICE); }}><X className="h-2.5 w-2.5" /></button>
                   </span>
                 )}
                 {ratingActive && (
@@ -370,18 +398,24 @@ const Experiences = () => {
 
         {/* ── Card grid ── */}
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-          {loading
+          {isLoading
             ? Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)
-            : pageItems.map((exp) => <ExperienceBrowseCard key={exp.id} exp={exp} />)}
+            : pageItems.map((exp) => <ExperienceBrowseCard key={exp._id} exp={exp} />)}
         </div>
 
         {/* Empty state */}
-        {!loading && filtered.length === 0 && (
+        {!isLoading && filtered.length === 0 && (
           <div className="py-20 text-center">
-            <p className="text-on-surface-variant text-sm mb-3">No experiences match your filters.</p>
-            <button onClick={clearAll} className="text-xs font-bold text-primary hover:underline">
-              Clear filters
-            </button>
+            <p className="text-on-surface-variant text-sm mb-3">
+              {allExperiences.length === 0
+                ? "No experiences are currently scheduled. Check back soon!"
+                : "No experiences match your filters."}
+            </p>
+            {anyActive && (
+              <button onClick={clearAll} className="text-xs font-bold text-primary hover:underline">
+                Clear filters
+              </button>
+            )}
           </div>
         )}
 

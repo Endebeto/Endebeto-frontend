@@ -1,4 +1,3 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -29,19 +28,31 @@ import VerifyEmail from "./pages/VerifyEmail";
 import OAuthSuccess from "./pages/OAuthSuccess";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: 1, staleTime: 30_000 },
-  },
-});
-
-function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
+function ProtectedRoute({
+  children,
+  allowedRoles,
+}: {
+  children: React.ReactNode;
+  // Supported values: "admin", "host" (approved host OR admin), or any role string
+  allowedRoles?: string[];
+}) {
   const { isAuthenticated, loading, user } = useAuth();
   if (loading) return null;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+
+  if (allowedRoles && user) {
+    const isAdmin = user.role === "admin";
+    const isApprovedHost = user.hostStatus === "approved";
+
+    const hasAccess = allowedRoles.some((r) => {
+      if (r === "admin") return isAdmin;
+      if (r === "host")  return isApprovedHost || isAdmin; // admins can access host routes too
+      return user.role === r;
+    });
+
+    if (!hasAccess) return <Navigate to="/" replace />;
   }
+
   return <>{children}</>;
 }
 
@@ -64,11 +75,11 @@ const AppRoutes = () => (
     <Route path="/host/apply" element={<ProtectedRoute><HostApply /></ProtectedRoute>} />
     <Route path="/host/application-status" element={<ProtectedRoute><HostApplicationStatus /></ProtectedRoute>} />
 
-    {/* Host */}
-    <Route path="/host-dashboard" element={<ProtectedRoute allowedRoles={["admin"]}><HostDashboard /></ProtectedRoute>} />
-    <Route path="/host/wallet" element={<ProtectedRoute allowedRoles={["admin"]}><HostWallet /></ProtectedRoute>} />
-    <Route path="/host/experiences" element={<ProtectedRoute allowedRoles={["admin"]}><HostExperiences /></ProtectedRoute>} />
-    <Route path="/host/experiences/create" element={<ProtectedRoute allowedRoles={["admin"]}><HostCreateExperience /></ProtectedRoute>} />
+    {/* Host (approved hosts + admins) */}
+    <Route path="/host-dashboard" element={<ProtectedRoute allowedRoles={["host"]}><HostDashboard /></ProtectedRoute>} />
+    <Route path="/host/wallet" element={<ProtectedRoute allowedRoles={["host"]}><HostWallet /></ProtectedRoute>} />
+    <Route path="/host/experiences" element={<ProtectedRoute allowedRoles={["host"]}><HostExperiences /></ProtectedRoute>} />
+    <Route path="/host/experiences/create" element={<ProtectedRoute allowedRoles={["host"]}><HostCreateExperience /></ProtectedRoute>} />
 
     {/* Admin */}
     <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
@@ -83,17 +94,15 @@ const AppRoutes = () => (
 
 const App = () => (
   <ThemeProvider>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <AppRoutes />
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </BrowserRouter>
+    </TooltipProvider>
   </ThemeProvider>
 );
 

@@ -37,10 +37,19 @@ export const authService = {
   getMe: () =>
     api.get<{ status: string; data: { data: User } }>("/users/me"),
 
-  updateMe: (data: FormData | Partial<Pick<User, "name" | "email">>) =>
+  updateMe: (data: FormData | Partial<Pick<User, "name" | "email" | "photo">>) =>
     api.patch<{ status: string; data: { user: User } }>("/users/updateMe", data, {
       headers: data instanceof FormData ? { "Content-Type": "multipart/form-data" } : {},
     }),
+
+  /** Multipart field name must be `photo` (single image, max 5MB). */
+  uploadProfilePhoto: (file: File) => {
+    const form = new FormData();
+    form.append("photo", file);
+    return api.patch<{ status: string; data: { user: User } }>("/users/me/photo", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
 
   updatePassword: (payload: {
     passwordCurrent: string;

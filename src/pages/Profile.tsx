@@ -145,7 +145,7 @@ export default function Profile() {
                       <ChevronRight className="h-4 w-4 text-on-surface-variant/40" />
                     </Link>
                   )}
-                  {isHost && (
+                  {isHost && !isAdmin && (
                     <Link
                       to="/host-dashboard"
                       className="flex items-center gap-3 w-full px-4 py-4 transition-colors hover:bg-surface-container-low dark:hover:bg-zinc-700 border-t border-outline-variant/10 dark:border-zinc-700"
@@ -255,7 +255,7 @@ export default function Profile() {
                       Admin Dashboard
                     </Link>
                   )}
-                  {isHost && (
+                  {isHost && !isAdmin && (
                     <Link
                       to="/host-dashboard"
                       className="flex items-center gap-2.5 px-3 py-2.5 w-full rounded-xl text-sm font-headline font-semibold text-primary dark:text-green-400 hover:bg-primary/8 dark:hover:bg-primary/15 transition-all hover:translate-x-0.5"

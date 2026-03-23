@@ -1,7 +1,16 @@
 import api from "@/lib/api";
 
+export interface Review {
+  _id: string;
+  review: string;
+  rating: number;
+  user: { _id: string; name: string; photo?: string };
+  createdAt?: string;
+}
+
 export interface Experience {
   _id: string;
+  id: string;
   title: string;
   slug: string;
   description: string;
@@ -24,18 +33,27 @@ export interface Experience {
   ratingsQuantity: number;
   status?: "draft" | "pending" | "approved" | "rejected";
   updatedAt: string;
-  id: string;
+  reviews?: Review[];
 }
 
+// factory.getAll  → { status, results: totalCount, data: { data: T[] } }
 export interface ExperienceListResponse {
   status: string;
   results: number;
-  data: { experiences: Experience[] };
+  data: { data: Experience[] };
 }
 
+// factory.getOne  → { status, data: { data: T } }
 export interface ExperienceResponse {
   status: string;
-  data: { experience: Experience };
+  data: { data: Experience };
+}
+
+// factory.getAll for reviews  → { status, results: totalCount, data: { data: Review[] } }
+export interface ReviewListResponse {
+  status: string;
+  results: number;
+  data: { data: Review[] };
 }
 
 export interface ExperienceFilters {
@@ -85,7 +103,6 @@ export const experiencesService = {
   updateNextOccurrence: (id: string, nextOccurrenceAt: string) =>
     api.patch<ExperienceResponse>(`/experiences/${id}/next-occurrence`, { nextOccurrenceAt }),
 
-  // Host: get all their own experiences (any status: draft, pending, approved, rejected)
   getMyExperiences: (params?: { page?: number; limit?: number }) =>
     api.get<ExperienceListResponse>("/experiences/mine", { params }),
 
@@ -94,4 +111,11 @@ export const experiencesService = {
       status: string;
       data: { booked: number; available: number; maxGuests: number; nextOccurrenceAt?: string };
     }>(`/bookings/availability/${id}`),
+
+  // Paginated reviews for a single experience
+  // GET /experiences/:experienceId/reviews?page=1&limit=5&sort=-createdAt
+  getReviews: (experienceId: string, params: { page?: number; limit?: number }) =>
+    api.get<ReviewListResponse>(`/experiences/${experienceId}/reviews`, {
+      params: { sort: "-createdAt", ...params },
+    }),
 };
