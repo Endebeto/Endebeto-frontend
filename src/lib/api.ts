@@ -24,6 +24,10 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const url = error.config?.url ?? "";
+      // Wrong current password returns 401 — don't force logout on Profile
+      if (url.includes("/users/updateMyPassword")) {
+        return Promise.reject(error);
+      }
       const publicPaths = ["/users/login", "/users/signup", "/users/forgotPassword"];
       const isPublic = publicPaths.some((p) => url.includes(p));
       if (!isPublic) {

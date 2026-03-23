@@ -23,8 +23,14 @@ export interface User {
   name: string;
   email: string;
   photo?: string;
+  bio?: string;
   role: "user" | "admin";
   hostStatus: "none" | "pending" | "approved" | "rejected";
+  /** Present when returned from API; OAuth users may not use password change. */
+  authProvider?: "local" | "google" | "facebook";
+  /** Set when Google account is linked (same email merges on OAuth). */
+  googleId?: string;
+  facebookId?: string;
 }
 
 export const authService = {
@@ -37,10 +43,13 @@ export const authService = {
   getMe: () =>
     api.get<{ status: string; data: { data: User } }>("/users/me"),
 
-  updateMe: (data: FormData | Partial<Pick<User, "name" | "email" | "photo">>) =>
+  updateMe: (data: FormData | Partial<Pick<User, "name" | "email" | "photo" | "bio">>) =>
     api.patch<{ status: string; data: { user: User } }>("/users/updateMe", data, {
       headers: data instanceof FormData ? { "Content-Type": "multipart/form-data" } : {},
     }),
+
+  /** Soft-delete: sets `active: false`; user cannot log in afterward. */
+  deleteMe: () => api.delete("/users/deleteMe"),
 
   /** Multipart field name must be `photo` (single image, max 5MB). */
   uploadProfilePhoto: (file: File) => {

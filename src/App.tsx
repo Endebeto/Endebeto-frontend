@@ -19,6 +19,7 @@ import HostWallet from "./pages/HostWallet";
 import HostCreateExperience from "./pages/HostCreateExperience";
 import HostExperiences from "./pages/HostExperiences";
 import Profile from "./pages/Profile";
+import MyBookings from "./pages/MyBookings";
 import BecomeHost from "./pages/BecomeHost";
 import HostApply from "./pages/HostApply";
 import HostApplicationStatus from "./pages/HostApplicationStatus";
@@ -72,6 +73,7 @@ const AppRoutes = () => (
 
     {/* Authenticated */}
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+    <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
     <Route path="/host/apply" element={<ProtectedRoute><HostApply /></ProtectedRoute>} />
     <Route path="/host/application-status" element={<ProtectedRoute><HostApplicationStatus /></ProtectedRoute>} />
 
