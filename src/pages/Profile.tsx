@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   User, Shield, Bell, LogOut,
   Camera, Key, Smartphone, Laptop, Mail, MessageSquare,
@@ -7,19 +7,19 @@ import {
   BookOpen, LayoutDashboard, Compass, ChevronRight, ArrowLeft,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { useAuth } from "@/context/AuthContext";
+import type { User as AuthUser } from "@/services/auth.service";
 
 /* ─── types ─────────────────────────────────────────────── */
 type Tab = "personal" | "security" | "notifications" | "bookings";
-type UserRole = "user" | "host" | "admin";
 
-/* ─── mock: simulated auth user ─────────────────────────── */
-// In production this comes from AuthContext
-const MOCK_USER = {
-  name: "Abebe Bikila",
-  initials: "AB",
-  email: "abebe.bikila@heritage.com",
-  role: "host" as UserRole,   // change to "admin" or "user" to test
-};
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((n) => n[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
 /* ─── toggle component ──────────────────────────────────── */
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -44,6 +44,9 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 /* ─── page ──────────────────────────────────────────────── */
 export default function Profile() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab]     = useState<Tab>("personal");
   // mobile navigation: "menu" = settings list, or the active tab key
   const [mobileView, setMobileView]   = useState<"menu" | Tab>("menu");
@@ -52,9 +55,15 @@ export default function Profile() {
   const [twoFa, setTwoFa]             = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
-  const { role } = MOCK_USER;
-  const isHost  = role === "host"  || role === "admin";
-  const isAdmin = role === "admin";
+  const displayName = user?.name ?? "";
+  const initials    = getInitials(displayName);
+  const isAdmin     = user?.role === "admin";
+  const isHost      = user?.hostStatus === "approved" || isAdmin;
+
+  const handleSignOut = () => {
+    logout();
+    navigate("/login");
+  };
 
   /* notification prefs */
   const [notifs, setNotifs] = useState({
@@ -90,11 +99,11 @@ export default function Profile() {
               {/* User hero card */}
               <div className="bg-primary rounded-2xl p-5 flex items-center gap-4 shadow-lg shadow-primary/20">
                 <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center font-headline font-black text-white text-xl shrink-0 border-2 border-white/20">
-                  {MOCK_USER.initials}
+                  {initials}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-headline font-extrabold text-white text-base truncate">{MOCK_USER.name}</p>
-                  <p className="text-white/60 text-xs mt-0.5">{MOCK_USER.email}</p>
+                  <p className="font-headline font-extrabold text-white text-base truncate">{displayName}</p>
+                  <p className="text-white/60 text-xs mt-0.5">{user?.email}</p>
                   <span className="inline-block mt-1.5 bg-white/15 text-white/90 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full">
                     {isAdmin ? "Administrator" : isHost ? "Superhost" : "Traveler"}
                   </span>
@@ -153,15 +162,15 @@ export default function Profile() {
 
               {/* Sign out */}
               <div className="bg-white dark:bg-[#2d3133] rounded-2xl shadow-sm overflow-hidden">
-                <Link
-                  to="/login"
+                <button
+                  onClick={handleSignOut}
                   className="flex items-center gap-3 w-full px-4 py-4 text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/10"
                 >
                   <div className="w-8 h-8 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-500 shrink-0">
                     <LogOut className="h-4 w-4" />
                   </div>
                   <span className="font-headline font-semibold text-sm">Sign Out</span>
-                </Link>
+                </button>
               </div>
             </div>
           )}
@@ -180,6 +189,7 @@ export default function Profile() {
               {/* Render the active section — pass mobileView as the tab */}
               <ProfileContent
                 activeTab={mobileView}
+                user={user}
                 showPass={showPass} setShowPass={setShowPass}
                 showNewPass={showNewPass} setShowNewPass={setShowNewPass}
                 twoFa={twoFa} setTwoFa={setTwoFa}
@@ -202,10 +212,10 @@ export default function Profile() {
               {/* User summary */}
               <div className="flex items-center gap-3 mb-5 px-1">
                 <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center font-headline font-bold text-on-secondary-container text-sm shrink-0">
-                  {MOCK_USER.initials}
+                  {initials}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-headline font-bold text-primary text-sm truncate">{MOCK_USER.name}</p>
+                  <p className="font-headline font-bold text-primary text-sm truncate">{displayName}</p>
                   <p className="text-[10px] text-on-surface-variant capitalize">
                     {isAdmin ? "Administrator" : isHost ? "Superhost" : "Traveler"}
                   </p>
@@ -259,13 +269,13 @@ export default function Profile() {
 
               {/* Sign out */}
               <div className="mt-4 pt-4 border-t border-outline-variant/20 dark:border-zinc-600">
-                <Link
-                  to="/login"
+                <button
+                  onClick={handleSignOut}
                   className="flex items-center gap-2.5 px-3 py-2.5 w-full rounded-xl text-sm font-headline font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
                   Sign Out
-                </Link>
+                </button>
               </div>
             </div>
           </aside>
@@ -274,6 +284,7 @@ export default function Profile() {
           <div className="flex-1 space-y-6 min-w-0">
             <ProfileContent
               activeTab={activeTab}
+              user={user}
               showPass={showPass} setShowPass={setShowPass}
               showNewPass={showNewPass} setShowNewPass={setShowNewPass}
               twoFa={twoFa} setTwoFa={setTwoFa}
@@ -292,6 +303,7 @@ export default function Profile() {
 ───────────────────────────────────────────────────────── */
 interface ContentProps {
   activeTab: Tab;
+  user: AuthUser | null;
   showPass: boolean; setShowPass: (v: boolean) => void;
   showNewPass: boolean; setShowNewPass: (v: boolean) => void;
   twoFa: boolean; setTwoFa: (v: boolean) => void;
@@ -301,9 +313,10 @@ interface ContentProps {
 }
 
 function ProfileContent({
-  activeTab, showPass, setShowPass, showNewPass, setShowNewPass,
+  activeTab, user, showPass, setShowPass, showNewPass, setShowNewPass,
   twoFa, setTwoFa, deleteConfirm, setDeleteConfirm, notifs, toggleNotif,
 }: ContentProps) {
+  const initials = getInitials(user?.name ?? "");
   return (
     <div className="space-y-6">
             {/* ── Personal Info ── */}
@@ -324,7 +337,11 @@ function ProfileContent({
                     {/* Avatar */}
                     <div className="relative shrink-0">
                       <div className="w-24 h-24 rounded-2xl bg-surface-container overflow-hidden border-4 border-background shadow-sm flex items-center justify-center">
-                        <span className="font-headline font-black text-3xl text-primary">AB</span>
+                        {user?.photo ? (
+                          <img src={user.photo} alt={user.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="font-headline font-black text-3xl text-primary">{initials}</span>
+                        )}
                       </div>
                       <button className="absolute -bottom-2 -right-2 bg-primary text-white p-1.5 rounded-lg shadow-md hover:scale-110 transition-transform">
                         <Camera className="h-3.5 w-3.5" />
@@ -334,9 +351,8 @@ function ProfileContent({
                     {/* Fields */}
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                       {[
-                        { label: "Full Name",      type: "text",  defaultValue: "Abebe Bikila",              col: 1 },
-                        { label: "Email Address",  type: "email", defaultValue: "abebe.bikila@heritage.com", col: 1 },
-                        { label: "Phone Number",   type: "tel",   defaultValue: "+251 911 234 567",          col: 1 },
+                        { label: "Full Name",     type: "text",  defaultValue: user?.name  ?? "" },
+                        { label: "Email Address", type: "email", defaultValue: user?.email ?? "" },
                       ].map(({ label, type, defaultValue }) => (
                         <div key={label}>
                           <label className="block text-xs font-semibold text-on-surface-variant mb-1.5">{label}</label>

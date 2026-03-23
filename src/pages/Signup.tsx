@@ -1,17 +1,46 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff, CheckCircle2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import heroHighlands from "@/assets/hero-highlands.jpg";
+import { useAuth } from "@/context/AuthContext";
 
 const Signup = () => {
-  const [showPass, setShowPass]       = useState(false);
+  const { signup, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [submitted, setSubmitted]     = useState(false);
-  const [password, setPassword]       = useState("");
-  const [confirm, setConfirm]         = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
 
   const passwordsMatch = password === confirm && confirm.length > 0;
-  const passwordWeak   = password.length > 0 && password.length < 8;
+  const passwordWeak = password.length > 0 && password.length < 8;
+
+  useEffect(() => {
+    if (isAuthenticated) navigate("/", { replace: true });
+  }, [isAuthenticated, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordWeak || !passwordsMatch) return;
+    setSubmitting(true);
+    try {
+      await signup(name, email, password, confirm);
+      setSubmitted(true);
+      toast.success("Account created! Please check your email to verify.");
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Registration failed. Please try again.";
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (submitted) {
     return (
@@ -45,11 +74,7 @@ const Signup = () => {
             Join Endebeto and start discovering unique Ethiopian experiences.
           </p>
 
-          <form
-            className="space-y-4"
-            onSubmit={(e) => { e.preventDefault(); setSubmitted(true); }}
-          >
-            {/* Full name */}
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="name" className="block text-xs font-semibold text-on-surface-variant mb-1.5">
                 Full name
@@ -58,12 +83,13 @@ const Signup = () => {
                 id="name"
                 type="text"
                 placeholder="Abebe Kebede"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
                 className="w-full text-sm border border-outline-variant/50 rounded-xl px-3 py-2.5 bg-white dark:bg-[#2d3133] focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
               />
             </div>
 
-            {/* Email */}
             <div>
               <label htmlFor="email" className="block text-xs font-semibold text-on-surface-variant mb-1.5">
                 Email
@@ -72,12 +98,13 @@ const Signup = () => {
                 id="email"
                 type="email"
                 placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full text-sm border border-outline-variant/50 rounded-xl px-3 py-2.5 bg-white dark:bg-[#2d3133] focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
               />
             </div>
 
-            {/* Password */}
             <div>
               <label htmlFor="password" className="block text-xs font-semibold text-on-surface-variant mb-1.5">
                 Password
@@ -105,7 +132,6 @@ const Signup = () => {
               )}
             </div>
 
-            {/* Confirm password */}
             <div>
               <label htmlFor="confirm" className="block text-xs font-semibold text-on-surface-variant mb-1.5">
                 Confirm password
@@ -141,24 +167,23 @@ const Signup = () => {
 
             <button
               type="submit"
-              disabled={passwordWeak || (confirm.length > 0 && !passwordsMatch)}
-              className="w-full py-2.5 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md shadow-primary/20 hover:scale-[0.99] active:opacity-90 transition-transform mt-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={submitting || passwordWeak || (confirm.length > 0 && !passwordsMatch)}
+              className="w-full py-2.5 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md shadow-primary/20 hover:scale-[0.99] active:opacity-90 transition-transform mt-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Create Account
             </button>
           </form>
 
-          {/* Divider */}
           <div className="flex items-center gap-3 my-5">
             <div className="h-px flex-1 bg-outline-variant/40" />
             <span className="text-xs text-on-surface-variant">or continue with</span>
             <div className="h-px flex-1 bg-outline-variant/40" />
           </div>
 
-          {/* OAuth buttons */}
           <div className="space-y-2.5">
             <a
-              href={`${import.meta.env.VITE_API_URL?.replace("/api/v1", "") ?? "http://localhost:3000"}/auth/google`}
+              href={`${import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1"}/auth/google`}
               className="flex items-center justify-center gap-2.5 w-full py-2.5 border border-outline-variant/50 rounded-xl text-sm font-headline font-semibold text-on-surface-variant hover:bg-surface-container transition-colors"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24">
@@ -170,7 +195,7 @@ const Signup = () => {
               Continue with Google
             </a>
             <a
-              href={`${import.meta.env.VITE_API_URL?.replace("/api/v1", "") ?? "http://localhost:3000"}/auth/facebook`}
+              href={`${import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1"}/auth/facebook`}
               className="flex items-center justify-center gap-2.5 w-full py-2.5 border border-outline-variant/50 rounded-xl text-sm font-headline font-semibold text-on-surface-variant hover:bg-surface-container transition-colors"
             >
               <svg className="h-4 w-4" fill="#1877F2" viewBox="0 0 24 24">

@@ -12,9 +12,16 @@ export default function ForgotPassword() {
     e.preventDefault();
     if (!email.trim()) return;
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1400));
-    setSubmitting(false);
-    setSent(true);
+    try {
+      const { authService } = await import("@/services/auth.service");
+      await authService.forgotPassword(email.trim());
+      setSent(true);
+    } catch {
+      // Still show success to prevent email enumeration
+      setSent(true);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

@@ -38,13 +38,21 @@ export default function ResetPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || !token) return;
     setError("");
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1600));
-    // Simulate token invalid 10% of time for demo — always success here
-    setSubmitting(false);
-    setDone(true);
+    try {
+      const { authService } = await import("@/services/auth.service");
+      await authService.resetPassword(token, { password, passwordConfirm: confirm });
+      setDone(true);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Reset link is invalid or has expired.";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

@@ -1,18 +1,47 @@
 import { useState, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import heroCoffee from "@/assets/hero-coffee.jpg";
+import { useAuth } from "@/context/AuthContext";
 
 const Login = () => {
-  const [showPass, setShowPass]     = useState(false);
-  const [searchParams]              = useSearchParams();
+  const { login, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [showPass, setShowPass] = useState(false);
   const [oauthError, setOauthError] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("error") === "oauth_failed") {
       setOauthError("OAuth sign-in failed. Please try again or use email & password.");
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (isAuthenticated) navigate("/", { replace: true });
+  }, [isAuthenticated, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) return;
+    setSubmitting(true);
+    try {
+      await login(email, password);
+      toast.success("Welcome back!");
+      navigate("/");
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Invalid email or password.";
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -29,15 +58,13 @@ const Login = () => {
             Sign in to continue exploring Ethiopia's hidden gems.
           </p>
 
-          {/* OAuth error banner */}
           {oauthError && (
             <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
               {oauthError}
             </div>
           )}
 
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-            {/* Email */}
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-xs font-semibold text-on-surface-variant mb-1.5">
                 Email
@@ -46,11 +73,13 @@ const Login = () => {
                 id="email"
                 type="email"
                 placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 className="w-full text-sm border border-outline-variant/50 rounded-xl px-3 py-2.5 bg-white dark:bg-[#2d3133] focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
               />
             </div>
 
-            {/* Password */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label htmlFor="password" className="text-xs font-semibold text-on-surface-variant">
@@ -65,6 +94,9 @@ const Login = () => {
                   id="password"
                   type={showPass ? "text" : "password"}
                   placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                   className="w-full text-sm border border-outline-variant/50 rounded-xl px-3 py-2.5 pr-10 bg-white dark:bg-[#2d3133] focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
                 />
                 <button
@@ -79,23 +111,23 @@ const Login = () => {
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md shadow-primary/20 hover:scale-[0.99] active:opacity-90 transition-transform mt-1"
+              disabled={submitting}
+              className="w-full py-2.5 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md shadow-primary/20 hover:scale-[0.99] active:opacity-90 transition-transform mt-1 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Sign In
             </button>
           </form>
 
-          {/* Divider */}
           <div className="flex items-center gap-3 my-5">
             <div className="h-px flex-1 bg-outline-variant/40" />
             <span className="text-xs text-on-surface-variant">or continue with</span>
             <div className="h-px flex-1 bg-outline-variant/40" />
           </div>
 
-          {/* OAuth buttons */}
           <div className="space-y-2.5">
             <a
-              href={`${import.meta.env.VITE_API_URL?.replace("/api/v1", "") ?? "http://localhost:3000"}/auth/google`}
+              href={`${import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1"}/auth/google`}
               className="flex items-center justify-center gap-2.5 w-full py-2.5 border border-outline-variant/50 rounded-xl text-sm font-headline font-semibold text-on-surface-variant hover:bg-surface-container transition-colors"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24">
@@ -107,7 +139,7 @@ const Login = () => {
               Continue with Google
             </a>
             <a
-              href={`${import.meta.env.VITE_API_URL?.replace("/api/v1", "") ?? "http://localhost:3000"}/auth/facebook`}
+              href={`${import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1"}/auth/facebook`}
               className="flex items-center justify-center gap-2.5 w-full py-2.5 border border-outline-variant/50 rounded-xl text-sm font-headline font-semibold text-on-surface-variant hover:bg-surface-container transition-colors"
             >
               <svg className="h-4 w-4" fill="#1877F2" viewBox="0 0 24 24">
