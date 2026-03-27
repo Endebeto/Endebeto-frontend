@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, Compass, PlusCircle, Wallet,
+  LayoutDashboard, Compass, PlusCircle, Wallet, Users,
   Settings, LogOut, Search, Bell, HelpCircle, Menu, X,
 } from "lucide-react";
 
@@ -9,6 +9,7 @@ const navLinks = [
   { icon: LayoutDashboard, label: "Dashboard",         href: "/host-dashboard" },
   { icon: Compass,         label: "My Experiences",    href: "/host/experiences" },
   { icon: PlusCircle,      label: "Create Experience", href: "/host/experiences/create" },
+  { icon: Users,           label: "Guest Bookings",    href: "/host/bookings" },
   { icon: Wallet,          label: "Wallet",            href: "/host/wallet" },
 ];
 
@@ -21,15 +22,24 @@ interface HostLayoutProps {
   onSearch?: (v: string) => void;
 }
 
+/** Compute two-letter initials from a full name (first + last word). */
+function computeInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "HO";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 export default function HostLayout({
   children,
   hostName = "Selamawit T.",
-  hostInitials = "ST",
+  hostInitials,
   hostTitle = "Superhost",
   searchValue = "",
   onSearch,
 }: HostLayoutProps) {
   const { pathname } = useLocation();
+  const displayInitials = hostInitials || computeInitials(hostName);
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -68,11 +78,10 @@ export default function HostLayout({
       {/* Nav */}
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
         {navLinks.map((item) => {
+          const exactOnly = new Set(["/host-dashboard", "/host/experiences", "/host/bookings"]);
           const isActive =
             pathname === item.href ||
-            (item.href !== "/host-dashboard" &&
-             item.href !== "/host/experiences" &&
-             pathname.startsWith(item.href));
+            (!exactOnly.has(item.href) && pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}
@@ -187,7 +196,7 @@ export default function HostLayout({
                 <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 mt-0.5">{hostTitle}</p>
               </div>
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-headline font-bold text-white text-[11px] shadow-sm shrink-0">
-                {hostInitials}
+                {displayInitials}
               </div>
             </div>
           </div>

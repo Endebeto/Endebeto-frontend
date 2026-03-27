@@ -1,16 +1,26 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Check, Upload, X, User, Briefcase,
   Camera, Globe, AlertCircle, Heart, DollarSign, ShieldCheck,
-  Leaf, Star,
+  Leaf, Star, Loader2, ClipboardCheck, Pencil,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { toast } from "sonner";
+import { hostApplicationsService } from "@/services/hostApplications.service";
+import { useAuth } from "@/context/AuthContext";
 
 /* ─── types ──────────────────────────────────────────── */
 interface Step1 { fullName: string; phoneNumber: string; cityRegion: string; fullAddress: string; languagesSpoken: string[]; aboutYou: string; }
 interface Step2 { experienceTypes: string[]; specialties: string[]; previousExperience: string; }
-interface Step3 { nationalIdFront: File | null; nationalIdBack: File | null; personalPhoto: File | null; hostingEnvironmentPhotos: File[]; }
+
+type SlotState = { status: "idle" } | { status: "uploading" } | { status: "done"; url: string } | { status: "error"; msg: string };
+interface Step3 {
+  nationalIdFront:  SlotState;
+  nationalIdBack:   SlotState;
+  personalPhoto:    SlotState;
+  envPhotos: SlotState[]; // each entry = one env photo slot
+}
 
 /* ─── options ────────────────────────────────────────── */
 const LANGUAGES      = ["Amharic", "English", "Oromiffa", "Tigrinya", "French", "Arabic", "Other"];
@@ -21,6 +31,7 @@ const STEPS = [
   { label: "About You",        short: "Personal Info",      icon: User },
   { label: "Your Expertise",   short: "Experience Details", icon: Briefcase },
   { label: "Verification",     short: "Media & Documents",  icon: Camera },
+  { label: "Review & Submit",  short: "Review",             icon: ClipboardCheck },
 ];
 
 /* ─── Right-panel content per step ───────────────────── */
@@ -51,6 +62,15 @@ const SIDE_CONTENT = [
       { icon: Star,        title: "Superhost Programme", desc: "Top-performing hosts earn the Superhost badge and get promoted in search results." },
     ],
     insight: { label: "What happens next?", quote: "After approval you can create your first experience and start earning within days." },
+  },
+  {
+    heading: "One last check",
+    benefits: [
+      { icon: ClipboardCheck, title: "Review Everything",  desc: "Make sure all your details are accurate before submission — edits after approval require a support request." },
+      { icon: ShieldCheck,    title: "Identity Verified",  desc: "Your documents are already securely uploaded. Submission is instant." },
+      { icon: Heart,          title: "You're Almost In",   desc: "Hosts who complete their profiles fully are 3× more likely to be approved on first review." },
+    ],
+    insight: { label: "Reminder", quote: "Once submitted, our editorial team will contact you within 48 hours with a decision." },
   },
 ];
 
@@ -85,34 +105,64 @@ function TagPicker({ options, selected, onChange }: { options: string[]; selecte
 }
 
 /* ─── ImageUploadBox ─────────────────────────────────── */
-function ImageUploadBox({ label, sublabel, file, onChange, onRemove, square = false }: {
-  label?: string; sublabel?: string; file: File | null;
-  onChange: (f: File) => void; onRemove: () => void; square?: boolean;
+function ImageUploadBox({ label, sublabel, slot, onPick, onRemove, square = false }: {
+  label?: string; sublabel?: string;
+  slot: SlotState;
+  onPick: (f: File) => void;
+  onRemove: () => void;
+  square?: boolean;
 }) {
   const ref = useRef<HTMLInputElement>(null);
-  const preview = file ? URL.createObjectURL(file) : null;
+  const aspectCls = square ? "aspect-square" : "aspect-[4/3]";
+
+  const previewUrl = slot.status === "done" ? slot.url : null;
+  const uploading  = slot.status === "uploading";
+  const hasError   = slot.status === "error";
+
   return (
     <div>
       {label && <p className={labelCls}>{label}</p>}
       {sublabel && <p className="text-[11px] text-on-surface-variant dark:text-zinc-400 mb-2">{sublabel}</p>}
-      {preview ? (
-        <div className={`relative rounded-xl overflow-hidden border border-outline-variant/30 dark:border-zinc-600 ${square ? "aspect-square" : "aspect-[4/3]"}`}>
-          <img src={preview} alt="" className="w-full h-full object-cover" />
+
+      {previewUrl ? (
+        <div className={`relative rounded-xl overflow-hidden border-2 border-primary/40 dark:border-green-500/40 ${aspectCls}`}>
+          <img src={previewUrl} alt="" className="w-full h-full object-cover" />
+          {/* Uploaded badge */}
+          <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 bg-emerald-600/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+            <Check className="h-2.5 w-2.5" /> Uploaded
+          </span>
           <button type="button" onClick={onRemove}
             className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors">
             <X className="h-3 w-3" />
           </button>
         </div>
+      ) : uploading ? (
+        <div className={`w-full rounded-xl border-2 border-primary/40 dark:border-green-500/40 bg-primary/[0.03] dark:bg-primary/10 flex flex-col items-center justify-center gap-2 text-primary dark:text-green-400 ${aspectCls}`}>
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span className="text-[11px] font-semibold">Uploading…</span>
+        </div>
       ) : (
         <button type="button" onClick={() => ref.current?.click()}
-          className={`w-full rounded-xl border-2 border-dashed border-outline-variant/40 dark:border-zinc-600 flex flex-col items-center justify-center gap-2 text-on-surface-variant dark:text-zinc-500 hover:border-primary/50 hover:bg-primary/[0.03] dark:hover:bg-primary/10 transition-all ${square ? "aspect-square" : "aspect-[4/3]"}`}
+          className={`w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all ${
+            hasError
+              ? "border-error/60 bg-error/5 dark:bg-red-900/10 text-error dark:text-red-400"
+              : "border-outline-variant/40 dark:border-zinc-600 text-on-surface-variant dark:text-zinc-500 hover:border-primary/50 hover:bg-primary/[0.03] dark:hover:bg-primary/10"
+          } ${aspectCls}`}
         >
-          <Upload className="h-5 w-5 opacity-40" />
-          <span className="text-[11px] font-semibold">Click to upload</span>
+          <Upload className="h-5 w-5 opacity-50" />
+          <span className="text-[11px] font-semibold">
+            {hasError ? "Retry upload" : "Click to upload"}
+          </span>
+          {hasError && (
+            <span className="text-[10px] px-2 text-center leading-tight opacity-80">
+              {(slot as { status: "error"; msg: string }).msg}
+            </span>
+          )}
         </button>
       )}
+
       <input ref={ref} type="file" accept="image/*" className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) onChange(f); }} />
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) { onPick(f); e.target.value = ""; } }} />
     </div>
   );
 }
@@ -120,33 +170,332 @@ function ImageUploadBox({ label, sublabel, file, onChange, onRemove, square = fa
 /* ─── main component ─────────────────────────────────── */
 export default function HostApply() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting]   = useState(false);
+  const [checkingExisting, setCheckingExisting] = useState(true);
 
   const [step1, setStep1] = useState<Step1>({ fullName: "", phoneNumber: "", cityRegion: "", fullAddress: "", languagesSpoken: [], aboutYou: "" });
   const [step2, setStep2] = useState<Step2>({ experienceTypes: [], specialties: [], previousExperience: "" });
-  const [step3, setStep3] = useState<Step3>({ nationalIdFront: null, nationalIdBack: null, personalPhoto: null, hostingEnvironmentPhotos: [] });
+  const IDLE: SlotState = { status: "idle" };
+  const [step3, setStep3] = useState<Step3>({
+    nationalIdFront: IDLE, nationalIdBack: IDLE, personalPhoto: IDLE, envPhotos: [],
+  });
 
   const step1Valid = step1.fullName.trim() && step1.phoneNumber.trim() && step1.cityRegion.trim() && step1.languagesSpoken.length > 0 && step1.aboutYou.trim().length >= 30;
   const step2Valid = step2.experienceTypes.length > 0 && step2.specialties.length > 0;
-  const step3Valid = step3.nationalIdFront && step3.nationalIdBack && step3.personalPhoto;
-  const canAdvance = [step1Valid, step2Valid, step3Valid][currentStep];
+  const step3Valid =
+    step3.nationalIdFront.status === "done" &&
+    step3.nationalIdBack.status  === "done" &&
+    step3.personalPhoto.status   === "done" &&
+    step3.envPhotos.some(s => s.status === "done");
+  const step3Uploading =
+    step3.nationalIdFront.status === "uploading" ||
+    step3.nationalIdBack.status  === "uploading" ||
+    step3.personalPhoto.status   === "uploading" ||
+    step3.envPhotos.some(s => s.status === "uploading");
+  const step4Valid = step1Valid && step2Valid && step3Valid; // all sections complete
+  const canAdvance = [step1Valid, step2Valid, step3Valid, step4Valid][currentStep];
 
   const toggleLang = (lang: string) =>
     setStep1((p) => ({ ...p, languagesSpoken: p.languagesSpoken.includes(lang) ? p.languagesSpoken.filter((l) => l !== lang) : [...p.languagesSpoken, lang] }));
 
   const envPhotoRef = useRef<HTMLInputElement>(null);
-  const addEnvPhoto = (f: File) => { if (step3.hostingEnvironmentPhotos.length < 4) setStep3((p) => ({ ...p, hostingEnvironmentPhotos: [...p.hostingEnvironmentPhotos, f] })); };
-  const removeEnvPhoto = (i: number) => setStep3((p) => ({ ...p, hostingEnvironmentPhotos: p.hostingEnvironmentPhotos.filter((_, idx) => idx !== i) }));
 
+  /* ── helper: upload a single file slot ── */
+  type SingleSlotKey = "nationalIdFront" | "nationalIdBack" | "personalPhoto";
+
+  const uploadSlot = async (field: SingleSlotKey, file: File) => {
+    setStep3(p => ({ ...p, [field]: { status: "uploading" } }));
+    try {
+      const res = await hostApplicationsService.uploadSingleFile(field, file);
+      const url = res.data.data.media?.[field] as string | undefined;
+      if (!url) throw new Error("URL not returned");
+      setStep3(p => ({ ...p, [field]: { status: "done", url } }));
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Upload failed";
+      setStep3(p => ({ ...p, [field]: { status: "error", msg } }));
+      toast.error(`${field}: ${msg}`);
+    }
+  };
+
+  const uploadEnvPhoto = async (file: File) => {
+    const idx = step3.envPhotos.length;
+    setStep3(p => ({ ...p, envPhotos: [...p.envPhotos, { status: "uploading" }] }));
+    try {
+      const res = await hostApplicationsService.uploadSingleFile("hostingEnvironmentPhotos", file);
+      const urls = res.data.data.media?.hostingEnvironmentPhotos ?? [];
+      const url = urls[urls.length - 1];
+      if (!url) throw new Error("URL not returned");
+      setStep3(p => {
+        const envPhotos = [...p.envPhotos];
+        envPhotos[idx] = { status: "done", url };
+        return { ...p, envPhotos };
+      });
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Upload failed";
+      setStep3(p => {
+        const envPhotos = [...p.envPhotos];
+        envPhotos[idx] = { status: "error", msg };
+        return { ...p, envPhotos };
+      });
+      toast.error(`Hosting photo: ${msg}`);
+    }
+  };
+
+  const removeEnvPhoto = async (i: number) => {
+    const slot = step3.envPhotos[i];
+    if (slot.status === "done") {
+      try { await hostApplicationsService.removeEnvPhoto(slot.url); } catch { /* best-effort */ }
+    }
+    setStep3(p => ({ ...p, envPhotos: p.envPhotos.filter((_, idx) => idx !== i) }));
+  };
+
+  /* ── on mount: check for existing application ── */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await hostApplicationsService.getMyApplication();
+        const app = res.data.data.application;
+        if (cancelled) return;
+        if (!app) { setCheckingExisting(false); return; }
+
+        const { status } = app;
+        if (status === "submitted" || status === "pending" || status === "approved") {
+          navigate("/host/application-status", { replace: true });
+          return;
+        }
+
+        // draft or rejected → allow apply; pre-fill from saved draft
+        if (status === "draft" && app.personalInfo) {
+          setStep1({
+            fullName:        app.personalInfo.fullName        ?? "",
+            phoneNumber:     app.personalInfo.phoneNumber     ?? "",
+            cityRegion:      app.personalInfo.cityRegion      ?? "",
+            fullAddress:     app.personalInfo.fullAddress     ?? "",
+            languagesSpoken: app.personalInfo.languagesSpoken ?? [],
+            aboutYou:        app.personalInfo.aboutYou        ?? "",
+          });
+        }
+        if (status === "draft" && app.experienceDetails) {
+          setStep2({
+            experienceTypes:    app.experienceDetails.experienceTypes    ?? [],
+            specialties:        app.experienceDetails.specialties        ?? [],
+            previousExperience: app.experienceDetails.previousExperience ?? "",
+          });
+        }
+        // Restore already-uploaded media URLs from the saved draft
+        if (status === "draft" && app.media) {
+          const m = app.media;
+          setStep3(p => ({
+            ...p,
+            nationalIdFront: m.nationalIdFront ? { status: "done", url: m.nationalIdFront } : p.nationalIdFront,
+            nationalIdBack:  m.nationalIdBack  ? { status: "done", url: m.nationalIdBack  } : p.nationalIdBack,
+            personalPhoto:   m.personalPhoto   ? { status: "done", url: m.personalPhoto   } : p.personalPhoto,
+            envPhotos: (m.hostingEnvironmentPhotos ?? []).map(url => ({ status: "done" as const, url })),
+          }));
+        }
+      } catch {
+        // no application yet — that's fine
+      } finally {
+        if (!cancelled) setCheckingExisting(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [navigate]);
+
+  /* ── step advance with API call ── */
+  const handleNext = async () => {
+    if (!canAdvance) return;
+    setSubmitting(true);
+    try {
+      if (currentStep === 0) {
+        await hostApplicationsService.start({
+          fullName:        step1.fullName,
+          email:           user?.email,
+          phoneNumber:     step1.phoneNumber,
+          cityRegion:      step1.cityRegion,
+          fullAddress:     step1.fullAddress,
+          languagesSpoken: step1.languagesSpoken,
+          aboutYou:        step1.aboutYou,
+        });
+      } else if (currentStep === 1) {
+        await hostApplicationsService.updateExperienceDetails({
+          experienceTypes:    step2.experienceTypes,
+          specialties:        step2.specialties,
+          previousExperience: step2.previousExperience,
+        });
+      }
+      setCurrentStep((p) => p + 1);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to save. Please try again.";
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* ── final submit — all files are already saved, just finalize ── */
   const handleSubmit = async () => {
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1800));
-    setSubmitting(false);
-    navigate("/host/application-status");
+    try {
+      await hostApplicationsService.submit();
+      toast.success("Application submitted! We'll be in touch within 48 hours.");
+      navigate("/host/application-status");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Submission failed. Please try again.";
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* ── renderStep4: review summary ── */
+  const renderStep4 = () => {
+    const doneEnvPhotos = step3.envPhotos.filter(s => s.status === "done") as { status: "done"; url: string }[];
+    const doneSingle = (s: SlotState) => s.status === "done" ? s : null;
+
+    const Section = ({ title, step, children }: { title: string; step: number; children: React.ReactNode }) => (
+      <div className="rounded-xl border border-outline-variant/15 dark:border-zinc-700 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 bg-surface-container-low/60 dark:bg-zinc-800/50 border-b border-outline-variant/10 dark:border-zinc-700">
+          <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant dark:text-zinc-400">{title}</p>
+          <button type="button" onClick={() => setCurrentStep(step)}
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary dark:text-green-400 hover:underline underline-offset-2 transition-colors">
+            <Pencil className="h-3 w-3" /> Edit
+          </button>
+        </div>
+        <div className="px-5 py-4 space-y-2">{children}</div>
+      </div>
+    );
+
+    const Row = ({ label, value }: { label: string; value?: string }) =>
+      value ? (
+        <div className="flex gap-3">
+          <span className="text-[11px] font-semibold text-on-surface-variant dark:text-zinc-500 w-28 shrink-0 pt-0.5">{label}</span>
+          <span className="text-sm text-on-surface dark:text-white flex-1 leading-relaxed">{value}</span>
+        </div>
+      ) : null;
+
+    return (
+      <div className="space-y-5">
+
+        {/* Personal Info */}
+        <Section title="Personal Info" step={0}>
+          <Row label="Full Name"   value={step1.fullName} />
+          <Row label="Phone"       value={step1.phoneNumber} />
+          <Row label="City/Region" value={step1.cityRegion} />
+          {step1.fullAddress && <Row label="Address" value={step1.fullAddress} />}
+          {step1.languagesSpoken.length > 0 && (
+            <div className="flex gap-3">
+              <span className="text-[11px] font-semibold text-on-surface-variant dark:text-zinc-500 w-28 shrink-0 pt-1">Languages</span>
+              <div className="flex flex-wrap gap-1.5 flex-1">
+                {step1.languagesSpoken.map(l => (
+                  <span key={l} className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 dark:bg-primary/20 text-primary dark:text-green-400">{l}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {step1.aboutYou && (
+            <div className="flex gap-3">
+              <span className="text-[11px] font-semibold text-on-surface-variant dark:text-zinc-500 w-28 shrink-0 pt-0.5">Your Story</span>
+              <p className="text-sm text-on-surface dark:text-white flex-1 leading-relaxed line-clamp-4">{step1.aboutYou}</p>
+            </div>
+          )}
+        </Section>
+
+        {/* Experience Details */}
+        <Section title="Your Expertise" step={1}>
+          {step2.experienceTypes.length > 0 && (
+            <div className="flex gap-3">
+              <span className="text-[11px] font-semibold text-on-surface-variant dark:text-zinc-500 w-28 shrink-0 pt-1">Experience Types</span>
+              <div className="flex flex-wrap gap-1.5 flex-1">
+                {step2.experienceTypes.map(t => (
+                  <span key={t} className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 dark:bg-primary/20 text-primary dark:text-green-400">{t}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {step2.specialties.length > 0 && (
+            <div className="flex gap-3">
+              <span className="text-[11px] font-semibold text-on-surface-variant dark:text-zinc-500 w-28 shrink-0 pt-1">Specialties</span>
+              <div className="flex flex-wrap gap-1.5 flex-1">
+                {step2.specialties.map(s => (
+                  <span key={s} className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-on-surface-variant dark:text-zinc-300 border border-outline-variant/20 dark:border-zinc-600">{s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {step2.previousExperience && (
+            <div className="flex gap-3">
+              <span className="text-[11px] font-semibold text-on-surface-variant dark:text-zinc-500 w-28 shrink-0 pt-0.5">Background</span>
+              <p className="text-sm text-on-surface dark:text-white flex-1 leading-relaxed line-clamp-3">{step2.previousExperience}</p>
+            </div>
+          )}
+        </Section>
+
+        {/* Documents & Media */}
+        <Section title="Documents & Media" step={2}>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            {[
+              { label: "ID Front",    slot: doneSingle(step3.nationalIdFront) },
+              { label: "ID Back",     slot: doneSingle(step3.nationalIdBack)  },
+              { label: "Your Photo",  slot: doneSingle(step3.personalPhoto)   },
+            ].map(({ label, slot }) => (
+              <div key={label}>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant dark:text-zinc-500 mb-1.5">{label}</p>
+                {slot ? (
+                  <div className="relative rounded-lg overflow-hidden aspect-[4/3] border border-primary/30 dark:border-green-500/30">
+                    <img src={slot.url} alt={label} className="w-full h-full object-cover" />
+                    <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 bg-emerald-600/85 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                      <Check className="h-2 w-2" /> Uploaded
+                    </span>
+                  </div>
+                ) : (
+                  <div className="aspect-[4/3] rounded-lg bg-surface-container dark:bg-zinc-800 border border-outline-variant/20 dark:border-zinc-700 flex items-center justify-center">
+                    <span className="text-[11px] text-error font-semibold">Missing</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {doneEnvPhotos.length > 0 && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant dark:text-zinc-500 mb-1.5">
+                Hosting Environment ({doneEnvPhotos.length} photo{doneEnvPhotos.length > 1 ? "s" : ""})
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                {doneEnvPhotos.map((s, i) => (
+                  <div key={i} className="rounded-lg overflow-hidden aspect-[4/3] border border-primary/30 dark:border-green-500/30">
+                    <img src={s.url} alt="" className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Section>
+
+        {/* Declaration */}
+        <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800/40 rounded-xl">
+          <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
+            By submitting you confirm that all information is accurate and you agree to our <span className="font-semibold">Host Terms & Conditions</span>.
+          </p>
+        </div>
+      </div>
+    );
   };
 
   const side = SIDE_CONTENT[currentStep];
+
+  if (checkingExisting) {
+    return (
+      <div className="min-h-screen bg-surface-container-low dark:bg-zinc-950 font-body flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   /* ── step renders ── */
   const renderStep1 = () => (
@@ -263,10 +612,10 @@ export default function HostApply() {
 
   const renderStep3 = () => (
     <div className="space-y-7">
-      <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-800/40 rounded-xl">
-        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-        <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-          Documents are encrypted and only used for identity verification. We never share personal documents with guests.
+      <div className="flex items-start gap-3 p-4 bg-primary/8 dark:bg-primary/15 border border-primary/20 dark:border-primary/30 rounded-xl">
+        <AlertCircle className="h-4 w-4 text-primary dark:text-green-400 shrink-0 mt-0.5" />
+        <p className="text-xs text-primary/80 dark:text-green-300 leading-relaxed">
+          Each file is uploaded immediately when you select it — no waiting at submission. Documents are encrypted and only used for identity verification.
         </p>
       </div>
 
@@ -274,12 +623,12 @@ export default function HostApply() {
         <label className={labelCls}>National ID / Passport <span className="text-error normal-case">*</span></label>
         <p className="text-xs text-on-surface-variant dark:text-zinc-400 mb-4">Upload both sides of your Ethiopian National ID or Passport.</p>
         <div className="grid grid-cols-2 gap-4">
-          <ImageUploadBox label="Front Side" file={step3.nationalIdFront}
-            onChange={(f) => setStep3((p) => ({ ...p, nationalIdFront: f }))}
-            onRemove={() => setStep3((p) => ({ ...p, nationalIdFront: null }))} />
-          <ImageUploadBox label="Back Side" file={step3.nationalIdBack}
-            onChange={(f) => setStep3((p) => ({ ...p, nationalIdBack: f }))}
-            onRemove={() => setStep3((p) => ({ ...p, nationalIdBack: null }))} />
+          <ImageUploadBox label="Front Side" slot={step3.nationalIdFront}
+            onPick={(f) => uploadSlot("nationalIdFront", f)}
+            onRemove={() => setStep3(p => ({ ...p, nationalIdFront: IDLE }))} />
+          <ImageUploadBox label="Back Side" slot={step3.nationalIdBack}
+            onPick={(f) => uploadSlot("nationalIdBack", f)}
+            onRemove={() => setStep3(p => ({ ...p, nationalIdBack: IDLE }))} />
         </div>
       </div>
 
@@ -287,34 +636,43 @@ export default function HostApply() {
         <label className={labelCls}>Profile Photo <span className="text-error normal-case">*</span></label>
         <p className="text-xs text-on-surface-variant dark:text-zinc-400 mb-4">A clear, recent headshot. This appears on your public host profile.</p>
         <div className="max-w-[200px]">
-          <ImageUploadBox label="" file={step3.personalPhoto} square
-            onChange={(f) => setStep3((p) => ({ ...p, personalPhoto: f }))}
-            onRemove={() => setStep3((p) => ({ ...p, personalPhoto: null }))} />
+          <ImageUploadBox label="" slot={step3.personalPhoto} square
+            onPick={(f) => uploadSlot("personalPhoto", f)}
+            onRemove={() => setStep3(p => ({ ...p, personalPhoto: IDLE }))} />
         </div>
       </div>
 
       <div>
         <label className={labelCls}>
           Hosting Environment Photos
-          <span className="font-normal normal-case text-on-surface-variant dark:text-zinc-500 ml-1">(up to 4, optional)</span>
+          <span className="text-error normal-case ml-1">*</span>
+          <span className="font-normal normal-case text-on-surface-variant dark:text-zinc-500 ml-1">(1–4 photos)</span>
         </label>
         <p className="text-xs text-on-surface-variant dark:text-zinc-400 mb-4">
           Photos of the space or location where you'll host. Help guests get excited!
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {step3.hostingEnvironmentPhotos.map((f, i) => {
-            const url = URL.createObjectURL(f);
-            return (
-              <div key={i} className="relative rounded-xl overflow-hidden border border-outline-variant/30 dark:border-zinc-600 aspect-[4/3]">
-                <img src={url} alt="" className="w-full h-full object-cover" />
-                <button type="button" onClick={() => removeEnvPhoto(i)}
-                  className="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            );
-          })}
-          {step3.hostingEnvironmentPhotos.length < 4 && (
+          {step3.envPhotos.map((slot, i) => (
+            <ImageUploadBox key={i} slot={slot}
+              onPick={(f) => {
+                setStep3(p => { const envPhotos = [...p.envPhotos]; envPhotos[i] = { status: "uploading" }; return { ...p, envPhotos }; });
+                (async () => {
+                  try {
+                    const res = await hostApplicationsService.uploadSingleFile("hostingEnvironmentPhotos", f);
+                    const urls = res.data.data.media?.hostingEnvironmentPhotos ?? [];
+                    const url = urls[urls.length - 1];
+                    if (!url) throw new Error("URL not returned");
+                    setStep3(p => { const envPhotos = [...p.envPhotos]; envPhotos[i] = { status: "done", url }; return { ...p, envPhotos }; });
+                  } catch (err: unknown) {
+                    const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Upload failed";
+                    setStep3(p => { const envPhotos = [...p.envPhotos]; envPhotos[i] = { status: "error", msg }; return { ...p, envPhotos }; });
+                    toast.error(`Hosting photo: ${msg}`);
+                  }
+                })();
+              }}
+              onRemove={() => removeEnvPhoto(i)} />
+          ))}
+          {step3.envPhotos.length < 4 && (
             <button type="button" onClick={() => envPhotoRef.current?.click()}
               className="aspect-[4/3] rounded-xl border-2 border-dashed border-outline-variant/40 dark:border-zinc-600 flex flex-col items-center justify-center gap-1.5 text-on-surface-variant dark:text-zinc-500 hover:border-primary/50 hover:bg-primary/[0.03] dark:hover:bg-primary/10 transition-all">
               <Upload className="h-5 w-5 opacity-40" />
@@ -323,7 +681,7 @@ export default function HostApply() {
           )}
         </div>
         <input ref={envPhotoRef} type="file" accept="image/*" className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) addEnvPhoto(f); }} />
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) { uploadEnvPhoto(f); e.target.value = ""; } }} />
       </div>
     </div>
   );
@@ -406,6 +764,7 @@ export default function HostApply() {
               {currentStep === 0 && renderStep1()}
               {currentStep === 1 && renderStep2()}
               {currentStep === 2 && renderStep3()}
+              {currentStep === 3 && renderStep4()}
             </div>
 
             {/* card footer / navigation */}
@@ -417,18 +776,29 @@ export default function HostApply() {
               </button>
 
               <div className="flex items-center gap-3">
-                <span className="text-[11px] text-on-surface-variant dark:text-zinc-500 hidden sm:block">Progress auto-saved</span>
+                <span className="text-[11px] text-on-surface-variant dark:text-zinc-500 hidden sm:block">
+                  {currentStep === 3 ? "Review then submit" : "Progress auto-saved"}
+                </span>
                 {currentStep < STEPS.length - 1 ? (
-                  <button type="button" onClick={() => setCurrentStep((p) => p + 1)} disabled={!canAdvance}
-                    className="inline-flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md">
-                    Next: {STEPS[currentStep + 1].short}
-                    <ArrowRight className="h-4 w-4" />
+                  /* Steps 0-2: "Next" — steps 0 & 1 save via handleNext, step 2 just advances */
+                  <button type="button"
+                    onClick={currentStep === 2 ? () => setCurrentStep(3) : handleNext}
+                    disabled={!canAdvance || submitting || (currentStep === 2 && step3Uploading)}
+                    className="inline-flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md min-w-[140px] justify-center">
+                    {currentStep === 2 && step3Uploading ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" />Uploading…</>
+                    ) : submitting ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" />Saving…</>
+                    ) : (
+                      <>Next: {STEPS[currentStep + 1].short}<ArrowRight className="h-4 w-4" /></>
+                    )}
                   </button>
                 ) : (
+                  /* Step 3 (Review): final submit */
                   <button type="button" onClick={handleSubmit} disabled={!canAdvance || submitting}
-                    className="inline-flex items-center gap-2 bg-primary text-white px-7 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md min-w-[160px] justify-center">
+                    className="inline-flex items-center gap-2 bg-primary text-white px-7 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md min-w-[170px] justify-center">
                     {submitting ? (
-                      <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Submitting…</>
+                      <><Loader2 className="h-4 w-4 animate-spin" />Submitting…</>
                     ) : (
                       <><Check className="h-4 w-4" />Submit Application</>
                     )}

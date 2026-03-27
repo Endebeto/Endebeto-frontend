@@ -383,6 +383,7 @@ function ProfileContent({
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [bio, setBio] = useState(user?.bio ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -397,6 +398,7 @@ function ProfileContent({
     setName(user.name);
     setEmail(user.email);
     setBio(user.bio ?? "");
+    setPhone(user.phone ?? "");
   }, [user]);
 
   const authProvider = user?.authProvider ?? "local";
@@ -424,6 +426,7 @@ function ProfileContent({
         name: name.trim(),
         email: email.trim(),
         bio: bio.trim(),
+        phone: phone.trim(),
       });
       updateUser(res.data.data.user);
       toast.success("Profile updated");
@@ -560,6 +563,25 @@ function ProfileContent({
                     onChange={(ev) => setEmail(ev.target.value)}
                     className="w-full text-sm bg-surface-container-low border-none rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1.5">
+                    WhatsApp / Phone
+                    {user?.hostStatus === "approved" && (
+                      <span className="ml-1.5 text-[10px] font-normal text-primary dark:text-green-400">(shown to guests who book your experience)</span>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm">📱</span>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(ev) => setPhone(ev.target.value)}
+                      placeholder="+251 9XX XXX XXX"
+                      className="w-full pl-9 text-sm bg-surface-container-low border-none rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                  <p className="text-[11px] text-on-surface-variant mt-1">Use international format, e.g. +251912345678</p>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-xs font-semibold text-on-surface-variant mb-1.5">Bio</label>

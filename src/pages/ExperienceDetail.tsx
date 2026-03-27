@@ -1,15 +1,31 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   MapPin, Star, Clock, Users, Globe,
   AlertCircle, ArrowRight, ChevronLeft, ChevronRight, ExternalLink, X,
-  Share2, Heart, Loader2, Plus,
+  Share2, Heart, Loader2, Plus, Mail, Lock, MessageCircle,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { experiencesService, type Review } from "@/services/experiences.service";
+import { bookingsService, type Booking } from "@/services/bookings.service";
 import { useAuth } from "@/context/AuthContext";
+
+function apiErrMessage(e: unknown): string {
+  if (typeof e === "object" && e !== null && "response" in e) {
+    const r = (e as { response?: { data?: { message?: string } } }).response;
+    if (r?.data?.message && typeof r.data.message === "string") return r.data.message;
+  }
+  if (e instanceof Error) return e.message;
+  return "Could not start payment. Try again.";
+}
+
+function bookingExperienceId(b: Booking): string {
+  if (typeof b.experience === "object" && b.experience?._id) return String(b.experience._id);
+  return String(b.experience);
+}
 
 const REVIEWS_PER_PAGE = 3;
 
@@ -257,6 +273,129 @@ function ReviewCard({ review, index }: { review: Review; index: number }) {
   );
 }
 
+/* ─── contact host helpers ──────────────────────────────── */
+
+function buildWaLink(phone: string | undefined, experienceTitle: string) {
+  if (!phone) return null;
+  const digits = phone.replace(/[^\d+]/g, "").replace(/^\+/, "");
+  if (digits.length < 7) return null;
+  const msg = encodeURIComponent(`Hi! I booked your experience "${experienceTitle}" on Endebeto — I have a question.`);
+  return `https://wa.me/${digits}?text=${msg}`;
+}
+
+function buildMailtoLink(email: string | undefined, experienceTitle: string) {
+  if (!email) return null;
+  return `mailto:${email}?subject=${encodeURIComponent(`Question about: ${experienceTitle}`)}`;
+}
+
+interface ContactHostButtonProps {
+  host: { name?: string; email?: string; phone?: string } | undefined;
+  experienceTitle: string;
+  booked: boolean;
+  compact?: boolean;
+}
+
+function ContactHostButton({ host, experienceTitle, booked, compact = false }: ContactHostButtonProps) {
+  const [open, setOpen] = useState(false);
+
+  const waLink      = buildWaLink(host?.phone, experienceTitle);
+  const mailtoLink  = buildMailtoLink(host?.email, experienceTitle);
+  const hasAny      = !!(waLink || mailtoLink);
+
+  if (!booked) {
+    return (
+      <button
+        disabled
+        title="Book this experience to contact the host"
+        className={`flex items-center gap-1.5 font-bold text-on-surface-variant/50 dark:text-zinc-500 border border-outline-variant/20 dark:border-zinc-700 cursor-not-allowed ${
+          compact
+            ? "text-xs px-4 py-1.5 rounded-full"
+            : "text-xs px-3 py-1.5 rounded-lg"
+        }`}
+      >
+        <Lock className="h-3.5 w-3.5" />
+        Book to Contact
+      </button>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-1.5 font-bold text-primary dark:text-green-400 border border-primary/40 dark:border-green-400/40 hover:bg-primary/5 transition-colors ${
+          compact
+            ? "text-xs px-4 py-1.5 rounded-full"
+            : "text-xs px-3 py-1.5 rounded-lg"
+        }`}
+      >
+        <MessageCircle className="h-3.5 w-3.5" />
+        Contact Host
+      </button>
+
+      {open && (
+        <>
+          {/* backdrop */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+
+          {/* picker card */}
+          <div className={`absolute z-50 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/20 dark:border-zinc-700 p-4 w-64 ${
+            compact ? "left-0 top-full mt-2" : "right-0 top-full mt-2"
+          }`}>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant dark:text-zinc-400 mb-3">
+              Contact {host?.name?.split(" ")[0] ?? "Host"} via
+            </p>
+
+            {!hasAny && (
+              <p className="text-xs text-on-surface-variant dark:text-zinc-400 italic py-2">
+                The host hasn't added contact details yet.
+              </p>
+            )}
+
+            {waLink && (
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-[#25D366]/10 transition-colors mb-2 group"
+              >
+                <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center shrink-0">
+                  <MessageCircle className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-on-surface dark:text-white group-hover:text-[#128C7E]">WhatsApp</p>
+                  <p className="text-[11px] text-on-surface-variant dark:text-zinc-400">Opens WhatsApp with pre-filled message</p>
+                </div>
+              </a>
+            )}
+
+            {mailtoLink && (
+              <a
+                href={mailtoLink}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-primary/5 transition-colors group"
+              >
+                <div className="w-9 h-9 rounded-full bg-primary/10 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                  <Mail className="h-4 w-4 text-primary dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-on-surface dark:text-white group-hover:text-primary dark:group-hover:text-green-400">Email</p>
+                  <p className="text-[11px] text-on-surface-variant dark:text-zinc-400">Opens your email client</p>
+                </div>
+              </a>
+            )}
+
+            <p className="text-[10px] text-on-surface-variant/60 dark:text-zinc-500 mt-3 leading-relaxed">
+              Contact info is only visible because you have a booking for this experience.
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ─── skeleton ──────────────────────────────────────────── */
 
 function DetailSkeleton() {
@@ -283,13 +422,67 @@ const ExperienceDetail = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
-  const handleBook = () => {
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [guests, setGuests] = useState(1);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+
+  const { data: myBookingsPayload } = useQuery({
+    queryKey: ["my-bookings", "experience-detail", id],
+    queryFn: async () => {
+      const res = await bookingsService.getMyBookings({ page: 1, limit: 100 });
+      return res.data.data;
+    },
+    enabled: !!id && isAuthenticated,
+  });
+
+  const hasUpcomingBookingHere = useMemo(() => {
+    if (!isAuthenticated || !id) return false;
+    const list = myBookingsPayload ?? [];
+    return list.some(
+      (b) => bookingExperienceId(b) === id && b.status === "upcoming"
+    );
+  }, [isAuthenticated, id, myBookingsPayload]);
+
+  /** Chapa: GET /bookings/checkout-session/:experienceId → redirect to checkout_url; return lands on /my-bookings?tx_ref= (Phase 5). */
+  const startCheckout = useCallback(async () => {
+    if (!id) return;
     if (!isAuthenticated) {
       navigate("/login", { state: { from: `/experiences/${id}` } });
       return;
     }
+    if (hasUpcomingBookingHere) {
+      toast.info("You already have an upcoming booking for this experience.");
+      return;
+    }
+    setCheckoutLoading(true);
+    try {
+      const res = await bookingsService.getCheckoutSession(id, guests);
+      const url = res.data.checkout_url;
+      if (!url) {
+        toast.error("Payment link was not returned. Please try again.");
+        return;
+      }
+      window.location.assign(url);
+    } catch (e) {
+      toast.error(apiErrMessage(e));
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }, [id, isAuthenticated, guests, navigate, hasUpcomingBookingHere]);
+
+  /** Mobile: open sheet to confirm guests, then pay. Desktop: pay uses sidebar guest count directly. */
+  const openMobileBookingSheet = () => {
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: `/experiences/${id}` } });
+      return;
+    }
+    if (hasUpcomingBookingHere) return;
     setShowBookingModal(true);
   };
+
+  useEffect(() => {
+    if (hasUpcomingBookingHere && showBookingModal) setShowBookingModal(false);
+  }, [hasUpcomingBookingHere, showBookingModal]);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["experience", id],
@@ -297,8 +490,6 @@ const ExperienceDetail = () => {
     enabled: !!id,
   });
 
-  const [guests, setGuests]             = useState(1);
-  const [showBookingModal, setShowBookingModal] = useState(false);
   const [saved, setSaved]               = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
@@ -444,9 +635,12 @@ const ExperienceDetail = () => {
                   <p className="font-headline font-bold text-sm text-on-surface dark:text-white">{exp.host?.name}</p>
                 </div>
               </div>
-              <button className="text-xs font-bold text-primary dark:text-green-400 border border-primary/30 dark:border-green-400/30 px-4 py-1.5 rounded-full hover:bg-primary/5 transition-colors">
-                Message
-              </button>
+              <ContactHostButton
+                host={exp.host}
+                experienceTitle={exp.title}
+                booked={hasUpcomingBookingHere}
+                compact
+              />
             </div>
 
             {/* Gallery strip — max 4 previews; last shows +N to open lightbox for the rest */}
@@ -497,25 +691,52 @@ const ExperienceDetail = () => {
             <div className="py-5 border-b border-outline-variant/15 dark:border-zinc-800">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-headline font-extrabold text-base text-on-surface dark:text-white">Where you'll meet</h2>
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(exp.location)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="text-[10px] font-bold text-primary dark:text-green-400 flex items-center gap-1"
-                >
-                  Open Maps <ExternalLink className="h-3 w-3" />
-                </a>
+                {hasUpcomingBookingHere && (
+                  <a
+                    href={exp.latitude && exp.longitude
+                      ? `https://www.google.com/maps/dir/?api=1&destination=${exp.latitude},${exp.longitude}`
+                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(exp.location)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-[10px] font-bold text-primary dark:text-green-400 flex items-center gap-1"
+                  >
+                    Open Maps <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
               </div>
               <p className="text-xs text-on-surface-variant dark:text-zinc-400 mb-3 flex items-center gap-1">
-                <MapPin className="h-3 w-3 text-primary shrink-0" /> {exp.location} · Exact point shared after booking
+                <MapPin className="h-3 w-3 text-primary shrink-0" />
+                {hasUpcomingBookingHere ? (exp.address || exp.location) : exp.location}
+                {!hasUpcomingBookingHere && <span className="ml-1 text-amber-600 dark:text-amber-400 font-medium">· Exact meetup point shared after booking</span>}
               </p>
               <div className="relative w-full h-44 rounded-2xl overflow-hidden bg-surface-container">
-                <iframe
-                  title={`Map of ${exp.location}`}
-                  className="w-full h-full"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://maps.google.com/maps?q=${encodeURIComponent(exp.location)}&output=embed&z=13`}
-                />
+                {hasUpcomingBookingHere ? (
+                  <iframe
+                    title={`Meetup point for ${exp.title}`}
+                    className="w-full h-full"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src={exp.latitude && exp.longitude
+                      ? `https://maps.google.com/maps?q=${exp.latitude},${exp.longitude}&output=embed&z=17`
+                      : `https://maps.google.com/maps?q=${encodeURIComponent(exp.location)}&output=embed&z=15`}
+                  />
+                ) : (
+                  <>
+                    <iframe
+                      title={`Area map for ${exp.title}`}
+                      className="w-full h-full blur-[3px] scale-110 pointer-events-none"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      src={`https://maps.google.com/maps?q=${encodeURIComponent(exp.location)}&output=embed&z=11`}
+                    />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 backdrop-blur-[1px]">
+                      <div className="bg-white dark:bg-zinc-900 rounded-xl px-4 py-3 text-center shadow-lg border border-outline-variant/20 mx-4">
+                        <MapPin className="h-5 w-5 text-primary mx-auto mb-1" />
+                        <p className="text-xs font-bold text-on-surface dark:text-white">Exact meetup point shared after booking</p>
+                        <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 mt-0.5">Book this experience to see the precise location</p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -572,12 +793,24 @@ const ExperienceDetail = () => {
               {exp.price.toLocaleString()} ETB
             </p>
           </div>
-          <button
-            onClick={handleBook}
-            className="flex-1 max-w-[180px] py-2.5 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md shadow-primary/20"
-          >
-            Book Now
-          </button>
+          <div className="flex flex-col items-stretch gap-1 flex-1 max-w-[200px]">
+            <button
+              type="button"
+              disabled={hasUpcomingBookingHere}
+              onClick={openMobileBookingSheet}
+              className="w-full py-2.5 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md shadow-primary/20 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {hasUpcomingBookingHere ? "Already booked" : "Book Now"}
+            </button>
+            {hasUpcomingBookingHere && (
+              <Link
+                to="/my-bookings"
+                className="text-center text-[10px] font-bold text-primary dark:text-green-400 hover:underline"
+              >
+                View in My Bookings
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 
@@ -668,7 +901,11 @@ const ExperienceDetail = () => {
                   <p className="font-headline font-bold text-primary">{exp.host?.name}</p>
                 </div>
               </div>
-              <button className="text-xs font-bold text-primary border border-outline-variant/40 px-3 py-1.5 rounded-lg hover:bg-primary/5 transition-colors">Contact Host</button>
+              <ContactHostButton
+                host={exp.host}
+                experienceTitle={exp.title}
+                booked={hasUpcomingBookingHere}
+              />
             </div>
 
             {/* Specs */}
@@ -701,36 +938,73 @@ const ExperienceDetail = () => {
             <div className="pt-6 border-t border-outline-variant/20">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-headline font-extrabold text-lg text-primary flex items-center gap-2"><MapPin className="h-5 w-5" />Where you'll meet</h2>
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(exp.location)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
-                >
-                  Open in Google Maps <ExternalLink className="h-3.5 w-3.5" />
-                </a>
+                {hasUpcomingBookingHere && (
+                  <a
+                    href={exp.latitude && exp.longitude
+                      ? `https://www.google.com/maps/dir/?api=1&destination=${exp.latitude},${exp.longitude}`
+                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(exp.location)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                  >
+                    Open in Google Maps <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                )}
               </div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><MapPin className="h-3.5 w-3.5 text-primary" /></div>
                 <div>
-                  <p className="font-headline font-bold text-sm text-on-surface">{exp.location}</p>
-                  <p className="text-xs text-on-surface-variant">Exact meetup point shared after booking</p>
+                  <p className="font-headline font-bold text-sm text-on-surface">
+                    {hasUpcomingBookingHere ? (exp.address || exp.location) : exp.location}
+                  </p>
+                  {hasUpcomingBookingHere ? (
+                    <p className="text-xs text-primary dark:text-green-400 font-medium">You're booked — exact meetup point unlocked</p>
+                  ) : (
+                    <p className="text-xs text-on-surface-variant">Exact meetup point shared after booking</p>
+                  )}
                 </div>
               </div>
               <div className="relative w-full h-64 rounded-2xl overflow-hidden border border-outline-variant/20 shadow-sm bg-surface-container">
-                <iframe
-                  title={`Map of ${exp.location}`}
-                  className="w-full h-full"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://maps.google.com/maps?q=${encodeURIComponent(exp.location)}&output=embed&z=13`}
-                />
-                <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(exp.location)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-white dark:bg-zinc-800 text-primary text-xs font-bold px-3 py-1.5 rounded-lg shadow-md border border-outline-variant/20"
-                >
-                  <MapPin className="h-3 w-3" /> Get Directions
-                </a>
+                {hasUpcomingBookingHere ? (
+                  <>
+                    <iframe
+                      title={`Meetup point for ${exp.title}`}
+                      className="w-full h-full"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      src={exp.latitude && exp.longitude
+                        ? `https://maps.google.com/maps?q=${exp.latitude},${exp.longitude}&output=embed&z=17`
+                        : `https://maps.google.com/maps?q=${encodeURIComponent(exp.location)}&output=embed&z=15`}
+                    />
+                    <a
+                      href={exp.latitude && exp.longitude
+                        ? `https://www.google.com/maps/dir/?api=1&destination=${exp.latitude},${exp.longitude}`
+                        : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(exp.location)}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-white dark:bg-zinc-800 text-primary text-xs font-bold px-3 py-1.5 rounded-lg shadow-md border border-outline-variant/20"
+                    >
+                      <MapPin className="h-3 w-3" /> Get Directions
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <iframe
+                      title={`Area map for ${exp.title}`}
+                      className="w-full h-full blur-[4px] scale-110 pointer-events-none"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      src={`https://maps.google.com/maps?q=${encodeURIComponent(exp.location)}&output=embed&z=11`}
+                    />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/25 backdrop-blur-[1px]">
+                      <div className="bg-white dark:bg-zinc-900 rounded-2xl px-6 py-5 text-center shadow-xl border border-outline-variant/20 max-w-xs">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                          <MapPin className="h-5 w-5 text-primary" />
+                        </div>
+                        <p className="font-headline font-bold text-sm text-on-surface dark:text-white mb-1">Exact meetup point shared after booking</p>
+                        <p className="text-[11px] text-on-surface-variant dark:text-zinc-400">The precise pin drops as soon as your booking is confirmed.</p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -822,21 +1096,62 @@ const ExperienceDetail = () => {
               <div className="flex items-center gap-2 p-2.5 bg-tertiary-fixed/30 rounded-xl mb-4 text-xs font-medium text-on-tertiary-fixed-variant">
                 <AlertCircle className="h-3.5 w-3.5 shrink-0" /> Limited spots available
               </div>
+              {hasUpcomingBookingHere && (
+                <div className="mb-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 text-xs text-amber-950 dark:text-amber-100">
+                  <p className="font-headline font-bold">You already have an upcoming booking for this experience.</p>
+                  <Link to="/my-bookings" className="inline-block mt-1.5 font-bold text-primary dark:text-green-400 hover:underline">
+                    View My Bookings →
+                  </Link>
+                </div>
+              )}
               <div className="flex items-center justify-between mb-4 px-1">
                 <span className="text-xs font-bold text-on-surface-variant">Guests</span>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setGuests(g => Math.max(1, g - 1))} className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold hover:bg-primary hover:text-white transition-colors">−</button>
+                  <button
+                    type="button"
+                    disabled={hasUpcomingBookingHere}
+                    onClick={() => setGuests((g) => Math.max(1, g - 1))}
+                    className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold hover:bg-primary hover:text-white transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                  >
+                    −
+                  </button>
                   <span className="font-headline font-bold w-4 text-center text-sm">{guests}</span>
-                  <button onClick={() => setGuests(g => Math.min(exp.maxGuests, g + 1))} className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold hover:bg-primary hover:text-white transition-colors">+</button>
+                  <button
+                    type="button"
+                    disabled={hasUpcomingBookingHere}
+                    onClick={() => setGuests((g) => Math.min(exp.maxGuests, g + 1))}
+                    className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold hover:bg-primary hover:text-white transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                  >
+                    +
+                  </button>
                 </div>
               </div>
               <button
-                onClick={handleBook}
-                className="w-full py-3 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md shadow-primary/20 hover:scale-[0.98] transition-transform"
+                type="button"
+                disabled={checkoutLoading || hasUpcomingBookingHere}
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    navigate("/login", { state: { from: `/experiences/${id}` } });
+                    return;
+                  }
+                  void startCheckout();
+                }}
+                className="w-full py-3 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md shadow-primary/20 hover:scale-[0.98] transition-transform disabled:opacity-60 inline-flex items-center justify-center gap-2"
               >
-                {isAuthenticated ? "Book Now" : "Sign in to Book"}
+                {checkoutLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {!isAuthenticated
+                  ? "Sign in to Book"
+                  : hasUpcomingBookingHere
+                    ? "Already booked"
+                    : "Book Now — Pay with Chapa"}
               </button>
-              <p className="text-center text-[10px] text-on-surface-variant mt-2">You won't be charged yet</p>
+              <p className="text-center text-[10px] text-on-surface-variant mt-2">
+                {!isAuthenticated
+                  ? "Sign in to book and pay."
+                  : hasUpcomingBookingHere
+                    ? "You can’t book the same experience again until this booking is no longer upcoming."
+                    : "You’ll go to Chapa’s secure page to complete payment. After paying, you’ll return to My Bookings."}
+              </p>
               <div className="mt-4 pt-4 border-t border-outline-variant/20 space-y-2.5 text-xs">
                 <div className="flex justify-between text-on-surface-variant"><span>{exp.price.toLocaleString()} ETB × {guests} guest{guests > 1 ? "s" : ""}</span><span>{totalBase.toLocaleString()} ETB</span></div>
                 <div className="flex justify-between text-on-surface-variant"><span>Heritage preservation fee</span><span>{fee} ETB</span></div>
@@ -877,9 +1192,23 @@ const ExperienceDetail = () => {
             <div className="flex items-center justify-between mb-4 px-1">
               <span className="text-xs font-bold text-on-surface-variant">Guests</span>
               <div className="flex items-center gap-3">
-                <button onClick={() => setGuests(g => Math.max(1, g - 1))} className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold hover:bg-primary hover:text-white transition-colors">−</button>
+                <button
+                  type="button"
+                  disabled={hasUpcomingBookingHere}
+                  onClick={() => setGuests((g) => Math.max(1, g - 1))}
+                  className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold hover:bg-primary hover:text-white transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  −
+                </button>
                 <span className="font-headline font-bold w-4 text-center text-sm">{guests}</span>
-                <button onClick={() => setGuests(g => Math.min(exp.maxGuests, g + 1))} className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold hover:bg-primary hover:text-white transition-colors">+</button>
+                <button
+                  type="button"
+                  disabled={hasUpcomingBookingHere}
+                  onClick={() => setGuests((g) => Math.min(exp.maxGuests, g + 1))}
+                  className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold hover:bg-primary hover:text-white transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  +
+                </button>
               </div>
             </div>
             <div className="mb-4 pt-3 border-t border-outline-variant/20 space-y-2 text-xs">
@@ -888,12 +1217,17 @@ const ExperienceDetail = () => {
               <div className="flex justify-between font-headline font-bold text-primary text-sm pt-1.5 border-t border-outline-variant/20"><span>Total</span><span>{(exp.price * guests + 120).toLocaleString()} ETB</span></div>
             </div>
             <button
-              onClick={handleBook}
-              className="w-full py-3 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md"
+              type="button"
+              disabled={checkoutLoading || hasUpcomingBookingHere}
+              onClick={() => void startCheckout()}
+              className="w-full py-3 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md disabled:opacity-60 inline-flex items-center justify-center gap-2"
             >
-              Confirm Booking
+              {checkoutLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {hasUpcomingBookingHere ? "Already booked" : "Pay with Chapa"}
             </button>
-            <p className="text-center text-[10px] text-on-surface-variant mt-2">You won't be charged yet</p>
+            <p className="text-center text-[10px] text-on-surface-variant mt-2">
+              Opens secure checkout. After payment you’ll land on My Bookings to confirm your booking.
+            </p>
           </div>
         </div>
       )}

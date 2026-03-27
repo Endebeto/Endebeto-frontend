@@ -8,26 +8,27 @@ export interface HostApplication {
     email: string;
     photo?: string;
   };
-  status: "draft" | "pending" | "approved" | "rejected";
-  currentStep: number;
+  status: "draft" | "submitted" | "pending" | "approved" | "rejected";
   personalInfo?: {
     fullName: string;
+    email?: string;
     phoneNumber: string;
     cityRegion: string;
-    fullAddress: string;
+    fullAddress?: string;
     languagesSpoken: string[];
     aboutYou: string;
   };
   experienceDetails?: {
-    title: string;
-    description: string;
-    location: string;
-    duration: string;
-    maxGuests: number;
-    price: number;
-    category?: string;
+    experienceTypes: string[];
+    specialties: string[];
+    previousExperience?: string;
   };
-  mediaUrls?: string[];
+  media?: {
+    nationalIdFront?: string;
+    nationalIdBack?: string;
+    personalPhoto?: string;
+    hostingEnvironmentPhotos?: string[];
+  };
   rejectionReason?: string;
   submittedAt?: string;
   reviewedAt?: string;
@@ -39,21 +40,42 @@ export interface ApplicationResponse {
   data: { application: HostApplication };
 }
 
+export type SingleFileField = "nationalIdFront" | "nationalIdBack" | "personalPhoto" | "hostingEnvironmentPhotos";
+
+export interface UploadSingleFileResponse {
+  status: string;
+  message: string;
+  data: {
+    savedField: Partial<Record<SingleFileField, string | string[]>>;
+    media: HostApplication["media"];
+  };
+}
+
 export const hostApplicationsService = {
+  /** Step 1: create or update personal info. Backend reads req.body.personalInfo */
   start: (personalInfo: HostApplication["personalInfo"]) =>
-    api.post<ApplicationResponse>("/host-applications", personalInfo),
+    api.post<ApplicationResponse>("/host-applications", { personalInfo }),
 
-  updateExperienceDetails: (data: HostApplication["experienceDetails"]) =>
-    api.patch<ApplicationResponse>("/host-applications/experience-details", data),
+  /** Step 2: update experience details. Backend reads req.body.experienceDetails */
+  updateExperienceDetails: (experienceDetails: HostApplication["experienceDetails"]) =>
+    api.patch<ApplicationResponse>("/host-applications/experience-details", { experienceDetails }),
 
-  updateMedia: (mediaUrls: string[]) =>
-    api.patch<ApplicationResponse>("/host-applications/media", { mediaUrls }),
+  /** Upload a single file immediately on selection.
+   *  `field` must match one of the multer field names.
+   *  Timeout is 2 min — Cloudinary can be slow on larger images. */
+  uploadSingleFile: (field: SingleFileField, file: File) => {
+    const fd = new FormData();
+    fd.append(field, file);
+    return api.post<UploadSingleFileResponse>("/host-applications/upload-media", fd, {
+      timeout: 120_000,
+    });
+  },
 
-  uploadMedia: (formData: FormData) =>
-    api.post<{ status: string; urls: string[] }>("/host-applications/upload-media", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }),
+  /** Remove a hosting environment photo that was already uploaded. */
+  removeEnvPhoto: (url: string) =>
+    api.delete<{ status: string }>("/host-applications/env-photo", { data: { url } }),
 
+  /** Step 3b: finalize submission (all files must already be saved via uploadSingleFile) */
   submit: () =>
     api.post<ApplicationResponse>("/host-applications/submit"),
 
@@ -76,5 +98,5 @@ export const hostApplicationsService = {
     api.patch<ApplicationResponse>(`/host-applications/${applicationId}/approve`),
 
   reject: (applicationId: string, reason: string) =>
-    api.patch<ApplicationResponse>(`/host-applications/${applicationId}/reject`, { reason }),
+    api.patch<ApplicationResponse>(`/host-applications/${applicationId}/reject`, { rejectionReason: reason }),
 };

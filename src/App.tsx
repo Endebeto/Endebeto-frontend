@@ -17,7 +17,9 @@ import AdminExperiences from "./pages/AdminExperiences";
 import HostDashboard from "./pages/HostDashboard";
 import HostWallet from "./pages/HostWallet";
 import HostCreateExperience from "./pages/HostCreateExperience";
+import HostEditExperience from "./pages/HostEditExperience";
 import HostExperiences from "./pages/HostExperiences";
+import HostBookings from "./pages/HostBookings";
 import Profile from "./pages/Profile";
 import MyBookings from "./pages/MyBookings";
 import BecomeHost from "./pages/BecomeHost";
@@ -82,6 +84,8 @@ const AppRoutes = () => (
     <Route path="/host/wallet" element={<ProtectedRoute allowedRoles={["host"]}><HostWallet /></ProtectedRoute>} />
     <Route path="/host/experiences" element={<ProtectedRoute allowedRoles={["host"]}><HostExperiences /></ProtectedRoute>} />
     <Route path="/host/experiences/create" element={<ProtectedRoute allowedRoles={["host"]}><HostCreateExperience /></ProtectedRoute>} />
+    <Route path="/host/experiences/:id/edit" element={<ProtectedRoute allowedRoles={["host"]}><HostEditExperience /></ProtectedRoute>} />
+    <Route path="/host/bookings" element={<ProtectedRoute allowedRoles={["host"]}><HostBookings /></ProtectedRoute>} />
 
     {/* Admin */}
     <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />

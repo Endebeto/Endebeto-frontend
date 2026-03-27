@@ -9,11 +9,16 @@ const api = axios.create({
   timeout: 15000,
 });
 
-// Attach JWT from localStorage on every request
+// Attach JWT from localStorage on every request.
+// For FormData bodies, delete the default Content-Type so the browser sets
+// multipart/form-data with the correct boundary automatically.
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
   }
   return config;
 });

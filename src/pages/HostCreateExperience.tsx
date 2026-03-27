@@ -1,11 +1,16 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FileEdit, Banknote, ImageIcon, MapPin, Upload, X,
   CheckCircle2, Circle, Star, MessageCircle, ArrowLeft,
-  ShieldCheck, Plus,
+  ShieldCheck, Plus, Lock, AlertCircle, Save,
 } from "lucide-react";
 import HostLayout from "@/components/HostLayout";
+import LocationPicker, { type PinLocation } from "@/components/LocationPicker";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { experiencesService } from "@/services/experiences.service";
 
 /* ─── types ──────────────────────────────────────────── */
 interface FormData {
@@ -20,12 +25,6 @@ interface FormData {
   location: string;
   address: string;
 }
-
-const CATEGORIES = [
-  "Coffee Ceremony", "Highlands Hiking", "Historical Tour",
-  "Culinary Workshop", "Wildlife Safari", "Cultural Immersion",
-  "Photography Walk", "Language Exchange", "Arts & Crafts",
-];
 
 const STEPS = ["Info", "Schedule", "Media", "Location"];
 
@@ -63,16 +62,38 @@ function SuccessModal({ onDashboard, onPreview }: { onDashboard: () => void; onP
 /* ─── main component ─────────────────────────────────── */
 export default function HostCreateExperience() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Use only the categories the host was approved to offer
+  const approvedCategories = user?.approvedCategories ?? [];
+  const defaultCategory = approvedCategories[0] ?? "";
 
   const [form, setForm] = useState<FormData>({
-    title: "", summary: "", description: "", category: "Coffee Ceremony",
+    title: "", summary: "", description: "", category: defaultCategory,
     price: "", duration: "", maxGuests: "", nextOccurrenceAt: "",
     location: "", address: "",
   });
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [pin, setPin] = useState<PinLocation | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // Fetch existing experiences to enforce one-per-category limit.
+  // Uses the same queryKey + raw queryFn as HostExperiences so the cache is shared correctly.
+  const { data: myExpData } = useQuery({
+    queryKey: ["my-experiences"],
+    queryFn: () => experiencesService.getMyExperiences(),
+    staleTime: 30_000,
+  });
+  const myExperiences = myExpData?.data.data.data ?? [];
+
+  // Check if the currently selected category already has an active experience
+  const categoryTaken = myExperiences.some(
+    (e) => e.category === form.category && e.status !== "rejected"
+  );
 
   const coverRef   = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -97,18 +118,77 @@ export default function HostCreateExperience() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || categoryTaken) return;
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1800));
-    setSubmitting(false);
-    setSuccess(true);
+    try {
+      const fd = new FormData();
+      fd.append("title", form.title);
+      fd.append("summary", form.summary);
+      fd.append("description", form.description);
+      fd.append("category", form.category);
+      fd.append("price", form.price);
+      fd.append("duration", form.duration);
+      fd.append("maxGuests", form.maxGuests);
+      fd.append("nextOccurrenceAt", form.nextOccurrenceAt);
+      fd.append("location", form.location);
+      if (form.address) fd.append("address", form.address);
+      if (pin?.lat) fd.append("latitude", String(pin.lat));
+      if (pin?.lng) fd.append("longitude", String(pin.lng));
+      if (coverFile) fd.append("imageCover", coverFile);
+      galleryFiles.forEach((f) => fd.append("images", f));
+
+      await experiencesService.create(fd);
+      setSuccess(true);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to submit experience. Please try again.";
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /** Save the current form as a draft — only title + category required. */
+  const handleSaveDraft = async () => {
+    if (!form.title.trim()) {
+      toast.error("Please enter at least a title before saving a draft.");
+      return;
+    }
+    setSavingDraft(true);
+    try {
+      const fd = new FormData();
+      fd.append("status", "draft");
+      fd.append("title", form.title);
+      fd.append("category", form.category);
+      if (form.summary.trim())       fd.append("summary", form.summary);
+      if (form.description.trim())   fd.append("description", form.description);
+      if (form.price)                fd.append("price", form.price);
+      if (form.duration.trim())      fd.append("duration", form.duration);
+      if (form.maxGuests)            fd.append("maxGuests", form.maxGuests);
+      if (form.nextOccurrenceAt)     fd.append("nextOccurrenceAt", form.nextOccurrenceAt);
+      if (form.location.trim())      fd.append("location", form.location);
+      if (form.address.trim())       fd.append("address", form.address);
+      if (pin?.lat)                  fd.append("latitude", String(pin.lat));
+      if (pin?.lng)                  fd.append("longitude", String(pin.lng));
+      if (coverFile)                 fd.append("imageCover", coverFile);
+      galleryFiles.forEach((f) =>    fd.append("images", f));
+
+      await experiencesService.create(fd);
+      await queryClient.invalidateQueries({ queryKey: ["my-experiences"] });
+      toast.success("Draft saved! You can continue editing it from My Experiences.");
+      navigate("/host/experiences");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to save draft.";
+      toast.error(msg);
+    } finally {
+      setSavingDraft(false);
+    }
   };
 
   /* shared input class */
   const inputCls = "w-full bg-white dark:bg-zinc-800 border border-outline-variant/40 dark:border-zinc-600 rounded-xl px-4 py-3 text-on-surface dark:text-white text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 dark:focus:border-green-400/50 transition-all placeholder:text-on-surface-variant/50 dark:placeholder:text-zinc-500";
 
   return (
-    <HostLayout hostName="Selamawit T." hostInitials="ST" hostTitle="Superhost">
+    <HostLayout hostName={user?.name ?? "Host"} hostInitials={(user?.name ?? "H").slice(0, 2).toUpperCase()} hostTitle="Host">
       {success && (
         <SuccessModal
           onDashboard={() => navigate("/host-dashboard")}
@@ -188,10 +268,33 @@ export default function HostCreateExperience() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">Category</label>
-                    <select value={form.category} onChange={set("category")} className={inputCls}>
-                      {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-                    </select>
+                    <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface dark:text-white mb-2">
+                      Category
+                      <Lock className="h-3 w-3 text-on-surface-variant dark:text-zinc-500" />
+                    </label>
+                    {approvedCategories.length > 0 ? (
+                      <select value={form.category} onChange={set("category")} className={inputCls}>
+                        {approvedCategories.map((c) => (
+                          <option key={c} value={c}>
+                            {c}{myExperiences.some((e) => e.category === c && e.status !== "rejected") ? " (already used)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className={`${inputCls} text-on-surface-variant dark:text-zinc-500 cursor-not-allowed opacity-60`}>
+                        No approved categories
+                      </div>
+                    )}
+                    {categoryTaken ? (
+                      <p className="mt-1.5 text-xs text-error dark:text-red-400 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3 shrink-0" />
+                        You already have an active experience in this category. Each category allows only one experience.
+                      </p>
+                    ) : (
+                      <p className="mt-1.5 text-xs text-on-surface-variant dark:text-zinc-400">
+                        Limited to your approved host categories.
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">Max Guests <span className="text-error">*</span></label>
@@ -416,46 +519,41 @@ export default function HostCreateExperience() {
                   />
                 </div>
 
-                {/* map placeholder */}
-                <div className="h-52 bg-surface-container-high dark:bg-zinc-800 rounded-2xl overflow-hidden relative border border-outline-variant/10 dark:border-zinc-700">
-                  <img
-                    src="/imgs/hero-1.jpg"
-                    alt="Map"
-                    className="w-full h-full object-cover grayscale opacity-30 dark:opacity-20"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="bg-white dark:bg-zinc-900 px-6 py-3 rounded-full shadow-lg flex items-center gap-2 border border-outline-variant/20 dark:border-zinc-700">
-                      <MapPin className="h-4 w-4 text-primary dark:text-green-400 fill-primary/20" />
-                      <span className="font-bold text-primary dark:text-green-400 text-sm">Set Location Pin</span>
-                    </div>
-                  </div>
-                  <p className="absolute bottom-3 right-3 text-[10px] text-on-surface-variant dark:text-zinc-500 bg-white/80 dark:bg-zinc-900/80 px-2 py-1 rounded-full">
-                    Map integration coming soon
-                  </p>
-                </div>
+                <LocationPicker
+                  onChange={(loc) => {
+                    setPin(loc.lat ? loc : null);
+                    if (loc.displayName && !form.location) {
+                      setForm((p) => ({ ...p, location: loc.displayName.split(",").slice(0, 2).join(",").trim() }));
+                    }
+                  }}
+                />
               </div>
             </section>
 
             {/* ─ Form actions ─ */}
-            <div className="flex items-center justify-between pt-2 pb-8">
+            <div className="flex items-center justify-between pt-2 pb-8 gap-3 flex-wrap">
               <button
                 type="button"
-                onClick={() => navigate("/host-dashboard")}
-                className="px-6 py-3 rounded-xl text-primary dark:text-green-400 font-bold hover:bg-surface dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 text-sm"
+                disabled={savingDraft || submitting || !form.title.trim()}
+                onClick={handleSaveDraft}
+                className="px-6 py-3 rounded-xl border border-outline-variant/40 dark:border-zinc-600 text-on-surface dark:text-white font-bold hover:bg-surface dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <ArrowLeft className="h-4 w-4" />
-                Save as Draft
+                {savingDraft ? (
+                  <><div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />Saving…</>
+                ) : (
+                  <><Save className="h-4 w-4" />Save as Draft</>
+                )}
               </button>
 
               <button
                 type="submit"
-                disabled={!canSubmit || submitting}
+                disabled={!canSubmit || submitting || categoryTaken}
                 className="px-10 py-4 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all flex items-center gap-3"
               >
                 {submitting ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Submitting…</>
                 ) : (
-                  <><ShieldCheck className="h-5 w-5" />Submit for Approval</>
+                  <><ShieldCheck className="h-5 w-5" />Post Experience</>
                 )}
               </button>
             </div>

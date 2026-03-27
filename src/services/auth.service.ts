@@ -24,8 +24,11 @@ export interface User {
   email: string;
   photo?: string;
   bio?: string;
+  phone?: string;
   role: "user" | "admin";
   hostStatus: "none" | "pending" | "approved" | "rejected";
+  /** Categories the host was approved to offer. Populated from their host application on approval. */
+  approvedCategories?: string[];
   /** Present when returned from API; OAuth users may not use password change. */
   authProvider?: "local" | "google" | "facebook";
   /** Set when Google account is linked (same email merges on OAuth). */

@@ -87,7 +87,7 @@ const testimonials = [
 
 /* ─── component ───────────────────────────────────── */
 export default function BecomeHost() {
-  const revealRef = useScrollReveal();
+  const { ref: revealRef } = useScrollReveal();
 
   return (
     <div className="min-h-screen bg-surface dark:bg-zinc-950 font-body">

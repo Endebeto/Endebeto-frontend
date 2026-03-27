@@ -1,33 +1,23 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   CheckCircle2, Clock, XCircle, Loader2,
   ShieldCheck, Search, MessageSquare, Star,
-  FileText, Pencil, Download, ChevronRight, Home,
-  RefreshCw, ArrowRight, Users,
+  FileText, ChevronRight, Home,
+  RefreshCw, ArrowRight, Users, AlertCircle, Mail,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { hostApplicationsService } from "@/services/hostApplications.service";
+import { toast } from "sonner";
 
 /* ─── types ──────────────────────────────────────────── */
 type AppStatus = "draft" | "submitted" | "pending" | "approved" | "rejected";
 
-/* ─── mock data ──────────────────────────────────────── */
-const MOCK = {
-  status: "pending" as AppStatus,
-  applicantName: "Selamawit Tadesse",
-  submittedAt: "Nov 16, 2025",
-  updatedAt: "Nov 18, 2025",
-  estimatedDecision: "Estimated 3–5 days",
-  rejectionReason: "",
-};
-
-/* ─── horizontal timeline config ────────────────────── */
-const STAGES = [
-  { key: "draft",     label: "Draft",          dateFn: () => "Completed" },
-  { key: "submitted", label: "Submitted",       dateFn: () => MOCK.submittedAt },
-  { key: "pending",   label: "Pending Review",  dateFn: () => "In Progress" },
-  { key: "approved",  label: "Final Decision",  dateFn: () => MOCK.estimatedDecision },
-] as const;
+/* ─── helpers ────────────────────────────────────────── */
+function fmtDate(iso?: string) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
 
 const STATUS_ORDER: AppStatus[] = ["draft", "submitted", "pending", "approved"];
 
@@ -62,12 +52,70 @@ const PROCESS_STEPS = [
 
 /* ─── component ──────────────────────────────────────── */
 export default function HostApplicationStatus() {
-  const [status] = useState<AppStatus>(MOCK.status);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["my-host-application"],
+    queryFn: async () => {
+      const res = await hostApplicationsService.getMyApplication();
+      return res.data.data.application;
+    },
+    retry: 1,
+  });
+
+  const reapplyMutation = useMutation({
+    mutationFn: () => hostApplicationsService.reapply(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-host-application"] });
+      toast.success("Application reset. You can now update and resubmit.");
+      navigate("/host/apply");
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to reset application.";
+      toast.error(msg);
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-surface-container-low dark:bg-zinc-950 font-body flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="min-h-screen bg-surface-container-low dark:bg-zinc-950 font-body flex items-center justify-center">
+        <div className="text-center space-y-4 px-4">
+          <AlertCircle className="h-10 w-10 text-amber-500 mx-auto" />
+          <p className="text-on-surface dark:text-white font-semibold">No application found.</p>
+          <Link to="/host/apply" className="inline-flex items-center gap-2 bg-primary text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-primary/90 transition-colors">
+            Start Application <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const status      = data.status as AppStatus;
   const activeStage = getActiveStage(status);
 
   const isApproved = status === "approved";
   const isRejected = status === "rejected";
   const isPending  = status === "pending" || status === "submitted";
+
+  const submittedLabel  = fmtDate(data.submittedAt);
+  const updatedLabel    = fmtDate(data.reviewedAt ?? data.submittedAt ?? data.createdAt);
+  const rejectionReason = data.rejectionReason ?? "";
+
+  const STAGES = [
+    { key: "draft",     label: "Draft",          sub: "Completed" },
+    { key: "submitted", label: "Submitted",       sub: submittedLabel },
+    { key: "pending",   label: "Pending Review",  sub: "In Progress" },
+    { key: "approved",  label: "Final Decision",  sub: isApproved ? "Approved" : isRejected ? "Rejected" : "Estimated 3–5 days" },
+  ] as const;
 
   return (
     <div className="min-h-screen bg-surface-container-low dark:bg-zinc-950 font-body">
@@ -142,7 +190,7 @@ export default function HostApplicationStatus() {
                       done    ? "text-on-surface-variant dark:text-zinc-400" :
                                 "text-on-surface-variant/60 dark:text-zinc-600"
                     }`}>
-                      {stage.dateFn()}
+                      {stage.sub}
                     </p>
 
                     {/* active badge */}
@@ -200,10 +248,10 @@ export default function HostApplicationStatus() {
             </div>
 
             {/* rejection reason */}
-            {isRejected && MOCK.rejectionReason && (
+            {isRejected && rejectionReason && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200/60 dark:border-red-800/40 rounded-xl p-4 mb-4">
                 <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-1">Reason</p>
-                <p className="text-sm text-red-700 dark:text-red-300 leading-relaxed">{MOCK.rejectionReason}</p>
+                <p className="text-sm text-red-700 dark:text-red-300 leading-relaxed">{rejectionReason}</p>
               </div>
             )}
 
@@ -217,7 +265,7 @@ export default function HostApplicationStatus() {
                               "Awaiting Submission"}
               </span>
               <span className="ml-auto text-[11px] text-on-surface-variant/70 dark:text-zinc-500">
-                Updated {MOCK.updatedAt}
+                Updated {updatedLabel}
               </span>
             </div>
           </div>
@@ -294,10 +342,18 @@ export default function HostApplicationStatus() {
 
           {isRejected && (
             <div className="mt-6 pt-6 border-t border-outline-variant/10 dark:border-zinc-800">
-              <Link to="/host/apply"
-                className="inline-flex items-center gap-2 bg-primary text-white font-headline font-bold text-sm px-6 py-3 rounded-xl hover:bg-primary/90 transition-colors shadow-sm">
-                <RefreshCw className="h-4 w-4" /> Reapply Now
-              </Link>
+              <button
+                type="button"
+                onClick={() => reapplyMutation.mutate()}
+                disabled={reapplyMutation.isPending}
+                className="inline-flex items-center gap-2 bg-primary text-white font-headline font-bold text-sm px-6 py-3 rounded-xl hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm"
+              >
+                {reapplyMutation.isPending ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" />Resetting…</>
+                ) : (
+                  <><RefreshCw className="h-4 w-4" /> Reapply Now</>
+                )}
+              </button>
             </div>
           )}
         </div>
@@ -305,19 +361,13 @@ export default function HostApplicationStatus() {
         {/* ── Bottom action bar ── */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-outline-variant/15 dark:border-zinc-800 shadow-sm px-5 md:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-on-surface dark:text-white">Need to change something?</p>
-            <p className="text-xs text-on-surface-variant dark:text-zinc-400">Updates are accepted until the review begins.</p>
+            <p className="text-sm font-semibold text-on-surface dark:text-white">Questions about your application?</p>
+            <p className="text-xs text-on-surface-variant dark:text-zinc-400">Our team typically responds within 24 hours.</p>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <Link to="/host/apply"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-primary dark:text-green-400 hover:underline underline-offset-2 transition-colors">
-              <Pencil className="h-3.5 w-3.5" /> Edit Application
-            </Link>
-            <span className="w-px h-4 bg-outline-variant/30 dark:bg-zinc-700" />
-            <button className="inline-flex items-center gap-1.5 text-xs font-bold text-on-surface-variant dark:text-zinc-400 hover:text-primary dark:hover:text-green-400 transition-colors">
-              <Download className="h-3.5 w-3.5" /> View Submission PDF
-            </button>
-          </div>
+          <a href="mailto:support@endebeto.com"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-primary dark:text-green-400 hover:underline underline-offset-2 transition-colors shrink-0">
+            <Mail className="h-3.5 w-3.5" /> support@endebeto.com
+          </a>
         </div>
 
       </div>

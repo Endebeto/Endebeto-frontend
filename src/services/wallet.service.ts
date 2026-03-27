@@ -1,43 +1,62 @@
 import api from "@/lib/api";
 
+// Amounts from the backend are in cents (ETB 1 = 100 cents).
+// Divide by 100 to display in ETB.
+
 export interface Wallet {
-  _id: string;
-  host: string;
-  balance: number;
-  totalEarned: number;
-  totalWithdrawn: number;
-  currency: string;
-  updatedAt: string;
+  availableBalanceCents: number;
+  pendingPayoutCents:    number;
+  currency:              string;
+}
+
+export interface WithdrawalDestination {
+  bankName?:           string;
+  accountName?:        string;
+  accountNumberLast4?: string;
 }
 
 export interface WithdrawalRequest {
-  _id: string;
-  host: string;
-  amount: number;
-  status: "pending" | "approved" | "paid" | "failed";
-  bankDetails?: {
-    bankName: string;
-    accountNumber: string;
-    accountName: string;
-  };
-  createdAt: string;
+  _id:         string;
+  amountCents: number;
+  currency:    string;
+  status:      "pending_transfer" | "paid" | "failed" | "canceled";
+  destination?: WithdrawalDestination;
+  createdAt:   string;
+  processedAt?: string;
+  failureReason?: string;
 }
 
 export const walletService = {
   getWallet: () =>
     api.get<{ status: string; data: { wallet: Wallet } }>("/wallet"),
 
-  getWithdrawals: () =>
-    api.get<{ status: string; results: number; data: { withdrawals: WithdrawalRequest[] } }>(
-      "/withdrawals"
-    ),
+  getWithdrawals: (params?: { page?: number; limit?: number }) =>
+    api.get<{
+      status: string;
+      results: number;
+      total: number;
+      page: number;
+      limit: number;
+      data: { withdrawals: WithdrawalRequest[] };
+    }>("/withdrawals", { params }),
 
+  // amountETB: the human-readable amount in ETB (e.g. 500)
+  // The backend expects amountCents, so we multiply by 100 here.
   createWithdrawal: (payload: {
-    amount: number;
-    bankDetails: WithdrawalRequest["bankDetails"];
+    amountETB: number;
+    bankName: string;
+    accountName: string;
+    accountNumber: string;
   }) =>
     api.post<{ status: string; data: { withdrawal: WithdrawalRequest } }>(
       "/withdrawals",
-      payload
+      {
+        amountCents: Math.round(payload.amountETB * 100),
+        destination: {
+          bankName:           payload.bankName,
+          accountName:        payload.accountName,
+          accountNumberLast4: payload.accountNumber.slice(-4),
+        },
+      }
     ),
 };

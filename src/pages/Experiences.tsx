@@ -72,34 +72,73 @@ function FilterDropdown({
 /* ─── card ──────────────────────────────────────────────── */
 
 function ExperienceBrowseCard({ exp }: { exp: Experience }) {
-  const badge =
-    exp.ratingsAverage >= 4.9
-      ? "Top Rated"
-      : exp.ratingsAverage >= 4.7
-      ? "Popular"
-      : null;
+  const soldOut = exp.isSoldOut === true;
+  const fewLeft = !soldOut && typeof exp.spotsLeft === "number" && exp.spotsLeft > 0 && exp.spotsLeft <= 3;
+
+  const badge = soldOut
+    ? null
+    : exp.ratingsAverage >= 4.9
+    ? "Top Rated"
+    : exp.ratingsAverage >= 4.7
+    ? "Popular"
+    : null;
 
   return (
-    <Link to={`/experiences/${exp._id}`} className="group cursor-pointer block">
+    <Link
+      to={`/experiences/${exp._id}`}
+      className={`group cursor-pointer block ${soldOut ? "opacity-70" : ""}`}
+    >
       <div className="relative aspect-[3/4] rounded-2xl overflow-hidden mb-2.5 shadow-sm group-hover:shadow-lg transition-all duration-500">
         <img
           src={exp.imageCover}
           alt={exp.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          className={`w-full h-full object-cover transition-transform duration-700 ${
+            soldOut ? "grayscale-[30%]" : "group-hover:scale-105"
+          }`}
         />
-        {badge && (
-          <div className="absolute top-3 left-3">
-            <span className="bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
-              {badge}
+
+        {/* Sold Out overlay */}
+        {soldOut && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <span className="bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-lg">
+              Sold Out
             </span>
           </div>
         )}
+
+        {/* Top-left badge (Top Rated / Popular / few spots left) */}
+        {(badge || fewLeft) && (
+          <div className="absolute top-3 left-3">
+            {badge && (
+              <span className="bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                {badge}
+              </span>
+            )}
+            {fewLeft && (
+              <span className="bg-amber-500 text-white px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                {exp.spotsLeft} spot{exp.spotsLeft === 1 ? "" : "s"} left
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Hover CTA */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-          <button className="w-full bg-white text-primary font-headline font-bold py-1.5 text-xs rounded-lg transform translate-y-3 group-hover:translate-y-0 transition-transform duration-300">
-            Book Now
-          </button>
+          {soldOut ? (
+            <button
+              disabled
+              className="w-full bg-white/60 text-gray-500 font-headline font-bold py-1.5 text-xs rounded-lg cursor-not-allowed"
+            >
+              Sold Out
+            </button>
+          ) : (
+            <button className="w-full bg-white text-primary font-headline font-bold py-1.5 text-xs rounded-lg transform translate-y-3 group-hover:translate-y-0 transition-transform duration-300">
+              Book Now
+            </button>
+          )}
         </div>
       </div>
+
       <div className="px-0.5">
         <div className="flex justify-between items-start mb-0.5 gap-2">
           <h3 className="font-headline font-bold text-sm text-primary leading-snug line-clamp-2">
@@ -115,7 +154,7 @@ function ExperienceBrowseCard({ exp }: { exp: Experience }) {
           {exp.location} &bull; {exp.duration}
         </p>
         <div className="flex items-center gap-1">
-          <span className="text-sm font-black text-primary font-headline">
+          <span className={`text-sm font-black font-headline ${soldOut ? "text-on-surface-variant" : "text-primary"}`}>
             {exp.price.toLocaleString()} ETB
           </span>
           <span className="text-[11px] text-on-surface-variant">/ person</span>

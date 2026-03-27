@@ -48,6 +48,14 @@ export interface CheckoutSessionResponse {
   tx_ref: string;
 }
 
+/** POST /bookings/verify — shape varies by Chapa outcome */
+export interface VerifyPaymentResponse {
+  status: "success" | "failed";
+  message?: string;
+  booking?: Booking;
+  raw?: unknown;
+}
+
 export const bookingsService = {
   getCheckoutSession: (experienceId: string, qty = 1) =>
     api.get<CheckoutSessionResponse>(
@@ -55,8 +63,9 @@ export const bookingsService = {
       { params: { qty } }
     ),
 
+  /** Chapa return / callback: confirms payment and may create booking (requires matching gateway meta). */
   verifyPayment: (txRef: string) =>
-    api.post(`/bookings/verify`, { tx_ref: txRef }),
+    api.post<VerifyPaymentResponse>(`/bookings/verify`, { tx_ref: txRef }),
 
   getMyBookings: (params?: { page?: number; limit?: number }) =>
     api.get<BookingListResponse>("/bookings/me", { params }),

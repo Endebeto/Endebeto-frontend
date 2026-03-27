@@ -13,6 +13,7 @@ export interface Experience {
   id: string;
   title: string;
   slug: string;
+  category: string;
   description: string;
   summary: string;
   price: number;
@@ -25,8 +26,12 @@ export interface Experience {
     name: string;
     email: string;
     photo?: string;
+    phone?: string;
   };
   location: string;
+  address?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   images: string[];
   imageCover: string;
   ratingsAverage: number;
@@ -34,6 +39,8 @@ export interface Experience {
   status?: "draft" | "pending" | "approved" | "rejected";
   updatedAt: string;
   reviews?: Review[];
+  isSoldOut?: boolean;
+  spotsLeft?: number | null;
 }
 
 // factory.getAll  → { status, results: totalCount, data: { data: T[] } }
@@ -84,12 +91,12 @@ export const experiencesService = {
     api.get<ExperienceListResponse>("/experiences/pending"),
 
   create: (data: FormData) =>
-    api.post<ExperienceResponse>("/experiences", data, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }),
+    api.post<ExperienceResponse>("/experiences", data, { timeout: 120_000 }),
 
-  update: (id: string, data: Partial<Experience>) =>
-    api.patch<ExperienceResponse>(`/experiences/${id}`, data),
+  update: (id: string, data: Partial<Experience> | FormData) =>
+    api.patch<ExperienceResponse>(`/experiences/${id}`, data, {
+      timeout: data instanceof FormData ? 120_000 : 15_000,
+    }),
 
   delete: (id: string) =>
     api.delete(`/experiences/${id}`),
@@ -105,6 +112,9 @@ export const experiencesService = {
 
   getMyExperiences: (params?: { page?: number; limit?: number }) =>
     api.get<ExperienceListResponse>("/experiences/mine", { params }),
+
+  getMyOne: (id: string) =>
+    api.get<ExperienceResponse>(`/experiences/mine/${id}`),
 
   getAvailability: (id: string) =>
     api.get<{
