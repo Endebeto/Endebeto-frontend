@@ -29,10 +29,12 @@ const statusLabel: Record<string, string> = {
   upcoming: "Upcoming", completed: "Completed", expired: "Expired", cancelled: "Cancelled",
 };
 
+const initials = (name?: string) =>
+  (name ?? "?").split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+
 /* ─── component ──────────────────────────────────────── */
 export default function HostDashboard() {
   const { user } = useAuth();
-  const [search, setSearch] = useState("");
   const [phoneNudgeDismissed, setPhoneNudgeDismissed] = useState(
     () => localStorage.getItem("hostPhoneNudgeDismissed") === "1"
   );
@@ -62,11 +64,16 @@ export default function HostDashboard() {
   });
 
   const allBookings: Booking[] = bookingsData?.data.data ?? [];
-  const totalEarnings: number  = bookingsData?.data.totalEarnings ?? 0;
   const summary                = bookingsData?.data.summary ?? { upcoming: 0, completed: 0, expired: 0 };
 
   const wallet = walletData?.data.data.wallet;
   const availableBalanceCents = wallet?.availableBalanceCents ?? 0;
+  const totalEarnedCents      = wallet?.totalEarnedCents ?? 0;
+
+  // Total confirmed guests across all upcoming bookings (sum of quantity, not booking count)
+  const upcomingGuestCount = allBookings
+    .filter(b => b.status === "upcoming")
+    .reduce((sum, b) => sum + (b.quantity ?? 1), 0);
   const etb = (cents: number) => (cents / 100).toLocaleString("en-ET", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const recentBookings         = allBookings.slice(0, 5);
 
@@ -106,8 +113,6 @@ export default function HostDashboard() {
       hostName={user?.name ?? "Host"}
       hostInitials={(user?.name ?? "H").slice(0, 2).toUpperCase()}
       hostTitle="Host"
-      searchValue={search}
-      onSearch={setSearch}
     >
       <main className="p-4 md:p-10 max-w-[1440px]">
 
@@ -174,7 +179,7 @@ export default function HostDashboard() {
                     </h3>
                     <p className="text-[9px] md:text-xs text-primary-container dark:text-green-500 mt-1 flex items-center gap-0.5 font-semibold">
                       <TrendingUp className="h-2.5 w-2.5 md:h-3 md:w-3 shrink-0" />
-                      <span className="truncate">ETB {totalEarnings.toLocaleString()} total earned</span>
+                      <span className="truncate">ETB {etb(totalEarnedCents)} net earned</span>
                     </p>
                   </>
                 )}
@@ -187,15 +192,17 @@ export default function HostDashboard() {
                 <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-secondary-container/40 dark:bg-emerald-900/30 flex items-center justify-center mb-2 md:mb-4">
                   <CalendarDays className="h-3.5 w-3.5 md:h-5 md:w-5 text-primary dark:text-green-400" />
                 </div>
-                <p className="text-[8px] md:text-[10px] font-bold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wider leading-tight">Upcoming</p>
+                <p className="text-[8px] md:text-[10px] font-bold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wider leading-tight">Upcoming Bookings</p>
               </div>
               <div className="mt-2 md:mt-4">
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin text-primary dark:text-green-400" />
                 ) : (
                   <>
-                    <h3 className="text-2xl md:text-4xl font-headline font-bold text-primary dark:text-green-400">{summary.upcoming}</h3>
-                    <p className="text-[9px] md:text-xs text-on-surface-variant dark:text-zinc-400 mt-1 font-medium">Active bookings</p>
+                    <h3 className="text-2xl md:text-4xl font-headline font-bold text-primary dark:text-green-400">{upcomingGuestCount}</h3>
+                    <p className="text-[9px] md:text-xs text-on-surface-variant dark:text-zinc-400 mt-1 font-medium">
+                      {summary.upcoming} booking{summary.upcoming !== 1 ? "s" : ""}
+                    </p>
                   </>
                 )}
               </div>
@@ -207,7 +214,7 @@ export default function HostDashboard() {
                 <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-secondary-container/40 dark:bg-emerald-900/30 flex items-center justify-center mb-2 md:mb-4">
                   <Compass className="h-3.5 w-3.5 md:h-5 md:w-5 text-primary dark:text-green-400" />
                 </div>
-                <p className="text-[8px] md:text-[10px] font-bold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wider leading-tight">Active Exp.</p>
+                <p className="text-[8px] md:text-[10px] font-bold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wider leading-tight">Live Experiences</p>
               </div>
               <div className="mt-2 md:mt-4">
                 {isLoading ? (
@@ -215,7 +222,7 @@ export default function HostDashboard() {
                 ) : (
                   <>
                     <h3 className="text-2xl md:text-4xl font-headline font-bold text-primary dark:text-green-400">{activeCount}</h3>
-                    <p className="text-[9px] md:text-xs text-on-surface-variant dark:text-zinc-400 mt-1 font-medium">Live &amp; booking</p>
+                    <p className="text-[9px] md:text-xs text-on-surface-variant dark:text-zinc-400 mt-1 font-medium">Open for booking</p>
                   </>
                 )}
               </div>
@@ -257,7 +264,7 @@ export default function HostDashboard() {
             <div className="bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden shadow-[0_20px_40px_-10px_rgba(0,53,39,0.06)] border border-outline-variant/10 dark:border-zinc-800">
               <div className="px-4 md:px-8 py-4 md:py-6 flex justify-between items-center">
                 <h3 className="text-base md:text-xl font-headline font-bold text-primary dark:text-green-400">Recent Bookings</h3>
-                <Link to="/host/experiences"
+                <Link to="/host/bookings"
                   className="text-sm font-semibold text-primary dark:text-green-400 underline underline-offset-4 decoration-primary/30 hover:decoration-primary transition-colors">
                   View all
                 </Link>
@@ -285,9 +292,10 @@ export default function HostDashboard() {
                   <table className="w-full text-left min-w-[520px]">
                     <thead>
                       <tr className="bg-surface-container-low dark:bg-zinc-800 text-on-surface-variant dark:text-zinc-400 text-[10px] uppercase tracking-widest font-bold">
-                        <th className="px-4 md:px-8 py-4">Experience</th>
+                        <th className="px-4 md:px-8 py-4">Guest</th>
+                        <th className="px-4 py-4">Experience</th>
                         <th className="px-4 py-4">Date</th>
-                        <th className="px-4 py-4">Guests</th>
+                        <th className="px-4 py-4">Qty</th>
                         <th className="px-4 py-4">Status</th>
                         <th className="px-8 py-4 text-right">Total</th>
                       </tr>
@@ -295,9 +303,34 @@ export default function HostDashboard() {
                     <tbody className="divide-y divide-surface-container-low dark:divide-zinc-800">
                       {recentBookings.map((b) => (
                         <tr key={b._id} className="hover:bg-surface-container-low/40 dark:hover:bg-zinc-800/40 transition-colors">
-                          <td className="px-4 md:px-8 py-5">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-surface-container dark:bg-zinc-700">
+
+                          {/* Guest */}
+                          <td className="px-4 md:px-8 py-4">
+                            <div className="flex items-center gap-2.5">
+                              {b.user?.photo ? (
+                                <img
+                                  src={b.user.photo}
+                                  alt={b.user.name}
+                                  className="w-8 h-8 rounded-full object-cover shrink-0 border border-outline-variant/20 dark:border-zinc-700"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-secondary-container dark:bg-emerald-900/50 flex items-center justify-center shrink-0 text-[10px] font-bold text-primary dark:text-green-400">
+                                  {initials(b.user?.name)}
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-on-surface dark:text-white truncate max-w-[100px]">
+                                  {b.user?.name ?? "—"}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Experience */}
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-surface-container dark:bg-zinc-700">
                                 <img
                                   src={b.experience?.imageCover}
                                   alt={b.experience?.title}
@@ -305,26 +338,27 @@ export default function HostDashboard() {
                                   onError={(e) => { (e.target as HTMLImageElement).src = "/imgs/hero-1.jpg"; }}
                                 />
                               </div>
-                              <p className="text-sm font-bold text-primary dark:text-green-400 line-clamp-1 max-w-[180px]">
+                              <p className="text-xs font-bold text-primary dark:text-green-400 line-clamp-1 max-w-[140px]">
                                 {b.experience?.title ?? "—"}
                               </p>
                             </div>
                           </td>
-                          <td className="px-4 py-5 text-sm text-on-surface-variant dark:text-zinc-400 whitespace-nowrap">
+
+                          <td className="px-4 py-4 text-xs text-on-surface-variant dark:text-zinc-400 whitespace-nowrap">
                             {fmtDate(b.experienceDate ?? b.createdAt)}
                           </td>
-                          <td className="px-4 py-5 text-sm text-on-surface-variant dark:text-zinc-400">
-                            <span className="flex items-center gap-1.5">
-                              <Users className="h-3.5 w-3.5" />{b.quantity}
+                          <td className="px-4 py-4 text-xs text-on-surface-variant dark:text-zinc-400">
+                            <span className="flex items-center gap-1">
+                              <Users className="h-3 w-3" />{b.quantity}
                             </span>
                           </td>
-                          <td className="px-4 py-5">
+                          <td className="px-4 py-4">
                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusStyle[b.status] ?? ""}`}>
                               {statusLabel[b.status] ?? b.status}
                             </span>
                           </td>
-                          <td className="px-4 md:px-8 py-5 text-right font-bold text-primary dark:text-green-400 text-sm whitespace-nowrap">
-                            {(b.price * b.quantity).toLocaleString()} <span className="font-normal text-on-surface-variant dark:text-zinc-400 text-xs">ETB</span>
+                          <td className="px-4 md:px-8 py-4 text-right font-bold text-primary dark:text-green-400 text-xs whitespace-nowrap">
+                            {(b.price * b.quantity).toLocaleString()} <span className="font-normal text-on-surface-variant dark:text-zinc-400">ETB</span>
                           </td>
                         </tr>
                       ))}

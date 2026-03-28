@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Compass, PlusCircle, Wallet, Users,
-  Settings, LogOut, Search, Bell, HelpCircle, Menu, X,
+  Settings, LogOut, Bell, HelpCircle, Menu, X,
 } from "lucide-react";
 
 const navLinks = [
@@ -18,8 +18,6 @@ interface HostLayoutProps {
   hostName?: string;
   hostInitials?: string;
   hostTitle?: string;
-  searchValue?: string;
-  onSearch?: (v: string) => void;
 }
 
 /** Compute two-letter initials from a full name (first + last word). */
@@ -35,8 +33,6 @@ export default function HostLayout({
   hostName = "Selamawit T.",
   hostInitials,
   hostTitle = "Superhost",
-  searchValue = "",
-  onSearch,
 }: HostLayoutProps) {
   const { pathname } = useLocation();
   const displayInitials = hostInitials || computeInitials(hostName);
@@ -167,18 +163,6 @@ export default function HostLayout({
           </div>
 
           <div className="flex items-center gap-3 md:gap-6">
-            {/* Search — tablet+ */}
-            <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-on-surface-variant dark:text-zinc-400" />
-              <input
-                type="text"
-                value={searchValue}
-                onChange={(e) => onSearch?.(e.target.value)}
-                placeholder="Search experiences or bookings…"
-                className="pl-9 pr-4 py-2 bg-surface-container-low dark:bg-zinc-800 border-0 rounded-full w-56 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-on-surface-variant/50 dark:placeholder:text-zinc-500 dark:text-white"
-              />
-            </div>
-
             {/* Icons */}
             <div className="flex items-center gap-2 text-on-surface-variant dark:text-zinc-400">
               <button className="p-1.5 rounded-full hover:text-primary dark:hover:text-green-400 hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors">

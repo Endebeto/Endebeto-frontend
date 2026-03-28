@@ -298,8 +298,6 @@ export default function HostExperiences() {
       hostName={user?.name ?? "Host"}
       hostInitials={(user?.name ?? "H").slice(0, 2).toUpperCase()}
       hostTitle="Host"
-      searchValue={search}
-      onSearch={setSearch}
     >
       {rescheduleExp && (
         <RescheduleModal exp={rescheduleExp} onClose={() => setReschedule(null)} />

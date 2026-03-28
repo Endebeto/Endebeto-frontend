@@ -194,8 +194,6 @@ export default function HostBookings() {
     <HostLayout
       hostName={user?.name ?? "Host"}
       hostTitle="Host"
-      searchValue={search}
-      onSearch={handleSearch}
     >
       <main className="p-4 md:p-10 max-w-[1440px]">
 

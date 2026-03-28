@@ -6,7 +6,37 @@ import api from "@/lib/api";
 export interface Wallet {
   availableBalanceCents: number;
   pendingPayoutCents:    number;
+  heldEarningsCents:     number;
+  payoutInTransitCents:  number;
   currency:              string;
+  totalEarnedCents:      number;
+  totalFeesCents:        number;
+}
+
+export interface EarningRow {
+  _id: string;
+  date: string;
+  type: "pending_credit" | "credit";
+  status: "held" | "released";
+  grossCents: number;
+  feeCents: number;
+  netCents: number;
+  booking: {
+    _id: string;
+    status: string;
+    quantity: number;
+    experience: { title: string; imageCover?: string } | null;
+    guest: { name: string; photo?: string } | null;
+  } | null;
+}
+
+export interface EarningsListResponse {
+  status: string;
+  results: number;
+  total: number;
+  page: number;
+  pages: number;
+  data: { earnings: EarningRow[] };
 }
 
 export interface WithdrawalDestination {
@@ -29,6 +59,9 @@ export interface WithdrawalRequest {
 export const walletService = {
   getWallet: () =>
     api.get<{ status: string; data: { wallet: Wallet } }>("/wallet"),
+
+  getEarnings: (params?: { page?: number; limit?: number }) =>
+    api.get<EarningsListResponse>("/wallet/earnings", { params }),
 
   getWithdrawals: (params?: { page?: number; limit?: number }) =>
     api.get<{

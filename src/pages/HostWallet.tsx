@@ -4,12 +4,13 @@ import {
   Banknote, Wallet, ArrowDownToLine, FileText,
   ShieldCheck, Filter, Download,
   ChevronLeft, ChevronRight, X, AlertCircle,
-  TrendingUp, Info, Loader2, ChevronDown, UserCheck,
+  TrendingUp, Info, Loader2, ChevronDown, UserCheck, Clock, ArrowUpFromLine,
+  TrendingDown, CheckCircle2, Search,
 } from "lucide-react";
 import HostLayout from "@/components/HostLayout";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { walletService, type WithdrawalRequest } from "@/services/wallet.service";
+import { walletService, type WithdrawalRequest, type EarningRow } from "@/services/wallet.service";
 
 /* ─── helpers ────────────────────────────────────────── */
 const etb = (cents: number) =>
@@ -371,6 +372,86 @@ function TxRow({ w }: { w: WithdrawalRequest }) {
   );
 }
 
+/* ─── earning row ────────────────────────────────────── */
+function EarningRowComponent({ row }: { row: EarningRow }) {
+  const isHeld     = row.status === "held";
+  const initials   = (name?: string) =>
+    (name ?? "?").split(" ").filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+
+  return (
+    <tr className="hover:bg-surface-container-low/30 dark:hover:bg-zinc-800/30 transition-colors">
+      {/* Date */}
+      <td className="px-8 py-5 text-sm text-on-surface-variant dark:text-zinc-400 whitespace-nowrap">
+        {fmtDate(row.date)}
+      </td>
+
+      {/* Experience */}
+      <td className="px-4 py-5">
+        <div className="flex items-center gap-2.5 min-w-0">
+          {row.booking?.experience?.imageCover ? (
+            <img
+              src={row.booking.experience.imageCover}
+              alt={row.booking.experience.title}
+              className="w-8 h-8 rounded-lg object-cover shrink-0"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-surface-container dark:bg-zinc-700 shrink-0" />
+          )}
+          <span className="text-xs font-semibold text-on-surface dark:text-white truncate max-w-[160px]">
+            {row.booking?.experience?.title ?? "—"}
+          </span>
+        </div>
+      </td>
+
+      {/* Guest */}
+      <td className="px-4 py-5">
+        <div className="flex items-center gap-2">
+          {row.booking?.guest?.photo ? (
+            <img src={row.booking.guest.photo} alt={row.booking.guest.name}
+              className="w-7 h-7 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-secondary-container dark:bg-emerald-900/50 flex items-center justify-center text-[9px] font-bold text-primary dark:text-green-400 shrink-0">
+              {initials(row.booking?.guest?.name)}
+            </div>
+          )}
+          <span className="text-xs text-on-surface-variant dark:text-zinc-400 truncate max-w-[100px]">
+            {row.booking?.guest?.name ?? "—"}
+          </span>
+        </div>
+      </td>
+
+      {/* Gross */}
+      <td className="px-4 py-5 text-xs text-on-surface-variant dark:text-zinc-400 whitespace-nowrap">
+        ETB {etb(row.grossCents)}
+      </td>
+
+      {/* Fee */}
+      <td className="px-4 py-5 text-xs text-error dark:text-red-400 whitespace-nowrap">
+        −ETB {etb(row.feeCents)}
+      </td>
+
+      {/* Net */}
+      <td className="px-4 py-5 text-sm font-bold text-primary dark:text-green-400 whitespace-nowrap">
+        ETB {etb(row.netCents)}
+      </td>
+
+      {/* Status */}
+      <td className="px-8 py-5 whitespace-nowrap">
+        {isHeld ? (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 uppercase">
+            <Clock className="h-2.5 w-2.5" /> Held
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-secondary-container dark:bg-emerald-900/40 text-on-secondary-fixed-variant dark:text-emerald-300 uppercase">
+            <CheckCircle2 className="h-2.5 w-2.5" /> Released
+          </span>
+        )}
+      </td>
+    </tr>
+  );
+}
+
 /* ─── main component ─────────────────────────────────── */
 export default function HostWallet() {
   const { user } = useAuth();
@@ -378,7 +459,9 @@ export default function HostWallet() {
 
   const [search, setSearch]       = useState("");
   const [showWithdraw, setShowWithdraw] = useState(false);
+  const [activeTab, setActiveTab] = useState<"earnings" | "withdrawals">("earnings");
   const [page, setPage]           = useState(1);
+  const [earningsPage, setEarningsPage] = useState(1);
 
   const { data: walletData, isLoading: walletLoading } = useQuery({
     queryKey: ["my-wallet"],
@@ -392,13 +475,22 @@ export default function HostWallet() {
     staleTime: 30_000,
   });
 
+  const { data: earningsData, isLoading: earningsLoading } = useQuery({
+    queryKey: ["my-earnings", earningsPage],
+    queryFn: () => walletService.getEarnings({ page: earningsPage, limit: PAGE_SIZE }),
+    staleTime: 30_000,
+  });
+
   const wallet      = walletData?.data.data.wallet;
   const withdrawals: WithdrawalRequest[] = withdrawalsData?.data.data.withdrawals ?? [];
   const totalW      = withdrawalsData?.data.total ?? 0;
   const totalPages  = Math.ceil(totalW / PAGE_SIZE);
 
+  const earnings: EarningRow[] = earningsData?.data.data.earnings ?? [];
+  const totalE      = earningsData?.data.total ?? 0;
+  const totalEPages = Math.ceil(totalE / PAGE_SIZE);
+
   const availableETB = wallet ? wallet.availableBalanceCents / 100 : 0;
-  const pendingETB   = wallet ? wallet.pendingPayoutCents   / 100 : 0;
 
   // client-side search over the current page
   const filtered = search
@@ -416,6 +508,7 @@ export default function HostWallet() {
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["my-wallet"] });
     queryClient.invalidateQueries({ queryKey: ["my-withdrawals"] });
+    queryClient.invalidateQueries({ queryKey: ["my-earnings"] });
   };
 
   return (
@@ -423,8 +516,6 @@ export default function HostWallet() {
       hostName={user?.name ?? "Host"}
       hostInitials={(user?.name ?? "H").slice(0, 2).toUpperCase()}
       hostTitle="Host"
-      searchValue={search}
-      onSearch={(v) => { setSearch(v); setPage(1); }}
     >
       {showWithdraw && (
         <WithdrawModal
@@ -444,10 +535,10 @@ export default function HostWallet() {
         </header>
 
         {/* ── Balance cards ────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
 
           {/* Available Balance */}
-          <div className="lg:col-span-2 relative overflow-hidden bg-primary-container dark:bg-[#064e3b] p-8 rounded-2xl text-white shadow-lg flex flex-col justify-between min-h-[220px]">
+          <div className="lg:col-span-1 relative overflow-hidden bg-primary-container dark:bg-[#064e3b] p-8 rounded-2xl text-white shadow-lg flex flex-col justify-between min-h-[220px]">
             <div className="absolute right-[-10%] bottom-[-20%] w-64 h-64 rounded-full blur-3xl pointer-events-none" style={{ background: "rgba(0,53,39,0.4)" }} />
             <div className="absolute right-[5%] top-[-10%]  w-32 h-32 rounded-full blur-2xl pointer-events-none" style={{ background: "rgba(76,99,89,0.2)" }} />
 
@@ -469,8 +560,13 @@ export default function HostWallet() {
                   </div>
                   <p className="text-white/60 text-xs mt-2 flex items-center gap-1.5">
                     <TrendingUp className="h-3.5 w-3.5" />
-                    Ready to withdraw — platform fee already deducted
+                    Ready to withdraw — 15% platform fee already deducted
                   </p>
+                  {(wallet?.totalEarnedCents ?? 0) > 0 && (
+                    <p className="text-white/40 text-[11px] mt-1">
+                      Gross earned: ETB {etb(wallet!.totalEarnedCents + wallet!.totalFeesCents)} &nbsp;·&nbsp; Fee: ETB {etb(wallet!.totalFeesCents)}
+                    </p>
+                  )}
                 </>
               )}
             </div>
@@ -491,45 +587,156 @@ export default function HostWallet() {
             </div>
           </div>
 
-          {/* Pending Payout */}
-          <div className="bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-sm border border-outline-variant/15 dark:border-zinc-700 border-l-4 border-l-[#ffddb8] flex flex-col justify-between">
+          {/* Held Earnings (not yet withdrawable) */}
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-outline-variant/15 dark:border-zinc-700 border-l-4 border-l-amber-400 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Banknote className="h-4 w-4 text-on-surface-variant dark:text-zinc-400" />
-                <span className="text-on-surface-variant dark:text-zinc-400 font-semibold text-xs uppercase tracking-widest">Pending Payout</span>
+                <Clock className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                <span className="text-on-surface-variant dark:text-zinc-400 font-semibold text-xs uppercase tracking-widest">Held Earnings</span>
               </div>
               {walletLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin text-primary dark:text-green-400 mt-2" />
+                <Loader2 className="h-5 w-5 animate-spin text-amber-500 mt-2" />
               ) : (
-                <div className="flex items-baseline gap-2 text-primary dark:text-green-400 mt-1">
-                  <span className="text-4xl font-headline font-black tracking-tighter">{etb(wallet?.pendingPayoutCents ?? 0)}</span>
-                  <span className="text-lg font-bold opacity-60">ETB</span>
+                <div className="flex items-baseline gap-2 text-amber-600 dark:text-amber-400 mt-1">
+                  <span className="text-3xl font-headline font-black tracking-tighter">{etb(wallet?.heldEarningsCents ?? 0)}</span>
+                  <span className="text-base font-bold opacity-60">ETB</span>
                 </div>
               )}
             </div>
-            <div className="mt-6 p-4 bg-[#ffddb8]/15 dark:bg-amber-900/20 rounded-xl border border-[#ffddb8]/40 dark:border-amber-800/30">
-              <p className="text-xs text-[#653e00] dark:text-amber-300 leading-relaxed">
-                <strong>Pending:</strong> Amounts deducted from your available balance and awaiting bank transfer (3–5 business days).
-              </p>
+            <p className="text-[11px] text-on-surface-variant dark:text-zinc-500 mt-4 leading-relaxed">
+              Paid by guests — released to your available balance once the experience date passes.
+            </p>
+          </div>
+
+          {/* Payout in Transit (withdrawal requested) */}
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-outline-variant/15 dark:border-zinc-700 border-l-4 border-l-blue-400 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <ArrowUpFromLine className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                <span className="text-on-surface-variant dark:text-zinc-400 font-semibold text-xs uppercase tracking-widest">In Transit</span>
+              </div>
+              {walletLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-blue-500 mt-2" />
+              ) : (
+                <div className="flex items-baseline gap-2 text-blue-600 dark:text-blue-400 mt-1">
+                  <span className="text-3xl font-headline font-black tracking-tighter">{etb(wallet?.payoutInTransitCents ?? 0)}</span>
+                  <span className="text-base font-bold opacity-60">ETB</span>
+                </div>
+              )}
             </div>
+            <p className="text-[11px] text-on-surface-variant dark:text-zinc-500 mt-4 leading-relaxed">
+              Your withdrawal is being processed — typically arrives in 3–5 business days.
+            </p>
           </div>
         </div>
 
-        {/* ── Transaction History ───────────────────────── */}
+        {/* ── History Tabs ──────────────────────────────── */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-outline-variant/10 dark:border-zinc-700 overflow-hidden">
 
-          <div className="px-8 py-5 flex items-center justify-between bg-white dark:bg-zinc-900 border-b border-outline-variant/10 dark:border-zinc-700">
-            <h3 className="font-headline font-bold text-primary dark:text-green-400">Withdrawal History</h3>
-            <div className="flex items-center gap-2">
-              <button className="p-2 rounded-lg border border-outline-variant/30 dark:border-zinc-600 hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-on-surface-variant dark:text-zinc-400">
-                <Filter className="h-4 w-4" />
-              </button>
-              <button className="p-2 rounded-lg border border-outline-variant/30 dark:border-zinc-600 hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-on-surface-variant dark:text-zinc-400">
-                <Download className="h-4 w-4" />
-              </button>
+          {/* Tab bar */}
+          <div className="px-8 py-0 flex items-center justify-between border-b border-outline-variant/10 dark:border-zinc-700">
+            <div className="flex">
+              {(["earnings", "withdrawals"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-5 py-4 text-xs font-bold uppercase tracking-widest transition-colors border-b-2 ${
+                    activeTab === tab
+                      ? "border-primary text-primary dark:border-green-400 dark:text-green-400"
+                      : "border-transparent text-on-surface-variant dark:text-zinc-400 hover:text-primary dark:hover:text-green-300"
+                  }`}
+                >
+                  {tab === "earnings" ? (
+                    <span className="flex items-center gap-1.5">
+                      <TrendingDown className="h-3.5 w-3.5" />
+                      Earnings {totalE > 0 && <span className="bg-primary/10 dark:bg-green-900/40 text-primary dark:text-green-400 rounded-full px-1.5 py-0.5 text-[9px]">{totalE}</span>}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5">
+                      <ArrowUpFromLine className="h-3.5 w-3.5" />
+                      Withdrawals {totalW > 0 && <span className="bg-primary/10 dark:bg-green-900/40 text-primary dark:text-green-400 rounded-full px-1.5 py-0.5 text-[9px]">{totalW}</span>}
+                    </span>
+                  )}
+                </button>
+              ))}
             </div>
+
+            {/* Search — withdrawals only */}
+            {activeTab === "withdrawals" && (
+              <div className="relative hidden md:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-on-surface-variant dark:text-zinc-500" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search withdrawals…"
+                  className="pl-8 pr-3 py-1.5 bg-surface-container-low dark:bg-zinc-800 rounded-lg text-xs border-0 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white placeholder:text-on-surface-variant/50 dark:placeholder:text-zinc-500 w-48"
+                />
+              </div>
+            )}
           </div>
 
+          {/* ── Earnings Tab ── */}
+          {activeTab === "earnings" && (
+            <>
+              <div className="overflow-x-auto scrollbar-hide">
+                <table className="w-full text-left min-w-[680px]">
+                  <thead>
+                    <tr className="bg-surface-container-low dark:bg-zinc-800 text-on-surface-variant dark:text-zinc-400 text-[10px] uppercase tracking-widest font-bold">
+                      <th className="px-8 py-4">Date</th>
+                      <th className="px-4 py-4">Experience</th>
+                      <th className="px-4 py-4">Guest</th>
+                      <th className="px-4 py-4">Gross</th>
+                      <th className="px-4 py-4">Fee (15%)</th>
+                      <th className="px-4 py-4">You Receive</th>
+                      <th className="px-8 py-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10 dark:divide-zinc-800">
+                    {earningsLoading ? (
+                      <tr><td colSpan={7} className="px-8 py-12 text-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-green-400 mx-auto" />
+                      </td></tr>
+                    ) : earnings.length === 0 ? (
+                      <tr><td colSpan={7} className="px-8 py-12 text-center text-sm text-on-surface-variant dark:text-zinc-400">
+                        No earnings yet — earnings appear here when guests book your experiences.
+                      </td></tr>
+                    ) : (
+                      earnings.map((row) => <EarningRowComponent key={row._id} row={row} />)
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {totalEPages > 1 && (
+                <div className="px-8 py-5 border-t border-outline-variant/10 dark:border-zinc-700 flex items-center justify-between">
+                  <span className="text-xs text-on-surface-variant dark:text-zinc-400">
+                    Page {earningsPage} of {totalEPages} · {totalE} total
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button disabled={earningsPage === 1} onClick={() => setEarningsPage(p => p - 1)}
+                      className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-primary dark:text-green-400 hover:bg-surface-container-low dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                      <ChevronLeft className="h-3.5 w-3.5" /> Previous
+                    </button>
+                    {Array.from({ length: Math.min(totalEPages, 5) }, (_, i) => i + 1).map((p) => (
+                      <button key={p} onClick={() => setEarningsPage(p)}
+                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${p === earningsPage ? "bg-primary text-white dark:bg-green-600" : "text-on-surface-variant dark:text-zinc-400 hover:bg-surface-container-low dark:hover:bg-zinc-800"}`}>
+                        {p}
+                      </button>
+                    ))}
+                    <button disabled={earningsPage === totalEPages} onClick={() => setEarningsPage(p => p + 1)}
+                      className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-primary dark:text-green-400 hover:bg-surface-container-low dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                      Next <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── Withdrawals Tab ── */}
+          {activeTab === "withdrawals" && (
+            <>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
@@ -599,6 +806,9 @@ export default function HostWallet() {
               </div>
             </div>
           )}
+            </>
+          )}
+
         </div>
       </main>
     </HostLayout>
