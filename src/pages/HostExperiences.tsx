@@ -105,7 +105,7 @@ function ActionMenu({ exp, onReschedule, onDelete }: { exp: Experience; onResche
   const [open, setOpen] = useState(false);
   const id = exp._id ?? exp.id;
   const showReschedule = exp.status === "approved" && isExpired(exp);
-  const isPubliclyVisible = exp.status === "approved";
+  const isPubliclyVisible = exp.status === "approved" && !exp.suspended;
 
   return (
     <div className="relative">
@@ -147,10 +147,15 @@ function ActionMenu({ exp, onReschedule, onDelete }: { exp: Experience; onResche
 
 /* ─── experience card ────────────────────────────────── */
 function ExpCard({ exp, onReschedule, onDelete }: { exp: Experience; onReschedule: (e: Experience) => void; onDelete: (id: string) => void }) {
+  const isSuspended = exp.status === "approved" && exp.suspended;
   const s = statusCfg[exp.status ?? "draft"] ?? statusCfg.draft;
-  const Icon = s.icon;
+  const Icon = isSuspended ? AlertCircle : s.icon;
   const expired = isExpired(exp);
   const id = exp._id ?? exp.id;
+  const badgeCls = isSuspended
+    ? "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
+    : s.cls;
+  const badgeLabel = isSuspended ? "Suspended" : s.label;
 
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-outline-variant/10 dark:border-zinc-700 shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
@@ -162,8 +167,8 @@ function ExpCard({ exp, onReschedule, onDelete }: { exp: Experience; onReschedul
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={(e) => { (e.target as HTMLImageElement).src = "/imgs/hero-1.jpg"; }}
         />
-        <span className={`absolute top-3 left-3 flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${s.cls}`}>
-          <Icon className="h-3 w-3" />{s.label}
+        <span className={`absolute top-3 left-3 flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${badgeCls}`}>
+          <Icon className="h-3 w-3" />{badgeLabel}
         </span>
         <div className="absolute top-2.5 right-2.5">
           <ActionMenu exp={exp} onReschedule={onReschedule} onDelete={onDelete} />
@@ -175,6 +180,13 @@ function ExpCard({ exp, onReschedule, onDelete }: { exp: Experience; onReschedul
         <h3 className="font-headline font-bold text-sm text-on-surface dark:text-white mb-2 leading-tight line-clamp-2">
           {exp.title}
         </h3>
+
+        {isSuspended && exp.suspensionReason && (
+          <p className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/25 border border-amber-200/60 dark:border-amber-800/40 rounded-lg px-3 py-2 mb-3 leading-relaxed">
+            <span className="font-bold">Platform: </span>
+            {exp.suspensionReason}
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-x-3 gap-y-1 mb-3">
           <span className="flex items-center gap-1 text-xs text-on-surface-variant dark:text-zinc-400">
@@ -275,6 +287,8 @@ export default function HostExperiences() {
   const counts = {
     all:      exps.length,
     approved: exps.filter((e) => e.status === "approved").length,
+    livePublic: exps.filter((e) => e.status === "approved" && !e.suspended).length,
+    suspended: exps.filter((e) => e.status === "approved" && e.suspended).length,
     pending:  exps.filter((e) => e.status === "pending").length,
     rejected: exps.filter((e) => e.status === "rejected").length,
     draft:    exps.filter((e) => e.status === "draft").length,
@@ -318,10 +332,11 @@ export default function HostExperiences() {
         </div>
 
         {/* ── Stats strip ─────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { label: "Total",  value: counts.all,      color: "text-primary dark:text-green-400",       c1: "rgba(0,82,52,0.12)",   c2: "rgba(0,82,52,0.07)" },
-            { label: "Live",   value: counts.approved, color: "text-emerald-600 dark:text-emerald-400", c1: "rgba(5,150,105,0.15)", c2: "rgba(5,150,105,0.08)" },
+            { label: "Live on site", value: counts.livePublic, color: "text-emerald-600 dark:text-emerald-400", c1: "rgba(5,150,105,0.15)", c2: "rgba(5,150,105,0.08)" },
+            { label: "Suspended", value: counts.suspended, color: "text-amber-700 dark:text-amber-400", c1: "rgba(180,83,9,0.12)", c2: "rgba(180,83,9,0.06)" },
             { label: "Drafts", value: counts.draft,    color: "text-zinc-500 dark:text-zinc-400",       c1: "rgba(100,116,139,0.12)", c2: "rgba(100,116,139,0.07)" },
           ].map((s) => (
             <div key={s.label} className="relative bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-outline-variant/10 dark:border-zinc-700 shadow-sm overflow-hidden group">

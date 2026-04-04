@@ -56,6 +56,11 @@ function getExperienceId(b: Booking): string {
   return String(b.experience);
 }
 
+function isExperienceSuspended(b: Booking): boolean {
+  const ex = b.experience;
+  return typeof ex === "object" && ex !== null && Boolean(ex.suspended);
+}
+
 function isPastOrEqualExperienceDate(iso?: string): boolean {
   if (!iso) return false;
   const t = new Date(iso).getTime();
@@ -387,6 +392,8 @@ function BookingCard({ booking, userId, userRole }: { booking: Booking; userId?:
           : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400";
   const exId = getExperienceId(booking);
   const canCancel = booking.status === "upcoming";
+  const suspended = isExperienceSuspended(booking);
+  const showSuspensionNotice = canCancel && suspended;
 
   return (
     <>
@@ -398,6 +405,17 @@ function BookingCard({ booking, userId, userRole }: { booking: Booking; userId?:
         />
       )}
       <li className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-surface-container-low dark:bg-zinc-800 rounded-xl border border-transparent hover:border-outline-variant/20 transition-colors">
+        {showSuspensionNotice && (
+          <div className="w-full order-first flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+            <span>
+              This experience is temporarily paused by the platform. Your booking still stands unless we contact you.{" "}
+              {typeof booking.experience === "object" && booking.experience.suspensionReason
+                ? `Note: ${booking.experience.suspensionReason}`
+                : null}
+            </span>
+          </div>
+        )}
         <Link
           to={`/experiences/${exId}`}
           className="flex flex-1 min-w-0 items-center gap-4 group"

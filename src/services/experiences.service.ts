@@ -37,6 +37,10 @@ export interface Experience {
   ratingsAverage: number;
   ratingsQuantity: number;
   status?: "draft" | "pending" | "approved" | "rejected";
+  /** When true, listing is hidden from the public catalog (platform suspension). */
+  suspended?: boolean;
+  suspensionReason?: string;
+  suspendedAt?: string;
   updatedAt: string;
   reviews?: Review[];
   isSoldOut?: boolean;

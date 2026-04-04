@@ -1,185 +1,112 @@
 import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  CheckCircle2, XCircle, Clock, MapPin, Users, Timer,
-  Star, DollarSign, ImageIcon, Eye, X, ChevronRight,
-  AlertTriangle, Calendar,
+  MapPin, Users, Timer, Star, DollarSign, ImageIcon, Eye, X, ChevronRight,
+  Calendar, Loader2, AlertCircle, ExternalLink, Ban, RotateCcw,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
+import { adminService, type AdminExperience } from "@/services/admin.service";
 
-/* ─── types ──────────────────────────────────────────── */
-type ExpStatus = "pending" | "approved" | "rejected";
-type TabKey = "pending" | "approved" | "rejected";
+type ExpStatus = "pending" | "approved" | "rejected" | "draft";
+type TabKey = "live" | "suspended" | "draft";
 
-interface Experience {
-  id: string;
-  title: string;
-  slug: string;
-  hostName: string;
-  hostInitials: string;
-  hostEmail: string;
-  location: string;
-  price: number;
-  duration: string;
-  maxGuests: number;
-  nextOccurrenceAt: string;
-  submittedAt: string;
-  status: ExpStatus;
-  summary: string;
-  description: string;
-  imageCover: string;
-  images: string[];
-  ratingsAverage: number;
-  ratingsQuantity: number;
-  rejectionReason?: string;
+function hostInitials(name: string) {
+  return name?.split(" ").slice(0, 2).map((p) => p[0]).join("").toUpperCase() ?? "??";
 }
 
-/* ─── mock data ──────────────────────────────────────── */
-const MOCK_EXPERIENCES: Experience[] = [
-  {
-    id: "1",
-    title: "Lalibela Rock-Hewn Church Walk",
-    slug: "lalibela-rock-hewn-church-walk",
-    hostName: "Abebe Bikila", hostInitials: "AB", hostEmail: "abebe@heritage.et",
-    location: "Lalibela, Amhara",
-    price: 850, duration: "4 hours", maxGuests: 8,
-    nextOccurrenceAt: "Mar 15, 2026", submittedAt: "Feb 20, 2026",
-    status: "pending",
-    summary: "A guided walk through the ancient rock-hewn churches of Lalibela, a UNESCO World Heritage Site.",
-    description: "Discover the remarkable rock-hewn churches carved directly into the volcanic rock of Lalibela. This guided walk covers all 11 churches across two groups, with stories about their history, architecture, and spiritual significance. Light breakfast included.",
-    imageCover: "/imgs/hero-1.jpg",
-    images: ["/imgs/hero-2.jpg", "/imgs/hero-3.jpg"],
-    ratingsAverage: 0, ratingsQuantity: 0,
-  },
-  {
-    id: "2",
-    title: "Traditional Ethiopian Coffee Ceremony",
-    slug: "traditional-coffee-ceremony",
-    hostName: "Selamawit Tadesse", hostInitials: "ST", hostEmail: "selam@culture.et",
-    location: "Gondar, Amhara",
-    price: 350, duration: "2 hours", maxGuests: 6,
-    nextOccurrenceAt: "Mar 10, 2026", submittedAt: "Feb 18, 2026",
-    status: "pending",
-    summary: "Experience the full Ethiopian coffee ceremony — from roasting green beans to sharing three rounds of coffee with locals.",
-    description: "Join Selamawit in her family home for an authentic Ethiopian coffee ceremony. You'll roast raw green coffee beans over an open flame, grind them in a traditional mortar, brew three rounds of coffee, and learn about the cultural significance of each round. Snacks included.",
-    imageCover: "/imgs/hero-2.jpg",
-    images: ["/imgs/hero-1.jpg"],
-    ratingsAverage: 0, ratingsQuantity: 0,
-  },
-  {
-    id: "3",
-    title: "Simien Mountains Sunrise Trek",
-    slug: "simien-mountains-sunrise-trek",
-    hostName: "Dawit Mengistu", hostInitials: "DM", hostEmail: "dawit@trek.et",
-    location: "Simien Mountains, Amhara",
-    price: 1200, duration: "6 hours", maxGuests: 10,
-    nextOccurrenceAt: "Mar 22, 2026", submittedAt: "Feb 15, 2026",
-    status: "pending",
-    summary: "A breathtaking sunrise trek in the Simien Mountains with dramatic gorge views and Gelada baboon sightings.",
-    description: "Start before dawn and hike to a dramatic escarpment viewpoint just as the sun rises over the Simien highlands. Your guide will share ecology and conservation insights. Spot Gelada baboons, Walia ibex, and Ethiopian wolves in their natural habitat. Packed lunch and hot tea included.",
-    imageCover: "/imgs/hero-3.jpg",
-    images: ["/imgs/hero-1.jpg", "/imgs/hero-2.jpg"],
-    ratingsAverage: 0, ratingsQuantity: 0,
-  },
-  {
-    id: "4",
-    title: "Addis Ababa Street Food Safari",
-    slug: "addis-ababa-street-food-safari",
-    hostName: "Tigist Haile", hostInitials: "TH", hostEmail: "tigist@foodie.et",
-    location: "Addis Ababa",
-    price: 600, duration: "3 hours", maxGuests: 12,
-    nextOccurrenceAt: "Mar 8, 2026", submittedAt: "Jan 30, 2026",
-    status: "approved",
-    summary: "A guided walk through Addis Ababa's most vibrant street food spots — injera, tibs, kitfo, and more.",
-    description: "Explore the culinary soul of Addis Ababa on foot. Visit five street food stops, taste classic Ethiopian dishes, and learn about the ingredients and traditions behind each one. The route covers Merkato, Piazza, and the Churchill Avenue corridor.",
-    imageCover: "/imgs/hero-1.jpg",
-    images: [],
-    ratingsAverage: 4.8, ratingsQuantity: 24,
-  },
-  {
-    id: "5",
-    title: "Omo Valley Cultural Immersion",
-    slug: "omo-valley-cultural-immersion",
-    hostName: "Yonas Assefa", hostInitials: "YA", hostEmail: "yonas@omo.et",
-    location: "Omo Valley, SNNPR",
-    price: 2500, duration: "Full day", maxGuests: 6,
-    nextOccurrenceAt: "Apr 1, 2026", submittedAt: "Jan 20, 2026",
-    status: "approved",
-    summary: "A full-day immersion into the cultures of the Mursi, Karo, and Hamar tribes of the Omo Valley.",
-    description: "Travel with Yonas deep into the Omo Valley to visit tribal villages, witness traditional ceremonies, and learn the histories and customs of some of Ethiopia's most distinctive ethnic groups. Responsible tourism guidelines strictly followed.",
-    imageCover: "/imgs/hero-2.jpg",
-    images: ["/imgs/hero-3.jpg"],
-    ratingsAverage: 4.9, ratingsQuantity: 38,
-  },
-  {
-    id: "6",
-    title: "Danakil Depression Geology Walk",
-    slug: "danakil-depression-geology",
-    hostName: "Bereket Mesfin", hostInitials: "BM", hostEmail: "bereket@safari.et",
-    location: "Danakil, Afar",
-    price: 3200, duration: "Full day", maxGuests: 8,
-    nextOccurrenceAt: "Apr 5, 2026", submittedAt: "Feb 5, 2026",
-    status: "rejected",
-    rejectionReason: "The listing lacks adequate safety protocols for an extreme-environment tour. Please provide a detailed safety plan, emergency contacts, and proof of liability insurance before resubmitting.",
-    summary: "A guided walk across the Danakil Depression — one of Earth's hottest and most otherworldly landscapes.",
-    description: "Explore sulphur springs, salt flats, lava lakes, and mineral-coloured hydrothermal fields in the Danakil Depression. Bereket will explain the geology, ecology, and local Afar culture of this alien landscape.",
-    imageCover: "/imgs/hero-3.jpg",
-    images: [],
-    ratingsAverage: 0, ratingsQuantity: 0,
-  },
-];
+function fmtDuration(d: unknown) {
+  if (d == null) return "–";
+  if (typeof d === "string") return d;
+  const mins = Number(d);
+  if (Number.isNaN(mins)) return String(d);
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
 
-/* ─── reject modal ────────────────────────────────────── */
-function RejectModal({
+function locationText(exp: AdminExperience): string {
+  const loc = exp.location as unknown;
+  if (!loc) return "";
+  if (typeof loc === "string") return loc;
+  if (typeof loc === "object" && loc && "address" in (loc as object)) {
+    return String((loc as { address?: string }).address ?? "");
+  }
+  return "";
+}
+
+const statusBadge: Record<ExpStatus, string> = {
+  pending:
+    "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
+  approved:
+    "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
+  rejected: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
+  draft: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-600",
+};
+
+const suspendedBadge =
+  "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700";
+
+const TAB_LABEL: Record<TabKey, string> = {
+  live: "Live",
+  suspended: "Suspended",
+  draft: "Drafts",
+};
+
+function SuspendModal({
   exp,
-  onConfirm,
   onClose,
+  onConfirm,
+  isPending,
 }: {
-  exp: Experience;
-  onConfirm: (reason: string) => void;
+  exp: AdminExperience;
   onClose: () => void;
+  onConfirm: (reason: string) => void;
+  isPending: boolean;
 }) {
   const [reason, setReason] = useState("");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/20 dark:border-zinc-700 w-full max-w-md">
-        <div className="flex items-start gap-3 p-6 border-b border-outline-variant/10 dark:border-zinc-700">
-          <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
-            <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+    <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/15 dark:border-zinc-700 max-w-md w-full p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+            <Ban className="h-5 w-5 text-amber-700 dark:text-amber-400" />
           </div>
           <div>
-            <h3 className="font-headline font-bold text-base text-on-surface dark:text-white">Reject Experience</h3>
-            <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 leading-relaxed">
-              You are rejecting <strong className="text-on-surface dark:text-white">"{exp.title}"</strong>. The host will be notified with your reason.
-            </p>
+            <h3 className="font-headline font-bold text-on-surface dark:text-white">Suspend listing</h3>
+            <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 line-clamp-1">{exp.title}</p>
           </div>
         </div>
-        <div className="p-6">
-          <label className="block text-xs font-semibold text-on-surface dark:text-white mb-2">
-            Rejection Reason <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            rows={4}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Explain clearly what needs to be improved or why this experience cannot be approved…"
-            className="w-full px-4 py-3 rounded-xl border border-outline-variant/40 dark:border-zinc-600 bg-surface dark:bg-zinc-800 text-on-surface dark:text-white text-sm resize-none outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/20 transition-all"
-          />
-          <p className="text-[11px] text-on-surface-variant dark:text-zinc-500 mt-1">{reason.length} characters</p>
-        </div>
-        <div className="flex gap-3 px-6 pb-6">
+        <p className="text-xs text-on-surface-variant dark:text-zinc-400 mb-3">
+          The listing will disappear from the public catalog until you reinstate it. Hosts will see why it was suspended.
+        </p>
+        <label className="block text-xs font-bold text-on-surface dark:text-white mb-2">Reason (shown to host)</label>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          rows={3}
+          placeholder="e.g. Pricing or photos need review — please update and contact support."
+          className="w-full bg-white dark:bg-zinc-800 border border-outline-variant/40 dark:border-zinc-600 rounded-xl px-4 py-3 text-sm text-on-surface dark:text-white outline-none focus:ring-2 focus:ring-primary/20 resize-none mb-5"
+        />
+        <div className="flex gap-3">
           <button
+            type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-xl border border-outline-variant/40 dark:border-zinc-600 text-on-surface dark:text-white text-sm font-medium hover:bg-surface dark:hover:bg-zinc-800 transition-colors"
+            className="flex-1 py-2.5 rounded-xl border border-outline-variant/30 dark:border-zinc-600 text-sm font-semibold text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-800 transition-colors"
           >
             Cancel
           </button>
           <button
-            disabled={!reason.trim()}
-            onClick={() => reason.trim() && onConfirm(reason.trim())}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            type="button"
+            disabled={isPending}
+            onClick={() => onConfirm(reason.trim() || "Suspended by platform")}
+            className="flex-1 py-2.5 rounded-xl bg-amber-700 text-white text-sm font-semibold hover:bg-amber-800 disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            Reject Experience
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
+            Suspend
           </button>
         </div>
       </div>
@@ -187,97 +114,151 @@ function RejectModal({
   );
 }
 
-/* ─── detail panel ────────────────────────────────────── */
 function DetailPanel({
   exp,
-  onApprove,
-  onReject,
+  tab,
   onClose,
+  onOpenSuspend,
+  onReinstate,
+  reinstatePending,
 }: {
-  exp: Experience;
-  onApprove: () => void;
-  onReject: () => void;
+  exp: AdminExperience;
+  tab: TabKey;
   onClose: () => void;
+  onOpenSuspend: () => void;
+  onReinstate: () => void;
+  reinstatePending: boolean;
 }) {
-  const statusBadge: Record<ExpStatus, string> = {
-    pending:  "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
-    approved: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
-    rejected: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
-  };
+  const status = (exp.status ?? "draft") as ExpStatus;
+  const address = locationText(exp) || "Location not set";
+  const images = exp.images ?? [];
+  const publicPath = exp.slug ? `/experiences/${exp.slug}` : null;
+  const canViewPublic = publicPath && status === "approved" && !exp.suspended;
+  const showSuspend = tab === "live" && status === "approved" && !exp.suspended;
+  const showReinstate = tab === "suspended" && exp.suspended;
+
+  const overlayBadgeClass = exp.suspended ? suspendedBadge : statusBadge[status];
+  const overlayLabel = exp.suspended ? "Suspended" : status === "approved" ? "Live" : status.charAt(0).toUpperCase() + status.slice(1);
 
   return (
     <div className="flex flex-col h-full">
-      {/* header */}
       <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-outline-variant/10 dark:border-zinc-700">
         <div className="flex items-center gap-2">
           <Eye className="h-4 w-4 text-primary" />
-          <span className="font-headline font-bold text-sm text-on-surface dark:text-white">Experience Detail</span>
+          <span className="font-headline font-bold text-sm text-on-surface dark:text-white">Listing detail</span>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-full hover:bg-surface dark:hover:bg-zinc-800 text-on-surface-variant transition-colors"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          {canViewPublic && (
+            <Link
+              to={publicPath!}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1 text-[11px] font-bold text-primary hover:underline"
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> View on site
+            </Link>
+          )}
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-full hover:bg-surface dark:hover:bg-zinc-800 text-on-surface-variant transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      {/* scrollable body */}
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
-        {/* cover image */}
         <div className="relative rounded-xl overflow-hidden aspect-video bg-surface-container dark:bg-zinc-800">
-          <img
-            src={exp.imageCover}
-            alt={exp.title}
-            className="w-full h-full object-cover"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-          <span className={`absolute top-2 right-2 text-[11px] font-bold px-2.5 py-1 rounded-full border ${statusBadge[exp.status]}`}>
-            {exp.status.charAt(0).toUpperCase() + exp.status.slice(1)}
+          {exp.imageCover && exp.imageCover !== "__draft__" ? (
+            <img
+              src={exp.imageCover}
+              alt={exp.title}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <ImageIcon className="h-10 w-10 text-on-surface-variant/30" />
+            </div>
+          )}
+          <span
+            className={`absolute top-2 right-2 text-[11px] font-bold px-2.5 py-1 rounded-full border ${overlayBadgeClass}`}
+          >
+            {overlayLabel}
           </span>
         </div>
 
-        {/* gallery strip */}
-        {exp.images.length > 0 && (
-          <div className="flex gap-2">
-            {exp.images.map((img, i) => (
-              <div key={i} className="w-16 h-12 rounded-lg overflow-hidden border border-outline-variant/20 dark:border-zinc-700 shrink-0">
-                <img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+        {images.length > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            {images.map((img, i) => (
+              <div
+                key={i}
+                className="w-16 h-12 rounded-lg overflow-hidden border border-outline-variant/20 dark:border-zinc-700 shrink-0"
+              >
+                <img
+                  src={img}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
               </div>
             ))}
-            {exp.images.length === 0 && (
-              <div className="flex items-center gap-1.5 text-xs text-on-surface-variant dark:text-zinc-500">
-                <ImageIcon className="h-3.5 w-3.5" /> No additional images
-              </div>
-            )}
           </div>
         )}
 
-        {/* title + host */}
         <div>
           <h2 className="font-headline font-extrabold text-lg text-on-surface dark:text-white leading-tight mb-1">
             {exp.title}
           </h2>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-primary/15 dark:bg-primary/30 text-primary dark:text-green-300 text-[10px] font-bold flex items-center justify-center">
-              {exp.hostInitials}
-            </div>
+            {exp.host?.photo ? (
+              <img src={exp.host.photo} alt={exp.host.name} className="w-6 h-6 rounded-full object-cover" />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-primary/15 dark:bg-primary/30 text-primary dark:text-green-300 text-[10px] font-bold flex items-center justify-center">
+                {hostInitials(exp.host?.name ?? "")}
+              </div>
+            )}
             <span className="text-xs text-on-surface-variant dark:text-zinc-400">
-              by <strong className="text-on-surface dark:text-white">{exp.hostName}</strong>
+              by <strong className="text-on-surface dark:text-white">{exp.host?.name}</strong>
               <span className="mx-1">·</span>
-              {exp.hostEmail}
+              {exp.host?.email}
             </span>
           </div>
         </div>
 
-        {/* specs bento */}
+        {exp.suspended && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-xl p-4 space-y-2">
+            <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" /> Platform suspension
+            </p>
+            {exp.suspensionReason && (
+              <p className="text-sm text-amber-900 dark:text-amber-100 leading-relaxed">{exp.suspensionReason}</p>
+            )}
+            {exp.suspendedAt && (
+              <p className="text-[11px] text-amber-800/80 dark:text-amber-400/90">
+                {new Date(exp.suspendedAt).toLocaleString()}
+                {exp.suspendedBy?.name && ` · by ${exp.suspendedBy.name}`}
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-2.5">
           {[
-            { icon: MapPin,       label: "Location",   value: exp.location },
-            { icon: DollarSign,   label: "Price",      value: `ETB ${exp.price.toLocaleString()}` },
-            { icon: Timer,        label: "Duration",   value: exp.duration },
-            { icon: Users,        label: "Max Guests", value: `${exp.maxGuests} people` },
-            { icon: Calendar,     label: "Next Date",  value: exp.nextOccurrenceAt },
-            { icon: Clock,        label: "Submitted",  value: exp.submittedAt },
+            { icon: MapPin, label: "Location", value: address },
+            { icon: DollarSign, label: "Price", value: `ETB ${(exp.price ?? 0).toLocaleString()}` },
+            { icon: Timer, label: "Duration", value: fmtDuration(exp.duration) },
+            { icon: Users, label: "Max guests", value: `${exp.maxGuests ?? "–"} people` },
+            {
+              icon: Calendar,
+              label: "Next date",
+              value: exp.nextOccurrenceAt ? new Date(exp.nextOccurrenceAt).toLocaleDateString() : "Not set",
+            },
+            { icon: Calendar, label: "Created", value: new Date(exp.createdAt).toLocaleDateString() },
           ].map((s) => (
             <div
               key={s.label}
@@ -287,181 +268,199 @@ function DetailPanel({
                 <s.icon className="h-3.5 w-3.5 text-primary dark:text-green-400" />
               </div>
               <div>
-                <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 font-medium uppercase tracking-wide">{s.label}</p>
+                <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 font-medium uppercase tracking-wide">
+                  {s.label}
+                </p>
                 <p className="text-xs font-semibold text-on-surface dark:text-white mt-0.5">{s.value}</p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* ratings (if any) */}
-        {exp.ratingsQuantity > 0 && (
+        {(exp.ratingsQuantity ?? 0) > 0 && (
           <div className="flex items-center gap-2">
             <div className="flex gap-0.5">
               {[1, 2, 3, 4, 5].map((s) => (
-                <Star key={s} className={`h-3.5 w-3.5 ${s <= Math.round(exp.ratingsAverage) ? "fill-amber-400 text-amber-400" : "text-outline-variant dark:text-zinc-600"}`} />
+                <Star
+                  key={s}
+                  className={`h-3.5 w-3.5 ${
+                    s <= Math.round(exp.ratingsAverage ?? 0) ? "fill-amber-400 text-amber-400" : "text-outline-variant dark:text-zinc-600"
+                  }`}
+                />
               ))}
             </div>
-            <span className="text-xs font-semibold text-on-surface dark:text-white">{exp.ratingsAverage.toFixed(1)}</span>
+            <span className="text-xs font-semibold text-on-surface dark:text-white">{(exp.ratingsAverage ?? 0).toFixed(1)}</span>
             <span className="text-xs text-on-surface-variant dark:text-zinc-400">({exp.ratingsQuantity} reviews)</span>
           </div>
         )}
 
-        {/* summary */}
-        <div>
-          <p className="text-xs font-semibold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wide mb-1.5">Summary</p>
-          <p className="text-sm text-on-surface dark:text-zinc-200 leading-relaxed">{exp.summary}</p>
-        </div>
+        {exp.summary && exp.summary !== "__draft__" && (
+          <div>
+            <p className="text-xs font-semibold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wide mb-1.5">
+              Summary
+            </p>
+            <p className="text-sm text-on-surface dark:text-zinc-200 leading-relaxed">{exp.summary}</p>
+          </div>
+        )}
 
-        {/* description */}
-        <div>
-          <p className="text-xs font-semibold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wide mb-1.5">Full Description</p>
-          <p className="text-sm text-on-surface-variant dark:text-zinc-300 leading-relaxed">{exp.description}</p>
-        </div>
+        {exp.description && exp.description !== "__draft__" && (
+          <div>
+            <p className="text-xs font-semibold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wide mb-1.5">
+              Description
+            </p>
+            <p className="text-sm text-on-surface-variant dark:text-zinc-300 leading-relaxed">{exp.description}</p>
+          </div>
+        )}
 
-        {/* rejection reason (if rejected) */}
-        {exp.status === "rejected" && exp.rejectionReason && (
+        {status === "rejected" && exp.rejectionReason && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-xl p-4">
-            <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-1">Rejection Reason</p>
+            <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-1">Rejection / archive note</p>
             <p className="text-sm text-red-700 dark:text-red-300 leading-relaxed">{exp.rejectionReason}</p>
           </div>
         )}
-      </div>
 
-      {/* action footer (only for pending) */}
-      {exp.status === "pending" && (
-        <div className="shrink-0 p-5 border-t border-outline-variant/10 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex gap-3">
-          <button
-            onClick={onReject}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-          >
-            <XCircle className="h-4 w-4" />
-            Reject
-          </button>
-          <button
-            onClick={onApprove}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-sm font-semibold transition-colors shadow-sm"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            Approve
-          </button>
-        </div>
-      )}
+        {(showSuspend || showReinstate) && (
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-outline-variant/10">
+            {showSuspend && (
+              <button
+                type="button"
+                onClick={onOpenSuspend}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-700 text-white text-xs font-bold hover:bg-amber-800 transition-colors"
+              >
+                <Ban className="h-3.5 w-3.5" /> Suspend listing
+              </button>
+            )}
+            {showReinstate && (
+              <button
+                type="button"
+                disabled={reinstatePending}
+                onClick={onReinstate}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-600 text-emerald-700 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-50"
+              >
+                {reinstatePending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                Reinstate listing
+              </button>
+            )}
+          </div>
+        )}
+
+        <p className="text-[11px] text-on-surface-variant dark:text-zinc-500 leading-relaxed border-t border-outline-variant/10 pt-4">
+          Suspending hides a listing from guests; hosts keep access and should fix issues described above.
+        </p>
+      </div>
     </div>
   );
 }
 
-/* ─── main component ──────────────────────────────────── */
 export default function AdminExperiences() {
-  const [experiences, setExperiences] = useState<Experience[]>(MOCK_EXPERIENCES);
-  const [tab, setTab] = useState<TabKey>("pending");
+  const queryClient = useQueryClient();
+  const [tab, setTab] = useState<TabKey>("live");
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<Experience | null>(null);
-  const [rejectTarget, setRejectTarget] = useState<Experience | null>(null);
+  const [selected, setSelected] = useState<AdminExperience | null>(null);
+  const [suspendModalExp, setSuspendModalExp] = useState<AdminExperience | null>(null);
 
-  const tabCounts = {
-    pending:  experiences.filter((e) => e.status === "pending").length,
-    approved: experiences.filter((e) => e.status === "approved").length,
-    rejected: experiences.filter((e) => e.status === "rejected").length,
-  };
-
-  const filtered = experiences.filter((e) => {
-    const matchTab = e.status === tab;
-    const q = search.toLowerCase();
-    const matchSearch =
-      !q ||
-      e.title.toLowerCase().includes(q) ||
-      e.hostName.toLowerCase().includes(q) ||
-      e.location.toLowerCase().includes(q);
-    return matchTab && matchSearch;
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["admin-experiences-manage", tab],
+    queryFn: () => adminService.getAdminCatalog(tab, { limit: 200 }).then((r) => r.data.data.data),
+    staleTime: 30_000,
   });
 
-  const handleApprove = (id: string) => {
-    setExperiences((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, status: "approved" } : e))
-    );
-    setSelected((prev) => (prev?.id === id ? { ...prev, status: "approved" } : prev));
-  };
+  const suspendMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => adminService.suspendExperience(id, reason),
+    onSuccess: () => {
+      toast.success("Listing suspended.");
+      queryClient.invalidateQueries({ queryKey: ["admin-experiences-manage"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      setSuspendModalExp(null);
+      setSelected(null);
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Could not suspend.";
+      toast.error(msg);
+    },
+  });
 
-  const handleReject = (id: string, reason: string) => {
-    setExperiences((prev) =>
-      prev.map((e) =>
-        e.id === id ? { ...e, status: "rejected", rejectionReason: reason } : e
-      )
-    );
-    setSelected((prev) =>
-      prev?.id === id ? { ...prev, status: "rejected", rejectionReason: reason } : prev
-    );
-    setRejectTarget(null);
-  };
+  const reinstateMutation = useMutation({
+    mutationFn: (id: string) => adminService.reinstateExperience(id),
+    onSuccess: () => {
+      toast.success("Listing reinstated.");
+      queryClient.invalidateQueries({ queryKey: ["admin-experiences-manage"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      setSelected(null);
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Could not reinstate.";
+      toast.error(msg);
+    },
+  });
 
-  const statusBadge: Record<ExpStatus, string> = {
-    pending:  "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
-    approved: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
-    rejected: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
-  };
+  const experiences = data ?? [];
+  const filtered = experiences.filter((e) => {
+    const q = search.toLowerCase();
+    const loc = locationText(e).toLowerCase();
+    return (
+      !q ||
+      e.title.toLowerCase().includes(q) ||
+      (e.host?.name ?? "").toLowerCase().includes(q) ||
+      loc.includes(q)
+    );
+  });
 
   const tabs: { key: TabKey; label: string }[] = [
-    { key: "pending",  label: "Pending Approval" },
-    { key: "approved", label: "Approved" },
-    { key: "rejected", label: "Rejected" },
+    { key: "live", label: TAB_LABEL.live },
+    { key: "suspended", label: TAB_LABEL.suspended },
+    { key: "draft", label: TAB_LABEL.draft },
   ];
+
+  const emptyLabel = TAB_LABEL[tab].toLowerCase();
 
   return (
     <AdminLayout
-      searchPlaceholder="Search experiences, hosts, locations…"
+      searchPlaceholder="Search title, host, or location…"
       searchValue={search}
-      onSearch={(v) => { setSearch(v); setSelected(null); }}
+      onSearch={(v) => {
+        setSearch(v);
+        setSelected(null);
+      }}
     >
-      {/* reject modal */}
-      {rejectTarget && (
-        <RejectModal
-          exp={rejectTarget}
-          onConfirm={(reason) => handleReject(rejectTarget.id, reason)}
-          onClose={() => setRejectTarget(null)}
+      {suspendModalExp && (
+        <SuspendModal
+          exp={suspendModalExp}
+          isPending={suspendMutation.isPending}
+          onClose={() => setSuspendModalExp(null)}
+          onConfirm={(reason) => suspendMutation.mutate({ id: suspendModalExp._id, reason })}
         />
       )}
 
       <div className="flex flex-1 overflow-hidden">
-
-        {/* ── LEFT: list panel ── */}
-        <div className={`flex flex-col border-r border-outline-variant/10 dark:border-zinc-700 bg-white dark:bg-zinc-900 transition-all duration-200 ${selected ? "w-[400px] shrink-0" : "flex-1"}`}>
-
-          {/* panel header */}
+        <div
+          className={`flex flex-col border-r border-outline-variant/10 dark:border-zinc-700 bg-white dark:bg-zinc-900 transition-all duration-200 ${
+            selected ? "w-[400px] shrink-0" : "flex-1"
+          }`}
+        >
           <div className="shrink-0 px-5 pt-5 pb-0">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h1 className="font-headline font-extrabold text-lg text-on-surface dark:text-white">Experience Management</h1>
-                <p className="text-xs text-on-surface-variant dark:text-zinc-400">Review, approve and manage listed experiences</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-headline font-black text-primary dark:text-green-400">{tabCounts.pending}</p>
-                <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 uppercase tracking-wide">Pending</p>
-              </div>
+            <div className="mb-4">
+              <h1 className="font-headline font-extrabold text-lg text-on-surface dark:text-white">Experience Management</h1>
+              <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5">
+                Live and suspended listings are approved experiences. Suspend to hide a listing from guests until issues are resolved.
+              </p>
             </div>
 
-            {/* tabs */}
-            <div className="flex gap-1 border-b border-outline-variant/10 dark:border-zinc-700">
+            <div className="flex gap-1 border-b border-outline-variant/10 dark:border-zinc-700 overflow-x-auto">
               {tabs.map((t) => (
                 <button
                   key={t.key}
-                  onClick={() => { setTab(t.key); setSelected(null); }}
-                  className={`relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold transition-colors ${
+                  onClick={() => {
+                    setTab(t.key);
+                    setSelected(null);
+                  }}
+                  className={`relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold transition-colors shrink-0 ${
                     tab === t.key
                       ? "text-primary dark:text-green-400"
                       : "text-on-surface-variant dark:text-zinc-400 hover:text-on-surface dark:hover:text-white"
                   }`}
                 >
                   {t.label}
-                  {tabCounts[t.key] > 0 && (
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                      tab === t.key
-                        ? "bg-primary/15 text-primary dark:bg-green-400/15 dark:text-green-400"
-                        : "bg-outline-variant/20 text-on-surface-variant dark:bg-zinc-700 dark:text-zinc-400"
-                    }`}>
-                      {tabCounts[t.key]}
-                    </span>
-                  )}
                   {tab === t.key && (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary dark:bg-green-400 rounded-t-full" />
                   )}
@@ -470,24 +469,37 @@ export default function AdminExperiences() {
             </div>
           </div>
 
-          {/* list */}
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : isError ? (
+              <div className="flex flex-col items-center gap-2 py-16 text-red-500">
+                <AlertCircle className="h-8 w-8" />
+                <p className="text-sm">Failed to load experiences.</p>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-12 h-12 rounded-full bg-surface dark:bg-zinc-800 flex items-center justify-center mb-3">
-                  <CheckCircle2 className="h-5 w-5 text-on-surface-variant dark:text-zinc-500" />
+                  <Eye className="h-5 w-5 text-on-surface-variant dark:text-zinc-500" />
                 </div>
-                <p className="text-sm font-semibold text-on-surface dark:text-white mb-1">No {tab} experiences</p>
+                <p className="text-sm font-semibold text-on-surface dark:text-white mb-1">No {emptyLabel} listings</p>
                 <p className="text-xs text-on-surface-variant dark:text-zinc-400">
-                  {search ? "Try a different search query" : `No experiences with "${tab}" status`}
+                  {search ? "Try a different search." : "Nothing in this tab yet."}
                 </p>
               </div>
             ) : (
               filtered.map((exp) => {
-                const isSelected = selected?.id === exp.id;
+                const isSelected = selected?._id === exp._id;
+                const st = (exp.status ?? "draft") as ExpStatus;
+                const rowBadge =
+                  tab === "suspended" || exp.suspended
+                    ? { cls: suspendedBadge, label: "Suspended" }
+                    : { cls: statusBadge[st], label: st === "approved" ? "Live" : st };
                 return (
                   <button
-                    key={exp.id}
+                    key={exp._id}
                     onClick={() => setSelected(isSelected ? null : exp)}
                     className={`w-full text-left rounded-xl border transition-all duration-150 overflow-hidden group ${
                       isSelected
@@ -496,50 +508,64 @@ export default function AdminExperiences() {
                     }`}
                   >
                     <div className="flex gap-0">
-                      {/* cover strip */}
-                      <div className="w-24 shrink-0 relative bg-surface-container dark:bg-zinc-800">
-                        <img
-                          src={exp.imageCover}
-                          alt=""
-                          className="w-full h-full object-cover"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                        />
+                      <div className="w-24 shrink-0 relative bg-surface-container dark:bg-zinc-800 aspect-[4/3]">
+                        {exp.imageCover && exp.imageCover !== "__draft__" ? (
+                          <img
+                            src={exp.imageCover}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <ImageIcon className="h-5 w-5 text-on-surface-variant/30" />
+                          </div>
+                        )}
                       </div>
 
-                      {/* content */}
                       <div className="flex-1 p-3 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <p className="text-sm font-headline font-semibold text-on-surface dark:text-white leading-tight line-clamp-2 flex-1">
                             {exp.title}
                           </p>
-                          <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusBadge[exp.status]}`}>
-                            {exp.status}
+                          <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${rowBadge.cls}`}>
+                            {rowBadge.label}
                           </span>
                         </div>
 
                         <div className="flex items-center gap-1.5 mb-2">
                           <div className="w-4 h-4 rounded-full bg-primary/15 text-primary text-[8px] font-bold flex items-center justify-center shrink-0">
-                            {exp.hostInitials}
+                            {hostInitials(exp.host?.name ?? "")}
                           </div>
-                          <span className="text-[11px] text-on-surface-variant dark:text-zinc-400 truncate">{exp.hostName}</span>
+                          <span className="text-[11px] text-on-surface-variant dark:text-zinc-400 truncate">{exp.host?.name}</span>
                         </div>
 
                         <div className="flex items-center gap-3 flex-wrap">
+                          {locationText(exp) && (
+                            <span className="flex items-center gap-1 text-[11px] text-on-surface-variant dark:text-zinc-400">
+                              <MapPin className="h-3 w-3" />
+                              {locationText(exp)}
+                            </span>
+                          )}
                           <span className="flex items-center gap-1 text-[11px] text-on-surface-variant dark:text-zinc-400">
-                            <MapPin className="h-3 w-3" />{exp.location}
+                            <DollarSign className="h-3 w-3" />
+                            ETB {(exp.price ?? 0).toLocaleString()}
                           </span>
                           <span className="flex items-center gap-1 text-[11px] text-on-surface-variant dark:text-zinc-400">
-                            <DollarSign className="h-3 w-3" />ETB {exp.price.toLocaleString()}
-                          </span>
-                          <span className="flex items-center gap-1 text-[11px] text-on-surface-variant dark:text-zinc-400">
-                            <Timer className="h-3 w-3" />{exp.duration}
+                            <Timer className="h-3 w-3" />
+                            {fmtDuration(exp.duration)}
                           </span>
                         </div>
                       </div>
 
-                      {/* chevron */}
                       <div className="flex items-center pr-3">
-                        <ChevronRight className={`h-4 w-4 transition-all ${isSelected ? "text-primary dark:text-green-400 translate-x-0.5" : "text-outline-variant dark:text-zinc-600"}`} />
+                        <ChevronRight
+                          className={`h-4 w-4 transition-all ${
+                            isSelected ? "text-primary dark:text-green-400 translate-x-0.5" : "text-outline-variant dark:text-zinc-600"
+                          }`}
+                        />
                       </div>
                     </div>
                   </button>
@@ -549,27 +575,29 @@ export default function AdminExperiences() {
           </div>
         </div>
 
-        {/* ── RIGHT: detail panel ── */}
         {selected && (
           <div className="flex-1 bg-surface dark:bg-zinc-950 overflow-hidden flex flex-col">
             <DetailPanel
               exp={selected}
-              onApprove={() => handleApprove(selected.id)}
-              onReject={() => setRejectTarget(selected)}
+              tab={tab}
               onClose={() => setSelected(null)}
+              onOpenSuspend={() => setSuspendModalExp(selected)}
+              onReinstate={() => reinstateMutation.mutate(selected._id)}
+              reinstatePending={reinstateMutation.isPending}
             />
           </div>
         )}
 
-        {/* empty state when no selection */}
         {!selected && (
           <div className="hidden lg:flex flex-1 items-center justify-center bg-surface dark:bg-zinc-950">
-            <div className="text-center">
+            <div className="text-center max-w-sm px-6">
               <div className="w-16 h-16 rounded-2xl bg-white dark:bg-zinc-800 border border-outline-variant/20 dark:border-zinc-700 flex items-center justify-center mx-auto mb-4 shadow-sm">
                 <Eye className="h-6 w-6 text-on-surface-variant dark:text-zinc-500" />
               </div>
-              <p className="font-headline font-bold text-sm text-on-surface dark:text-white mb-1">Select an experience</p>
-              <p className="text-xs text-on-surface-variant dark:text-zinc-400">Click any row to view its full details and take action</p>
+              <p className="font-headline font-bold text-sm text-on-surface dark:text-white mb-1">Select a listing</p>
+              <p className="text-xs text-on-surface-variant dark:text-zinc-400">
+                Click a row for details. Use Live / Suspended / Drafts / Rejected tabs. Suspend or reinstate from the detail panel.
+              </p>
             </div>
           </div>
         )}

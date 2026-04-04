@@ -10,6 +10,9 @@ export interface Booking {
     price: number;
     duration?: string;
     nextOccurrenceAt?: string;
+    /** Present when populated; true if platform hid the listing from the catalog */
+    suspended?: boolean;
+    suspensionReason?: string;
     host?: { _id: string; name: string; email: string };
   };
   user: {

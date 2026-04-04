@@ -43,6 +43,7 @@ export interface WithdrawalDestination {
   bankName?:           string;
   accountName?:        string;
   accountNumberLast4?: string;
+  accountNumber?:      string;
 }
 
 export interface WithdrawalRequest {
@@ -54,6 +55,8 @@ export interface WithdrawalRequest {
   createdAt:   string;
   processedAt?: string;
   failureReason?: string;
+  /** Proof of bank transfer — set when admin marks paid */
+  paymentReceiptUrl?: string;
 }
 
 export const walletService = {
@@ -89,6 +92,7 @@ export const walletService = {
           bankName:           payload.bankName,
           accountName:        payload.accountName,
           accountNumberLast4: payload.accountNumber.slice(-4),
+          accountNumber:      payload.accountNumber.replace(/\s/g, ""),
         },
       }
     ),

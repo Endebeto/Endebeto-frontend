@@ -1,49 +1,23 @@
 import { useState } from "react";
-import { TrendingUp, Minus, ArrowUp, ShieldCheck, Users, Compass, FileText } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { TrendingUp, ArrowUp, Users, Compass, FileText, Loader2, BarChart3 } from "lucide-react";
+import { Link as RouterLink } from "react-router-dom";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+  LabelList,
+} from "recharts";
 import AdminLayout from "@/components/AdminLayout";
-
-/* ─── stat cards data ───────────────────────────────────── */
-const stats = [
-  { label: "Total Users",         value: "1,240", sub: "+5% this week",  subType: "trend",  icon: "users" },
-  { label: "Active Experiences",  value: "85",    sub: "+3 this week",   subType: "trend",  icon: "compass" },
-  { label: "Pending Apps",        value: "12",    sub: "Action needed",  subType: "action", icon: "apps" },
-  { label: "Pending Exp.",        value: "7",     sub: "Action needed",  subType: "action", icon: "exp" },
-  { label: "Monthly Bookings",    value: "432",   sub: "+12% growth",    subType: "trend",  icon: "bookings", dark: true },
-];
-
-/* ─── chart bars ─────────────────────────────────────────── */
-const chartBars = [40, 45, 38, 55, 60, 42, 70, 85, 65, 75, 92, 58, 63, 47, 80, 72, 66, 50, 88, 74, 44, 69, 56, 83, 61, 49, 77, 91, 53, 68];
-
-const revenueRows = [
-  { label: "Coffee Tours",          value: "124.5k", pct: 75, shade: "bg-primary" },
-  { label: "Highland Trekking",     value: "89.2k",  pct: 55, shade: "bg-emerald-700" },
-  { label: "Historical Sites",      value: "62.1k",  pct: 40, shade: "bg-emerald-500" },
-  { label: "Culinary Experiences",  value: "45.0k",  pct: 30, shade: "bg-emerald-300" },
-];
-
-const pendingApps = [
-  { initials: "TA", name: "Tesfaye Alemu",  type: "Coffee Ceremony Masterclass", date: "Oct 28, 2023", color: "bg-secondary-container text-on-secondary-container" },
-  { initials: "MG", name: "Marta Gebre",    type: "Lalibela Rock-Hewn Tour",      date: "Oct 27, 2023", color: "bg-tertiary-fixed text-on-tertiary-fixed" },
-  { initials: "BD", name: "Berhanu Desta",  type: "Simien Mountains Hiking",      date: "Oct 26, 2023", color: "bg-secondary-container text-on-secondary-container" },
-];
-
-const recentApprovals = [
-  { title: "Traditional Weaving Workshop", by: "Sarah K." },
-  { title: "Blue Nile Falls Expedition",   by: "Abebe B." },
-];
-
-const regions = [
-  { rank: "01", name: "Addis Ababa", trend: "up" },
-  { rank: "02", name: "Lalibela",    trend: "flat" },
-  { rank: "03", name: "Gonder",      trend: "up" },
-];
-
-const donutSegments = [
-  { color: "bg-primary",        label: "Coffee (40%)" },
-  { color: "bg-emerald-700",    label: "Trekking (25%)" },
-  { color: "bg-emerald-500",    label: "History (20%)" },
-  { color: "bg-tertiary",       label: "Culinary (15%)" },
-];
+import { adminService, type PlatformStats } from "@/services/admin.service";
 
 /* ─── icon helper ────────────────────────────────────────── */
 function StatIcon({ type }: { type: string }) {
@@ -55,9 +29,109 @@ function StatIcon({ type }: { type: string }) {
   return <TrendingUp className={cls} />;
 }
 
+function fmt(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return n.toString();
+}
+
+function fmtETB(cents: number) {
+  const etb = cents / 100;
+  if (etb >= 1_000_000) return `${(etb / 1_000_000).toFixed(1)}M`;
+  if (etb >= 1_000) return `${(etb / 1_000).toFixed(1)}k`;
+  return etb.toFixed(0);
+}
+
+function BarTooltipBody({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-xl border border-outline-variant/20 bg-white dark:bg-zinc-800 px-3 py-2.5 text-xs shadow-lg max-w-[220px]">
+      <p className="font-headline font-bold text-primary mb-1.5 border-b border-outline-variant/10 pb-1">
+        {label}
+      </p>
+      <ul className="space-y-1">
+        {payload.map((p) => (
+          <li key={String(p.name)} className="flex justify-between gap-6">
+            <span className="text-on-surface-variant">{p.name}</span>
+            <span className="font-bold tabular-nums text-on-surface">{p.value}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function PieTooltipBody({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number }>;
+}) {
+  if (!active || !payload?.length) return null;
+  const row = payload[0];
+  const n = Number(row.value);
+  return (
+    <div className="rounded-xl border border-outline-variant/20 bg-white dark:bg-zinc-800 px-3 py-2 text-xs shadow-lg">
+      <p className="font-bold text-on-surface">{row.name}</p>
+      <p className="text-on-surface-variant">
+        <span className="font-semibold tabular-nums text-primary">{Number.isFinite(n) ? n : 0}</span> listings
+      </p>
+    </div>
+  );
+}
+
 /* ─── page ──────────────────────────────────────────────── */
 export default function AdminDashboard() {
   const [search, setSearch] = useState("");
+
+  const { data: statsData, isLoading } = useQuery({
+    queryKey: ["admin-stats"],
+    queryFn: () => adminService.getStats().then(r => r.data.data),
+    staleTime: 60_000,
+  });
+
+  const { data: chartsData, isLoading: chartsLoading } = useQuery({
+    queryKey: ["admin-dashboard-charts"],
+    queryFn: () => adminService.getDashboardCharts({ months: 6 }).then((r) => r.data.data),
+    staleTime: 120_000,
+  });
+
+  const chartRows =
+    chartsData?.labels.map((label, i) => ({
+      month: label,
+      signups: chartsData.newUsers[i] ?? 0,
+      bookings: chartsData.bookings[i] ?? 0,
+    })) ?? [];
+
+  const stats: PlatformStats = statsData ?? {
+    totalUsers: 0,
+    newUsersThisMonth: 0,
+    approvedHosts: 0,
+    totalBookings: 0,
+    grossRevenue: 0,
+    platformFeesCollected: 0,
+    pendingApplications: 0,
+    draftExperiences: 0,
+    liveExperiences: 0,
+    suspendedExperiences: 0,
+  };
+
+  const statCards = [
+    { label: "Total Users",        value: fmt(stats.totalUsers),          sub: `+${stats.newUsersThisMonth} this month`, subType: "trend",  icon: "users" },
+    { label: "Active Experiences", value: fmt(stats.liveExperiences), sub: "Live & bookable",                        subType: "trend",  icon: "compass" },
+    { label: "Pending Apps",       value: fmt(stats.pendingApplications), sub: "Action needed",                          subType: "action", icon: "apps" },
+    { label: "Draft Listings",     value: fmt(stats.draftExperiences),      sub: "Unpublished",                            subType: "trend",  icon: "exp" },
+    { label: "Total Bookings",     value: fmt(stats.totalBookings),       sub: `${fmtETB(stats.grossRevenue)} ETB gross`, subType: "trend", icon: "bookings", dark: true },
+  ];
 
   return (
     <AdminLayout
@@ -70,7 +144,11 @@ export default function AdminDashboard() {
 
           {/* ── Stat cards ── */}
           <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {stats.map((s) => (
+            {isLoading ? (
+              <div className="col-span-5 flex justify-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : statCards.map((s) => (
               <div
                 key={s.label}
                 className={`p-4 rounded-2xl flex flex-col gap-2 ${
@@ -103,152 +181,188 @@ export default function AdminDashboard() {
             ))}
           </section>
 
-          {/* ── Charts row ── */}
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-            {/* Registration growth */}
-            <div className="lg:col-span-2 bg-white dark:bg-[#2d3133] p-6 rounded-3xl shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="font-headline font-extrabold text-base text-primary">User Registration Growth</h3>
-                  <p className="text-xs text-on-surface-variant">Daily registrations over the last 30 days</p>
-                </div>
-                <select className="text-[11px] font-semibold bg-surface-container-low border-none rounded-lg px-2 py-1.5 focus:outline-none">
-                  <option>Last 30 Days</option>
-                  <option>Last 3 Months</option>
-                </select>
+          {/* ── Charts ── */}
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {chartsLoading ? (
+              <div className="lg:col-span-2 flex justify-center py-12 bg-white dark:bg-[#2d3133] rounded-2xl border border-outline-variant/10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
-
-              {/* Bar chart */}
-              <div className="h-48 flex items-end gap-0.5">
-                {chartBars.map((h, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 relative group"
-                    style={{ height: `${h}%` }}
-                  >
-                    <div
-                      className="absolute inset-0 bg-primary/8 rounded-t-sm"
-                    />
-                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary rounded-full" />
-                    {i === 10 && (
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-primary text-white text-[10px] rounded-lg whitespace-nowrap shadow">
-                        42 New
-                      </div>
+            ) : (
+              <>
+                <div className="bg-white dark:bg-[#2d3133] rounded-2xl border border-outline-variant/10 p-4 md:p-6 shadow-sm">
+                  <div className="mb-3">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-primary" />
+                      <h2 className="font-headline font-extrabold text-sm text-primary">Activity by month</h2>
+                    </div>
+                    <p className="text-[11px] text-on-surface-variant mt-1 pl-7 leading-relaxed">
+                      New user accounts created vs bookings recorded in each calendar month (last 6 months). Vertical axis is a count.
+                    </p>
+                  </div>
+                  <div className="h-[260px] w-full min-h-[200px]">
+                    {chartRows.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartRows} margin={{ top: 12, right: 12, left: 4, bottom: 8 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
+                          <XAxis dataKey="month" tick={{ fontSize: 11 }} interval={0} />
+                          <YAxis
+                            allowDecimals={false}
+                            tick={{ fontSize: 11 }}
+                            width={40}
+                            label={{ value: "Count", angle: -90, position: "insideLeft", style: { fontSize: 10, fill: "var(--muted-foreground, #64748b)" } }}
+                          />
+                          <Tooltip content={(props) => <BarTooltipBody {...props} />} />
+                          <Legend wrapperStyle={{ fontSize: "12px" }} />
+                          <Bar dataKey="signups" name="New users" fill="rgb(0, 82, 52)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="bookings" name="Bookings" fill="rgb(16, 185, 129)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <p className="text-xs text-on-surface-variant text-center py-12">No chart data yet.</p>
                     )}
                   </div>
-                ))}
-              </div>
-              <div className="flex justify-between mt-3 text-[9px] font-bold text-on-surface-variant uppercase tracking-widest opacity-50">
-                <span>Oct 01</span>
-                <span>Oct 10</span>
-                <span>Oct 20</span>
-                <span>Oct 30</span>
-              </div>
-            </div>
-
-            {/* Revenue breakdown */}
-            <div className="bg-white dark:bg-[#2d3133] p-6 rounded-3xl shadow-sm">
-              <h3 className="font-headline font-extrabold text-base text-primary mb-0.5">Marketplace Revenue</h3>
-              <p className="text-xs text-on-surface-variant mb-6">Volume in ETB (Thousands)</p>
-              <div className="space-y-5">
-                {revenueRows.map((r) => (
-                  <div key={r.label} className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-on-surface-variant">{r.label}</span>
-                      <span className="text-primary">{r.value}</span>
+                </div>
+                {!isLoading && (
+                  <div className="bg-white dark:bg-[#2d3133] rounded-2xl border border-outline-variant/10 p-4 md:p-6 shadow-sm">
+                    <div className="mb-3">
+                      <h2 className="font-headline font-extrabold text-sm text-primary">Experience listings</h2>
+                      <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
+                        Share of catalog states today — live (bookable), suspended (hidden from guests), or draft. Numbers appear on each slice and in the legend.
+                      </p>
                     </div>
-                    <div className="h-1.5 w-full bg-surface-container-low rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${r.shade}`}
-                        style={{ width: `${r.pct}%` }}
-                      />
+                    <div className="h-[260px] w-full min-h-[200px]">
+                      {(() => {
+                        const expMix = [
+                          { name: "Live", value: stats.liveExperiences, color: "#005234" },
+                          { name: "Suspended", value: stats.suspendedExperiences, color: "#b45309" },
+                          { name: "Drafts", value: stats.draftExperiences, color: "#64748b" },
+                        ].filter((d) => d.value > 0);
+                        const total = expMix.reduce((s, d) => s + d.value, 0);
+                        if (total === 0) {
+                          return <p className="text-xs text-on-surface-variant text-center py-12">No experiences yet.</p>;
+                        }
+                        return (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={expMix}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={48}
+                                outerRadius={82}
+                                paddingAngle={2}
+                              >
+                                {expMix.map((entry) => (
+                                  <Cell key={entry.name} fill={entry.color} />
+                                ))}
+                                <LabelList
+                                  dataKey="value"
+                                  position="inside"
+                                  fill="#fff"
+                                  fontSize={12}
+                                  fontWeight={700}
+                                  formatter={(v: number) => (v > 0 ? String(v) : "")}
+                                />
+                              </Pie>
+                              <Tooltip content={(props) => <PieTooltipBody {...props} />} />
+                              <Legend
+                                verticalAlign="bottom"
+                                formatter={(value, entry) => {
+                                  const v = (entry as { payload?: { value?: number } }).payload?.value;
+                                  return `${value} (${v ?? 0})`;
+                                }}
+                                wrapperStyle={{ fontSize: "12px", paddingTop: 8 }}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        );
+                      })()}
                     </div>
                   </div>
-                ))}
-              </div>
-              <div className="mt-6 pt-5 border-t border-outline-variant/10 flex items-center justify-between">
-                <span className="text-xs font-bold text-on-surface-variant">Total Volume</span>
-                <span className="font-headline font-extrabold text-lg text-primary">
-                  320.8k <span className="text-xs font-normal">ETB</span>
-                </span>
-              </div>
-            </div>
+                )}
+              </>
+            )}
           </section>
+
+          {/* ── Platform fee highlight ── */}
+          {!isLoading && (
+            <section className="bg-primary/5 border border-primary/10 rounded-2xl px-6 py-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-primary uppercase tracking-widest mb-0.5">Platform Fees Collected</p>
+                <p className="font-headline font-extrabold text-2xl text-primary">
+                  {fmtETB(stats.platformFeesCollected)} <span className="text-sm font-normal">ETB</span>
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-on-surface-variant">Gross Revenue</p>
+                <p className="font-headline font-bold text-lg text-on-surface">{fmtETB(stats.grossRevenue)} ETB</p>
+                <p className="text-[10px] text-on-surface-variant mt-0.5">15% platform fee on all bookings</p>
+              </div>
+            </section>
+          )}
 
           {/* ── Bottom row ── */}
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-            {/* Left: table + approvals */}
+            {/* Left: pending applications preview */}
             <div className="lg:col-span-2 space-y-5">
-
-              {/* Pending applications table */}
               <div className="bg-white dark:bg-[#2d3133] rounded-3xl shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-outline-variant/10 flex items-center justify-between">
                   <h3 className="font-headline font-extrabold text-base text-primary">Pending Host Applications</h3>
-                  <button className="text-[11px] font-bold text-primary hover:underline">View All</button>
+                  <RouterLink
+                    to="/admin/host-applications"
+                    className="text-[11px] font-bold text-primary hover:underline"
+                  >
+                    View All
+                  </RouterLink>
                 </div>
-                <div className="overflow-x-auto scrollbar-hide">
-                  <table className="w-full text-left min-w-[460px]">
-                    <thead className="bg-surface-container-low/50">
-                      <tr>
-                        {["Applicant Name", "Experience Type", "Date Submitted", "Action"].map((h, i) => (
-                          <th
-                            key={h}
-                            className={`px-5 py-3 text-[9px] font-bold uppercase tracking-widest text-on-surface-variant ${i === 3 ? "text-right" : ""}`}
-                          >
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-outline-variant/5">
-                      {pendingApps.map((app) => (
-                        <tr key={app.name} className="hover:bg-surface-container-low/30 transition-colors">
-                          <td className="px-5 py-3.5">
-                            <div className="flex items-center gap-2.5">
-                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${app.color}`}>
-                                {app.initials}
-                              </div>
-                              <span className="text-sm font-headline font-semibold text-primary">{app.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <span className="text-xs text-on-surface-variant">{app.type}</span>
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <span className="text-xs text-on-surface-variant">{app.date}</span>
-                          </td>
-                          <td className="px-5 py-3.5 text-right">
-                            <button className="px-3 py-1 bg-primary text-white text-[10px] font-bold rounded-full hover:opacity-90 transition-opacity">
-                              View Detail
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="px-6 py-8 flex flex-col items-center justify-center text-center gap-2">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-1">
+                    <FileText className="h-6 w-6 text-primary" />
+                  </div>
+                  <p className="font-headline font-extrabold text-3xl text-primary">
+                    {isLoading ? "–" : stats.pendingApplications}
+                  </p>
+                  <p className="text-sm text-on-surface-variant">
+                    {stats.pendingApplications === 1 ? "application" : "applications"} awaiting review
+                  </p>
+                  <RouterLink
+                    to="/admin/host-applications"
+                    className="mt-2 px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:opacity-90 transition-opacity"
+                  >
+                    Review Applications
+                  </RouterLink>
                 </div>
               </div>
 
-              {/* Recent approvals */}
+              {/* Experience management CTA */}
               <div className="bg-white dark:bg-[#2d3133] p-5 rounded-3xl shadow-sm">
-                <h3 className="text-sm font-headline font-bold text-primary mb-3 flex items-center gap-1.5">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                  Recent Experience Approvals
+                <h3 className="text-sm font-headline font-bold text-primary mb-2 flex items-center gap-1.5">
+                  <Compass className="h-4 w-4 text-emerald-600" />
+                  Experience Management
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {recentApprovals.map((a) => (
-                    <div key={a.title} className="p-3.5 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-headline font-bold text-primary">{a.title}</p>
-                        <p className="text-[10px] text-on-surface-variant">Approved by {a.by}</p>
-                      </div>
-                      <span className="shrink-0 px-2 py-0.5 bg-emerald-200 text-emerald-900 text-[9px] font-bold rounded uppercase tracking-wide">
-                        Active
-                      </span>
-                    </div>
-                  ))}
+                <p className="text-xs text-on-surface-variant mb-4 leading-relaxed">
+                  Monitor live listings, suspensions, drafts, and rejected items. Suspend listings to hide them from guests while hosts fix issues.
+                </p>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-on-surface-variant leading-relaxed">
+                      <span className="font-headline font-extrabold text-lg text-primary">{isLoading ? "–" : stats.liveExperiences}</span>
+                      {" "}live ·{" "}
+                      <span className="font-headline font-extrabold text-lg text-amber-700">{isLoading ? "–" : stats.suspendedExperiences}</span>
+                      {" "}suspended ·{" "}
+                      <span className="font-headline font-extrabold text-lg text-primary">{isLoading ? "–" : stats.draftExperiences}</span>
+                      {" "}drafts
+                    </p>
+                  </div>
+                  <RouterLink
+                    to="/admin/experiences"
+                    className="shrink-0 px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:opacity-90 transition-opacity"
+                  >
+                    Open catalog
+                  </RouterLink>
                 </div>
               </div>
             </div>
@@ -256,54 +370,38 @@ export default function AdminDashboard() {
             {/* Right: marketplace health */}
             <div className="bg-white dark:bg-[#2d3133] p-6 rounded-3xl shadow-sm flex flex-col">
               <h3 className="font-headline font-extrabold text-base text-primary mb-0.5">Marketplace Health</h3>
-              <p className="text-xs text-on-surface-variant mb-6">Category Distribution</p>
+              <p className="text-xs text-on-surface-variant mb-6">Platform overview</p>
 
-              {/* Donut visual */}
-              <div className="relative w-40 h-40 mx-auto mb-6">
-                <div
-                  className="w-full h-full rounded-full"
-                  style={{
-                    background: "conic-gradient(#003527 0% 40%, #047857 40% 65%, #10b981 65% 85%, #78350f 85% 100%)",
-                    padding: "16px",
-                  }}
-                >
-                  <div className="w-full h-full rounded-full bg-white dark:bg-[#2d3133] flex flex-col items-center justify-center">
-                    <span className="font-headline font-black text-2xl text-primary">85</span>
-                    <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Total Active</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Legend */}
-              <div className="grid grid-cols-2 gap-2 mb-6">
-                {donutSegments.map((s) => (
-                  <div key={s.label} className="flex items-center gap-2">
-                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.color}`} />
-                    <span className="text-[11px] text-on-surface">{s.label}</span>
+              <div className="space-y-4">
+                {[
+                  { label: "Total Users",          value: fmt(stats.totalUsers),          icon: "users",   color: "text-primary" },
+                  { label: "Approved Hosts",        value: fmt(stats.approvedHosts),        icon: "compass", color: "text-emerald-600" },
+                  { label: "Live Experiences",    value: fmt(stats.liveExperiences),  icon: "exp",     color: "text-on-surface" },
+                  { label: "Suspended (hidden)", value: fmt(stats.suspendedExperiences), icon: "exp", color: "text-amber-700" },
+                  { label: "Total Bookings",        value: fmt(stats.totalBookings),        icon: "bookings",color: "text-on-surface" },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center justify-between p-3 bg-surface-container-low rounded-xl">
+                    <span className="text-sm text-on-surface-variant">{item.label}</span>
+                    <span className={`font-headline font-extrabold text-lg ${item.color}`}>
+                      {isLoading ? "–" : item.value}
+                    </span>
                   </div>
                 ))}
               </div>
 
-              {/* Top regions */}
-              <div className="mt-auto">
-                <h4 className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-3">
-                  Top Performing Regions
-                </h4>
-                <div className="space-y-2">
-                  {regions.map((r) => (
-                    <div key={r.name} className="flex items-center justify-between p-3 bg-surface-container-low rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <span className="text-base font-headline font-bold text-primary/25">{r.rank}</span>
-                        <span className="text-sm font-headline font-bold text-primary">{r.name}</span>
-                      </div>
-                      {r.trend === "up" ? (
-                        <ArrowUp className="h-4 w-4 text-emerald-600" />
-                      ) : (
-                        <Minus className="h-4 w-4 text-emerald-600" />
-                      )}
-                    </div>
-                  ))}
-                </div>
+              <div className="mt-6 grid grid-cols-2 gap-2">
+                <RouterLink
+                  to="/admin/users"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-primary/5 text-primary text-xs font-bold rounded-xl hover:bg-primary/10 transition-colors"
+                >
+                  <Users className="h-3.5 w-3.5" /> Manage Users
+                </RouterLink>
+                <RouterLink
+                  to="/admin/payouts"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl hover:bg-emerald-100 transition-colors"
+                >
+                  <ArrowUp className="h-3.5 w-3.5" /> Payouts
+                </RouterLink>
               </div>
             </div>
           </section>

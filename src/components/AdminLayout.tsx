@@ -8,7 +8,7 @@ import {
 const navLinks = [
   { icon: LayoutDashboard, label: "Dashboard",         href: "/admin" },
   { icon: Users,           label: "Users",             href: "/admin/users" },
-  { icon: Compass,         label: "Experiences",       href: "/admin/experiences" },
+  { icon: Compass,         label: "Experience Management", href: "/admin/experiences" },
   { icon: FileText,        label: "Host Applications", href: "/admin/host-applications" },
   { icon: CreditCard,      label: "Payouts",           href: "/admin/payouts" },
 ];

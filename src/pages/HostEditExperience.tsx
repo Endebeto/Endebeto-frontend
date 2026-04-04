@@ -162,11 +162,15 @@ export default function HostEditExperience() {
   const stepStatus     = [infoFilled, scheduleFilled, mediaFilled, locationFilled];
   const canSubmit      = infoFilled && scheduleFilled && mediaFilled && locationFilled;
 
+  const suspended = experience?.suspended === true;
+  /** Bookings normally lock sensitive fields; platform suspension unlocks them so the host can remediate. */
+  const effectiveLocked = isLocked && !suspended;
+
   /* locked input class */
   const inputCls = "w-full bg-white dark:bg-zinc-800 border border-outline-variant/40 dark:border-zinc-600 rounded-xl px-4 py-3 text-on-surface dark:text-white text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 dark:focus:border-green-400/50 transition-all placeholder:text-on-surface-variant/50 dark:placeholder:text-zinc-500";
   const lockedCls = `${inputCls} opacity-60 cursor-not-allowed bg-surface-container dark:bg-zinc-800/60 border-outline-variant/20`;
 
-  const fieldCls = (sensitive: boolean) => (isLocked && sensitive ? lockedCls : inputCls);
+  const fieldCls = (sensitive: boolean) => (effectiveLocked && sensitive ? lockedCls : inputCls);
 
   const isDraft = experience?.status === "draft";
 
@@ -175,7 +179,7 @@ export default function HostEditExperience() {
     const fd = new FormData();
     fd.append("summary", form.summary);
     fd.append("description", form.description);
-    if (!isLocked) {
+    if (!effectiveLocked) {
       fd.append("title", form.title);
       fd.append("category", form.category);
       fd.append("price", form.price);
@@ -279,8 +283,23 @@ export default function HostEditExperience() {
           </div>
         </header>
 
-        {/* ── Booking-lock banner ─────────────────────────── */}
-        {isLocked && (
+        {/* ── Platform suspension ─────────────────────────── */}
+        {suspended && (
+          <div className="mb-8 flex items-start gap-3 p-4 bg-red-50 dark:bg-red-950/30 border border-red-200/60 dark:border-red-800/40 rounded-xl max-w-4xl mx-auto">
+            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-red-800 dark:text-red-300">Listing suspended by the platform</p>
+              <p className="text-xs text-red-700/90 dark:text-red-400/90 mt-0.5 leading-relaxed">
+                {experience.suspensionReason?.trim()
+                  ? experience.suspensionReason
+                  : "Update your listing to address the platform request. All fields are editable while suspended."}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Booking-lock banner (not applied during platform suspension) ── */}
+        {effectiveLocked && (
           <div className="mb-8 flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-700/40 rounded-xl max-w-4xl mx-auto">
             <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div>
@@ -311,14 +330,14 @@ export default function HostEditExperience() {
                 <div>
                   <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface dark:text-white mb-2">
                     Experience Title <span className="text-error">*</span>
-                    {isLocked && <Lock className="h-3 w-3 text-amber-500" />}
+                    {effectiveLocked && <Lock className="h-3 w-3 text-amber-500" />}
                   </label>
                   <input
                     type="text"
                     placeholder="e.g. Traditional Coffee Ceremony in the Simien Foothills"
                     value={form.title}
                     onChange={set("title")}
-                    disabled={isLocked}
+                    disabled={effectiveLocked}
                     className={fieldCls(true)}
                   />
                 </div>
@@ -332,7 +351,7 @@ export default function HostEditExperience() {
                       <select
                         value={form.category}
                         onChange={set("category")}
-                        disabled={isLocked}
+                        disabled={effectiveLocked}
                         className={fieldCls(true)}
                       >
                         {approvedCategories.map((c) => <option key={c}>{c}</option>)}
@@ -345,13 +364,13 @@ export default function HostEditExperience() {
                   <div>
                     <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface dark:text-white mb-2">
                       Max Guests <span className="text-error">*</span>
-                      {isLocked && <Lock className="h-3 w-3 text-amber-500" />}
+                      {effectiveLocked && <Lock className="h-3 w-3 text-amber-500" />}
                     </label>
                     <input
                       type="number" min={1} max={100} placeholder="e.g. 8"
                       value={form.maxGuests}
                       onChange={set("maxGuests")}
-                      disabled={isLocked}
+                      disabled={effectiveLocked}
                       className={fieldCls(true)}
                     />
                   </div>
@@ -399,7 +418,7 @@ export default function HostEditExperience() {
                 <div>
                   <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface dark:text-white mb-2">
                     Price (ETB) <span className="text-error">*</span>
-                    {isLocked && <Lock className="h-3 w-3 text-amber-500" />}
+                    {effectiveLocked && <Lock className="h-3 w-3 text-amber-500" />}
                   </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-on-surface-variant dark:text-zinc-400">ETB</span>
@@ -407,7 +426,7 @@ export default function HostEditExperience() {
                       type="number" min={0} placeholder="1200"
                       value={form.price}
                       onChange={set("price")}
-                      disabled={isLocked}
+                      disabled={effectiveLocked}
                       className={`${fieldCls(true)} pl-14`}
                     />
                   </div>
@@ -416,13 +435,13 @@ export default function HostEditExperience() {
                 <div>
                   <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface dark:text-white mb-2">
                     Duration <span className="text-error">*</span>
-                    {isLocked && <Lock className="h-3 w-3 text-amber-500" />}
+                    {effectiveLocked && <Lock className="h-3 w-3 text-amber-500" />}
                   </label>
                   <input
                     type="text" placeholder="e.g. 3 hours, Half day"
                     value={form.duration}
                     onChange={set("duration")}
-                    disabled={isLocked}
+                    disabled={effectiveLocked}
                     className={fieldCls(true)}
                   />
                 </div>
@@ -430,13 +449,13 @@ export default function HostEditExperience() {
                 <div>
                   <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface dark:text-white mb-2">
                     Next Occurrence <span className="text-error">*</span>
-                    {isLocked && <Lock className="h-3 w-3 text-amber-500" />}
+                    {effectiveLocked && <Lock className="h-3 w-3 text-amber-500" />}
                   </label>
                   <input
                     type="datetime-local"
                     value={form.nextOccurrenceAt}
                     onChange={set("nextOccurrenceAt")}
-                    disabled={isLocked}
+                    disabled={effectiveLocked}
                     className={fieldCls(true)}
                   />
                 </div>
@@ -527,12 +546,12 @@ export default function HostEditExperience() {
                 <div>
                   <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface dark:text-white mb-2">
                     Location Name <span className="text-error">*</span>
-                    {isLocked && <Lock className="h-3 w-3 text-amber-500" />}
+                    {effectiveLocked && <Lock className="h-3 w-3 text-amber-500" />}
                   </label>
                   <input type="text" placeholder="e.g. Tomoca Coffee Roasters, Piazza — Addis Ababa"
                     value={form.location}
                     onChange={set("location")}
-                    disabled={isLocked}
+                    disabled={effectiveLocked}
                     className={fieldCls(true)}
                   />
                 </div>
@@ -540,12 +559,12 @@ export default function HostEditExperience() {
                 <div>
                   <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface dark:text-white mb-2">
                     Street Address
-                    {isLocked && <Lock className="h-3 w-3 text-amber-500" />}
+                    {effectiveLocked && <Lock className="h-3 w-3 text-amber-500" />}
                   </label>
                   <textarea rows={2} placeholder="Woreda 01, House Number 42, Addis Ababa"
                     value={form.address}
                     onChange={set("address")}
-                    disabled={isLocked}
+                    disabled={effectiveLocked}
                     className={`${fieldCls(true)} resize-none`}
                   />
                 </div>
@@ -553,7 +572,7 @@ export default function HostEditExperience() {
                 <LocationPicker
                   initialLat={pin?.lat ?? experience.latitude}
                   initialLng={pin?.lng ?? experience.longitude}
-                  disabled={isLocked}
+                  disabled={effectiveLocked}
                   onChange={(loc) => {
                     setPin(loc.lat ? loc : null);
                     if (loc.displayName && !form.location) {
@@ -602,8 +621,8 @@ export default function HostEditExperience() {
           {/* ── RIGHT: sticky sidebar ── */}
           <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-6">
 
-            {/* Lock status card */}
-            {isLocked ? (
+            {/* Lock / suspension status card */}
+            {effectiveLocked ? (
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-700/40 rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-800/40 flex items-center justify-center">
@@ -621,6 +640,18 @@ export default function HostEditExperience() {
                     </div>
                   ))}
                 </div>
+              </div>
+            ) : suspended ? (
+              <div className="bg-red-50 dark:bg-red-950/25 border border-red-200/60 dark:border-red-800/40 rounded-2xl p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                    <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  </div>
+                  <h3 className="text-sm font-headline font-bold text-red-800 dark:text-red-300">Full edit (suspended)</h3>
+                </div>
+                <p className="text-xs text-red-700/90 dark:text-red-400/90 leading-relaxed">
+                  The listing is hidden from the catalog. You can change any field to address the platform request. Existing guest bookings still apply—be careful changing date, price, or capacity.
+                </p>
               </div>
             ) : (
               <div className="bg-primary-container dark:bg-[#064e3b] text-white rounded-2xl p-8 shadow-xl relative overflow-hidden">

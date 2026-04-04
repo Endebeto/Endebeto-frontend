@@ -363,6 +363,20 @@ function TxRow({ w }: { w: WithdrawalRequest }) {
       <td className="px-4 py-5 text-sm font-bold text-error dark:text-red-400 whitespace-nowrap">
         −ETB {etb(w.amountCents)}
       </td>
+      <td className="px-4 py-5 whitespace-nowrap">
+        {w.status === "paid" && w.paymentReceiptUrl ? (
+          <a
+            href={w.paymentReceiptUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-bold text-primary dark:text-green-400 hover:underline"
+          >
+            Receipt
+          </a>
+        ) : (
+          <span className="text-[10px] text-on-surface-variant dark:text-zinc-500">—</span>
+        )}
+      </td>
       <td className="px-8 py-5 whitespace-nowrap">
         <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${cfg.cls}`}>
           {cfg.label}
@@ -746,19 +760,20 @@ export default function HostWallet() {
                   <th className="px-4 py-4">Type</th>
                   <th className="px-4 py-4">Destination</th>
                   <th className="px-4 py-4">Amount</th>
+                  <th className="px-4 py-4">Receipt</th>
                   <th className="px-8 py-4">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/10 dark:divide-zinc-800">
                 {withdrawalsLoading ? (
                   <tr>
-                    <td colSpan={6} className="px-8 py-12 text-center">
+                    <td colSpan={7} className="px-8 py-12 text-center">
                       <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-green-400 mx-auto" />
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-8 py-12 text-center text-sm text-on-surface-variant dark:text-zinc-400">
+                    <td colSpan={7} className="px-8 py-12 text-center text-sm text-on-surface-variant dark:text-zinc-400">
                       {search ? "No withdrawals match your search." : "No withdrawals yet. Submit your first withdrawal above."}
                     </td>
                   </tr>
