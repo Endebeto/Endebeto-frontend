@@ -1,16 +1,16 @@
 import { ReactNode, useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Compass, FileText, CreditCard,
   Bell, Settings, Search, Menu, X,
 } from "lucide-react";
 
 const navLinks = [
-  { icon: LayoutDashboard, label: "Dashboard",         href: "/admin" },
-  { icon: Users,           label: "Users",             href: "/admin/users" },
-  { icon: Compass,         label: "Experience Management", href: "/admin/experiences" },
-  { icon: FileText,        label: "Host Applications", href: "/admin/host-applications" },
-  { icon: CreditCard,      label: "Payouts",           href: "/admin/payouts" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
+  { icon: Users, label: "Users", href: "/admin/users" },
+  { icon: Compass, label: "Experience Management", href: "/admin/experiences" },
+  { icon: FileText, label: "Host Applications", href: "/admin/host-applications" },
+  { icon: CreditCard, label: "Payouts", href: "/admin/payouts" },
 ];
 
 interface AdminLayoutProps {
@@ -27,6 +27,7 @@ export default function AdminLayout({
   onSearch,
 }: AdminLayoutProps) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   /* close drawer on route change */
@@ -56,11 +57,10 @@ export default function AdminLayout({
             <Link
               key={item.href}
               to={item.href}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-headline font-semibold transition-all duration-200 ${
-                isActive
-                  ? "bg-white/15 text-white shadow-inner translate-x-1"
-                  : "text-white/55 hover:bg-white/8 hover:text-white/85 hover:translate-x-0.5"
-              }`}
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-headline font-semibold transition-all duration-200 ${isActive
+                ? "bg-white/15 text-white shadow-inner translate-x-1"
+                : "text-white/55 hover:bg-white/8 hover:text-white/85 hover:translate-x-0.5"
+                }`}
             >
               <item.icon className="h-4 w-4 shrink-0" />
               <span>{item.label}</span>
@@ -98,16 +98,14 @@ export default function AdminLayout({
       {/* ── Mobile Sidebar Drawer ── */}
       {/* Backdrop */}
       <div
-        className={`lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
-          sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
+        className={`lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
         onClick={() => setSidebarOpen(false)}
       />
       {/* Drawer panel */}
       <aside
-        className={`lg:hidden fixed left-0 top-0 h-screen w-64 bg-primary flex flex-col p-5 z-50 shadow-[8px_0_32px_-4px_rgba(0,53,39,0.3)] transition-transform duration-300 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`lg:hidden fixed left-0 top-0 h-screen w-64 bg-primary flex flex-col p-5 z-50 shadow-[8px_0_32px_-4px_rgba(0,53,39,0.3)] transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         {/* Close button */}
         <button
@@ -152,11 +150,19 @@ export default function AdminLayout({
             <button className="sm:hidden p-1.5 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors">
               <Search className="h-[18px] w-[18px]" />
             </button>
-            <button className="relative p-1.5 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors">
+            <button
+              onClick={() => navigate("/admin")}
+              className="relative p-1.5 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
+              title="Notifications"
+            >
               <Bell className="h-[18px] w-[18px]" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
             </button>
-            <button className="hidden sm:flex p-1.5 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors">
+            <button
+              onClick={() => navigate("/admin/payouts")}
+              className="hidden sm:flex p-1.5 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
+              title="Settings / Payouts"
+            >
               <Settings className="h-[18px] w-[18px]" />
             </button>
             <div className="h-6 w-px bg-outline-variant/30 mx-1 hidden sm:block" />

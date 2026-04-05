@@ -49,7 +49,7 @@ function ProtectedRoute({
 
     const hasAccess = allowedRoles.some((r) => {
       if (r === "admin") return isAdmin;
-      if (r === "host")  return isApprovedHost || isAdmin; // admins can access host routes too
+      if (r === "host") return isApprovedHost || isAdmin; // admins can access host routes too
       return user.role === r;
     });
 

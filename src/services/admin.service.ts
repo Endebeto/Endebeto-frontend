@@ -188,6 +188,7 @@ export const adminService = {
     limit?: number;
     search?: string;
     role?: string;
+    status?: "all" | "active" | "suspended";
   }) =>
     api.get<{
       status: string;

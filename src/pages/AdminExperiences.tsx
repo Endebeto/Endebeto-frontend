@@ -4,7 +4,6 @@ import {
   MapPin, Users, Timer, Star, DollarSign, ImageIcon, Eye, X, ChevronRight,
   Calendar, Loader2, AlertCircle, ExternalLink, Ban, RotateCcw,
 } from "lucide-react";
-import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { adminService, type AdminExperience } from "@/services/admin.service";
@@ -132,8 +131,9 @@ function DetailPanel({
   const status = (exp.status ?? "draft") as ExpStatus;
   const address = locationText(exp) || "Location not set";
   const images = exp.images ?? [];
-  const publicPath = exp.slug ? `/experiences/${exp.slug}` : null;
-  const canViewPublic = publicPath && status === "approved" && !exp.suspended;
+  // Public experience route is /experiences/:id — always use _id
+  const publicPath = `/experiences/${exp._id}`;
+  const canViewPublic = status === "approved" && !exp.suspended;
   const showSuspend = tab === "live" && status === "approved" && !exp.suspended;
   const showReinstate = tab === "suspended" && exp.suspended;
 
@@ -149,14 +149,14 @@ function DetailPanel({
         </div>
         <div className="flex items-center gap-2">
           {canViewPublic && (
-            <Link
-              to={publicPath!}
+            <a
+              href={`${window.location.origin}${publicPath}`}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-1 text-[11px] font-bold text-primary hover:underline"
             >
               <ExternalLink className="h-3.5 w-3.5" /> View on site
-            </Link>
+            </a>
           )}
           <button
             onClick={onClose}
@@ -283,9 +283,8 @@ function DetailPanel({
               {[1, 2, 3, 4, 5].map((s) => (
                 <Star
                   key={s}
-                  className={`h-3.5 w-3.5 ${
-                    s <= Math.round(exp.ratingsAverage ?? 0) ? "fill-amber-400 text-amber-400" : "text-outline-variant dark:text-zinc-600"
-                  }`}
+                  className={`h-3.5 w-3.5 ${s <= Math.round(exp.ratingsAverage ?? 0) ? "fill-amber-400 text-amber-400" : "text-outline-variant dark:text-zinc-600"
+                    }`}
                 />
               ))}
             </div>
@@ -434,9 +433,8 @@ export default function AdminExperiences() {
 
       <div className="flex flex-1 overflow-hidden">
         <div
-          className={`flex flex-col border-r border-outline-variant/10 dark:border-zinc-700 bg-white dark:bg-zinc-900 transition-all duration-200 ${
-            selected ? "w-[400px] shrink-0" : "flex-1"
-          }`}
+          className={`flex flex-col border-r border-outline-variant/10 dark:border-zinc-700 bg-white dark:bg-zinc-900 transition-all duration-200 ${selected ? "w-[400px] shrink-0" : "flex-1"
+            }`}
         >
           <div className="shrink-0 px-5 pt-5 pb-0">
             <div className="mb-4">
@@ -454,11 +452,10 @@ export default function AdminExperiences() {
                     setTab(t.key);
                     setSelected(null);
                   }}
-                  className={`relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold transition-colors shrink-0 ${
-                    tab === t.key
-                      ? "text-primary dark:text-green-400"
-                      : "text-on-surface-variant dark:text-zinc-400 hover:text-on-surface dark:hover:text-white"
-                  }`}
+                  className={`relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold transition-colors shrink-0 ${tab === t.key
+                    ? "text-primary dark:text-green-400"
+                    : "text-on-surface-variant dark:text-zinc-400 hover:text-on-surface dark:hover:text-white"
+                    }`}
                 >
                   {t.label}
                   {tab === t.key && (
@@ -501,11 +498,10 @@ export default function AdminExperiences() {
                   <button
                     key={exp._id}
                     onClick={() => setSelected(isSelected ? null : exp)}
-                    className={`w-full text-left rounded-xl border transition-all duration-150 overflow-hidden group ${
-                      isSelected
-                        ? "border-primary/30 dark:border-green-400/30 bg-primary/5 dark:bg-primary/10 shadow-sm"
-                        : "border-outline-variant/20 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-primary/20 dark:hover:border-zinc-500 hover:shadow-sm"
-                    }`}
+                    className={`w-full text-left rounded-xl border transition-all duration-150 overflow-hidden group ${isSelected
+                      ? "border-primary/30 dark:border-green-400/30 bg-primary/5 dark:bg-primary/10 shadow-sm"
+                      : "border-outline-variant/20 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-primary/20 dark:hover:border-zinc-500 hover:shadow-sm"
+                      }`}
                   >
                     <div className="flex gap-0">
                       <div className="w-24 shrink-0 relative bg-surface-container dark:bg-zinc-800 aspect-[4/3]">
@@ -562,9 +558,8 @@ export default function AdminExperiences() {
 
                       <div className="flex items-center pr-3">
                         <ChevronRight
-                          className={`h-4 w-4 transition-all ${
-                            isSelected ? "text-primary dark:text-green-400 translate-x-0.5" : "text-outline-variant dark:text-zinc-600"
-                          }`}
+                          className={`h-4 w-4 transition-all ${isSelected ? "text-primary dark:text-green-400 translate-x-0.5" : "text-outline-variant dark:text-zinc-600"
+                            }`}
                         />
                       </div>
                     </div>

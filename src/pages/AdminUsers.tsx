@@ -1,29 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Users, CheckCircle, MoreVertical,
   ChevronLeft, ChevronRight, Leaf, Mail,
-  X, Ban, Trash2, Loader2, AlertCircle,
+  X, Ban, Trash2, Loader2, AlertCircle, ShieldOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { UserAvatar } from "@/components/UserAvatar";
 import { adminService, type AdminUser } from "@/services/admin.service";
 
+type StatusFilter = "all" | "active" | "suspended";
+
 /* ─── types ─────────────────────────────────────────────── */
-type Role       = "admin" | "host" | "user";
+type Role = "admin" | "host" | "user";
 type HostStatus = "approved" | "pending" | "rejected" | null;
-type Provider   = "email" | "google" | "facebook";
+type Provider = "email" | "google" | "facebook";
 
 /* ─── badge helpers ─────────────────────────────────────── */
 const ROLE_BADGE: Record<Role, string> = {
   admin: "bg-primary text-white",
-  host:  "bg-secondary-container text-on-secondary-container",
-  user:  "bg-surface-container text-on-surface-variant",
+  host: "bg-secondary-container text-on-secondary-container",
+  user: "bg-surface-container text-on-surface-variant",
 };
 const HOST_BADGE: Record<string, string> = {
   approved: "bg-tertiary-fixed text-on-tertiary-fixed",
-  pending:  "bg-surface-variant text-outline",
+  pending: "bg-surface-variant text-outline",
   rejected: "bg-red-100 text-red-700",
 };
 
@@ -68,17 +71,17 @@ function effectiveRole(u: AdminUser): Role {
 }
 
 function ProviderIcon({ p }: { p?: string }) {
-  if (p === "google")   return (
+  if (p === "google") return (
     <svg className="h-3.5 w-3.5" viewBox="0 0 24 24">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
     </svg>
   );
   if (p === "facebook") return (
     <svg className="h-3.5 w-3.5" fill="#1877F2" viewBox="0 0 24 24">
-      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
     </svg>
   );
   return <Mail className="h-3.5 w-3.5 text-on-surface-variant" />;
@@ -91,13 +94,17 @@ function ConfirmDialog({
   title: string; message: string; confirmLabel: string;
   confirmClass?: string; onConfirm: () => void; onClose: () => void; loading?: boolean;
 }) {
-  return (
-    <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#2d3133] rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-[#2d3133] rounded-2xl w-full max-w-sm p-6 shadow-2xl pointer-events-auto">
         <h3 className="font-headline font-extrabold text-lg text-primary mb-1">{title}</h3>
         <p className="text-sm text-on-surface-variant mb-6">{message}</p>
-        <div className="flex gap-3 justify-end">
-          <button onClick={onClose} disabled={loading} className="px-4 py-2 rounded-xl text-sm text-on-surface-variant hover:bg-surface-container transition-colors">Cancel</button>
+        <div className="flex gap-3 justify-end items-center">
+          <button onClick={onClose} disabled={loading} className="px-4 py-2 rounded-xl text-sm font-bold text-on-surface-variant hover:bg-surface-container transition-colors">Cancel</button>
           <button
             onClick={onConfirm}
             disabled={loading}
@@ -108,7 +115,8 @@ function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -118,7 +126,7 @@ function ActionMenu({
 }: {
   user: AdminUser;
   onSuspend: (u: AdminUser) => void;
-  onDelete:  (u: AdminUser) => void;
+  onDelete: (u: AdminUser) => void;
   onClose: () => void;
 }) {
   return (
@@ -142,10 +150,14 @@ function ActionMenu({
 
 /* ─── user detail drawer ─────────────────────────────────── */
 function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-[60] flex">
-      <div className="flex-1 bg-black/20 backdrop-blur-sm" onClick={onClose} />
-      <aside className="w-96 h-full bg-white dark:bg-[#2d3133] shadow-2xl flex flex-col overflow-y-auto">
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9990] flex pointer-events-auto">
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <aside className="w-96 h-full ml-auto relative bg-white dark:bg-[#2d3133] shadow-2xl flex flex-col overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-outline-variant/10">
           <h3 className="font-headline font-extrabold text-base text-primary">User Details</h3>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-surface-container text-on-surface-variant transition-colors">
@@ -181,7 +193,7 @@ function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void })
         <div className="px-6 py-5 space-y-4">
           {[
             { label: "Login method", value: loginMethodLabel(user) },
-            { label: "Verified",     value: user.isVerified ? "Yes" : "No" },
+            { label: "Verified", value: user.isVerified ? "Yes" : "No" },
             { label: "Member Since", value: formatUserDate(user.createdAt, user._id) },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between py-2.5 border-b border-outline-variant/10 last:border-none">
@@ -191,26 +203,34 @@ function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void })
           ))}
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body
   );
 }
 
 /* ─── page ──────────────────────────────────────────────── */
 const PAGE_SIZE = 10;
 
+const STATUS_TABS: { key: StatusFilter; label: string }[] = [
+  { key: "all", label: "All Users" },
+  { key: "active", label: "Active" },
+  { key: "suspended", label: "Suspended" },
+];
+
 export default function AdminUsers() {
   const qc = useQueryClient();
-  const [search, setSearch]           = useState("");
-  const [page, setPage]               = useState(1);
-  const [openMenu, setOpenMenu]       = useState<string | null>(null);
-  const [drawerUser, setDrawerUser]   = useState<AdminUser | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [drawerUser, setDrawerUser] = useState<AdminUser | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<AdminUser | null>(null);
-  const [deleteTarget, setDeleteTarget]   = useState<AdminUser | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["admin-users", page, search],
+    queryKey: ["admin-users", page, search, statusFilter],
     queryFn: () =>
-      adminService.getUsers({ page, limit: PAGE_SIZE, search: search || undefined })
+      adminService.getUsers({ page, limit: PAGE_SIZE, search: search || undefined, status: statusFilter })
         .then(r => r.data),
     staleTime: 30_000,
     placeholderData: (prev) => prev,
@@ -267,6 +287,23 @@ export default function AdminUsers() {
               </div>
             </div>
 
+            {/* Status filter tabs */}
+            <div className="flex gap-1 p-1 bg-surface-container-low rounded-xl w-fit">
+              {STATUS_TABS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => { setStatusFilter(key); setPage(1); }}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === key
+                    ? "bg-white dark:bg-zinc-800 text-primary shadow-sm"
+                    : "text-on-surface-variant hover:text-primary"
+                    }`}
+                >
+                  {key === "suspended" && <ShieldOff className="h-3.5 w-3.5" />}
+                  {label}
+                </button>
+              ))}
+            </div>
+
             {/* Table */}
             <div className="bg-white dark:bg-[#2d3133] rounded-3xl shadow-sm overflow-hidden">
               {isLoading ? (
@@ -281,11 +318,15 @@ export default function AdminUsers() {
               ) : users.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
                   <div className="w-16 h-16 bg-surface-container-low rounded-full flex items-center justify-center mb-4">
-                    <Users className="h-7 w-7 text-outline-variant" />
+                    {statusFilter === "suspended" ? <ShieldOff className="h-7 w-7 text-outline-variant" /> : <Users className="h-7 w-7 text-outline-variant" />}
                   </div>
-                  <p className="font-headline font-bold text-base text-primary mb-1">No users found</p>
+                  <p className="font-headline font-bold text-base text-primary mb-1">
+                    {statusFilter === "suspended" ? "No suspended users" : "No users found"}
+                  </p>
                   <p className="text-xs text-on-surface-variant max-w-xs">
-                    No users match your current search. Try adjusting your terms.
+                    {statusFilter === "suspended"
+                      ? "There are no suspended accounts at the moment."
+                      : "No users match your current search. Try adjusting your terms."}
                   </p>
                   {search && (
                     <button onClick={() => setSearch("")} className="mt-5 bg-primary text-white text-xs font-bold px-4 py-2 rounded-xl hover:opacity-90">
@@ -313,8 +354,8 @@ export default function AdminUsers() {
                         {users.map((user) => (
                           <tr
                             key={user._id}
-                            className={`hover:bg-surface-container-low transition-colors group cursor-pointer ${user.active === false ? "opacity-50" : ""}`}
-                            onClick={() => setDrawerUser(user)}
+                            className="hover:bg-surface-container-low transition-colors group cursor-pointer"
+                            onClick={() => { if (!openMenu) setDrawerUser(user); }}
                           >
                             {/* Name */}
                             <td className="px-5 py-4">
@@ -382,8 +423,8 @@ export default function AdminUsers() {
                               {openMenu === user._id && (
                                 <ActionMenu
                                   user={user}
-                                  onSuspend={(u) => setSuspendTarget(u)}
-                                  onDelete={(u)  => setDeleteTarget(u)}
+                                  onSuspend={(u) => { setDrawerUser(null); setSuspendTarget(u); }}
+                                  onDelete={(u) => { setDrawerUser(null); setDeleteTarget(u); }}
                                   onClose={() => setOpenMenu(null)}
                                 />
                               )}
@@ -423,11 +464,10 @@ export default function AdminUsers() {
                             <button
                               key={item}
                               onClick={() => setPage(item as number)}
-                              className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
-                                page === item
-                                  ? "bg-primary text-white"
-                                  : "text-primary hover:bg-surface-container"
-                              }`}
+                              className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${page === item
+                                ? "bg-primary text-white"
+                                : "text-primary hover:bg-surface-container"
+                                }`}
                             >
                               {item}
                             </button>
@@ -449,16 +489,21 @@ export default function AdminUsers() {
         </main>
       </div>
 
-      {/* Drawer */}
-      {drawerUser && <UserDrawer user={drawerUser} onClose={() => setDrawerUser(null)} />}
+      {/* Click-outside to close action menu — rendered BEFORE dialogs so dialogs appear on top */}
+      {openMenu && <div className="fixed inset-0 z-40" onClick={() => setOpenMenu(null)} />}
 
-      {/* Suspend confirm */}
+      {/* Drawer — hidden when a confirm dialog is open */}
+      {drawerUser && !suspendTarget && !deleteTarget && (
+        <UserDrawer user={drawerUser} onClose={() => setDrawerUser(null)} />
+      )}
+
+      {/* Suspend confirm — z-[100] always above drawer z-[60] */}
       {suspendTarget && (
         <ConfirmDialog
           title={suspendTarget.active === false ? "Restore Account" : "Suspend Account"}
           message={suspendTarget.active === false
-            ? `Restore access for ${suspendTarget.name}?`
-            : `Suspend ${suspendTarget.name}? They will lose access to the platform.`}
+            ? `Restore access for ${suspendTarget.name}? They will be able to log in again.`
+            : `Suspend ${suspendTarget.name}? They will lose access and see a suspension message at login.`}
           confirmLabel={suspendTarget.active === false ? "Restore" : "Suspend"}
           confirmClass={suspendTarget.active === false ? "bg-primary" : "bg-amber-600"}
           loading={suspendMutation.isPending}
@@ -479,9 +524,6 @@ export default function AdminUsers() {
           onClose={() => setDeleteTarget(null)}
         />
       )}
-
-      {/* Click-outside to close action menu */}
-      {openMenu && <div className="fixed inset-0 z-40" onClick={() => setOpenMenu(null)} />}
 
       {/* Badge */}
       <div className="fixed bottom-6 right-6 z-30 pointer-events-none">
