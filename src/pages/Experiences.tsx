@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, ChevronLeft, ChevronRight, Star, ChevronDown, X } from "lucide-react";
+import { MapPin, ChevronLeft, ChevronRight, Star, ChevronDown, X, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -10,10 +10,27 @@ import { experiencesService, type Experience } from "@/services/experiences.serv
 
 const SORT_OPTIONS = [
   "Newest First",
+  "Soonest occurrence",
   "Highest Rating",
   "Price: Low to High",
   "Price: High to Low",
 ];
+
+/** Experience `nextOccurrenceAt` must fall on or after dateFrom and on or before dateTo (local calendar days). */
+function occurrenceInDateRange(nextOccurrenceAt: string | undefined, dateFrom: string, dateTo: string): boolean {
+  if (!nextOccurrenceAt) return false;
+  const occ = new Date(nextOccurrenceAt).getTime();
+  if (Number.isNaN(occ)) return false;
+  if (dateFrom) {
+    const start = new Date(`${dateFrom}T00:00:00`);
+    if (occ < start.getTime()) return false;
+  }
+  if (dateTo) {
+    const end = new Date(`${dateTo}T23:59:59.999`);
+    if (occ > end.getTime()) return false;
+  }
+  return true;
+}
 
 const PAGE_SIZE = 8;
 
@@ -153,6 +170,18 @@ function ExperienceBrowseCard({ exp }: { exp: Experience }) {
           <MapPin className="h-3 w-3 shrink-0" />
           {exp.location} &bull; {exp.duration}
         </p>
+        {exp.nextOccurrenceAt && (
+          <p className="text-[10px] text-on-surface-variant mb-1 flex items-center gap-1">
+            <Calendar className="h-3 w-3 shrink-0 opacity-70" />
+            {new Date(exp.nextOccurrenceAt).toLocaleString(undefined, {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </p>
+        )}
         <div className="flex items-center gap-1">
           <span className={`text-sm font-black font-headline ${soldOut ? "text-on-surface-variant" : "text-primary"}`}>
             {exp.price.toLocaleString()} ETB
@@ -188,6 +217,8 @@ const Experiences = () => {
   const [minPrice, setMinPrice]   = useState(0);
   const [maxPriceFilter, setMaxPriceFilter] = useState(0);
   const [minRating, setMinRating] = useState(0);
+  const [dateFrom, setDateFrom]   = useState("");
+  const [dateTo, setDateTo]       = useState("");
   const [page, setPage]           = useState(1);
 
   const sortRef = useRef<HTMLDivElement>(null!);
@@ -218,11 +249,18 @@ const Experiences = () => {
   const locationActive = locationQ.trim() !== "";
   const priceActive    = minPrice > 0 || (maxPriceFilter > 0 && maxPriceFilter < MAX_PRICE);
   const ratingActive   = minRating > 0;
+  const dateActive     = dateFrom !== "" || dateTo !== "";
 
   const clearAll = () => {
-    setLocationQ(""); setMinPrice(0); setMaxPriceFilter(MAX_PRICE); setMinRating(0); setPage(1);
+    setLocationQ("");
+    setMinPrice(0);
+    setMaxPriceFilter(MAX_PRICE);
+    setMinRating(0);
+    setDateFrom("");
+    setDateTo("");
+    setPage(1);
   };
-  const anyActive = locationActive || priceActive || ratingActive;
+  const anyActive = locationActive || priceActive || ratingActive || dateActive;
 
   /* filter + sort */
   const filtered = allExperiences
@@ -231,12 +269,18 @@ const Experiences = () => {
       if (e.price < minPrice) return false;
       if (maxPriceFilter > 0 && e.price > maxPriceFilter) return false;
       if (e.ratingsAverage < minRating) return false;
+      if (dateActive && !occurrenceInDateRange(e.nextOccurrenceAt, dateFrom, dateTo)) return false;
       return true;
     })
     .sort((a, b) => {
       if (sortBy === "Highest Rating")     return b.ratingsAverage - a.ratingsAverage;
       if (sortBy === "Price: Low to High") return a.price - b.price;
       if (sortBy === "Price: High to Low") return b.price - a.price;
+      if (sortBy === "Soonest occurrence") {
+        const ta = a.nextOccurrenceAt ? new Date(a.nextOccurrenceAt).getTime() : Number.POSITIVE_INFINITY;
+        const tb = b.nextOccurrenceAt ? new Date(b.nextOccurrenceAt).getTime() : Number.POSITIVE_INFINITY;
+        return ta - tb;
+      }
       return 0;
     });
 
@@ -339,6 +383,47 @@ const Experiences = () => {
                   )}
                 </FilterDropdown>
 
+                {/* Date filter (next occurrence) */}
+                <FilterDropdown
+                  label="Date"
+                  icon={<Calendar className="h-3 w-3" />}
+                  active={dateActive}
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">
+                    Next session between
+                  </p>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-[10px] text-on-surface-variant">From</label>
+                      <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                        className="w-full text-xs border border-outline-variant/40 rounded-lg px-2 py-1.5 bg-surface-container focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-on-surface-variant">To</label>
+                      <input
+                        type="date"
+                        value={dateTo}
+                        min={dateFrom || undefined}
+                        onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                        className="w-full text-xs border border-outline-variant/40 rounded-lg px-2 py-1.5 bg-surface-container focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      />
+                    </div>
+                  </div>
+                  {dateActive && (
+                    <button
+                      type="button"
+                      onClick={() => { setDateFrom(""); setDateTo(""); setPage(1); }}
+                      className="mt-2 text-[10px] text-on-surface-variant hover:text-primary flex items-center gap-1"
+                    >
+                      <X className="h-3 w-3" /> Clear dates
+                    </button>
+                  )}
+                </FilterDropdown>
+
                 {/* Rating filter */}
                 <FilterDropdown
                   label="Rating"
@@ -425,6 +510,12 @@ const Experiences = () => {
                   <span className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
                     ⭐ {minRating}+
                     <button onClick={() => setMinRating(0)}><X className="h-2.5 w-2.5" /></button>
+                  </span>
+                )}
+                {dateActive && (
+                  <span className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
+                    📅 {dateFrom || "…"} → {dateTo || "…"}
+                    <button type="button" onClick={() => { setDateFrom(""); setDateTo(""); }}><X className="h-2.5 w-2.5" /></button>
                   </span>
                 )}
                 <span className="text-[10px] text-on-surface-variant ml-1 self-center">

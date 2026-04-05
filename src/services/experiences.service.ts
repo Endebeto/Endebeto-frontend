@@ -27,6 +27,7 @@ export interface Experience {
     email: string;
     photo?: string;
     phone?: string;
+    hostStory?: string;
   };
   location: string;
   address?: string;

@@ -5,6 +5,7 @@ import {
   ChevronLeft, ChevronRight, Filter,
 } from "lucide-react";
 import HostLayout from "@/components/HostLayout";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/context/AuthContext";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 
@@ -13,12 +14,6 @@ const fmtDate = (iso?: string) => {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
-
-function guestInitials(name: string) {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 const AVATAR_COLORS = [
   "bg-secondary-container text-on-secondary-container",
@@ -56,17 +51,14 @@ function GuestRow({ booking, idx }: { booking: Booking; idx: number }) {
       {/* Guest */}
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center gap-3">
-          {user?.photo ? (
-            <img
-              src={user.photo}
-              alt={user.name}
-              className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-white dark:ring-zinc-800"
-            />
-          ) : (
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center font-headline font-bold text-xs shrink-0 ring-2 ring-white dark:ring-zinc-800 ${colorCls}`}>
-              {user?.name ? guestInitials(user.name) : "?"}
-            </div>
-          )}
+          <UserAvatar
+            name={user?.name ?? "Guest"}
+            photo={user?.photo}
+            className={`w-9 h-9 rounded-full shrink-0 ring-2 ring-white dark:ring-zinc-800 font-headline font-bold text-xs ${colorCls}`}
+            initialsClassName="text-xs"
+            imgClassName="w-full h-full rounded-full object-cover"
+            alt={user?.name ?? ""}
+          />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-on-surface dark:text-white truncate max-w-[140px]">
               {user?.name ?? "Unknown"}

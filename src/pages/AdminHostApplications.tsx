@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileText, X, ShieldCheck, ChevronRight, ZoomIn, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
+import { UserAvatar } from "@/components/UserAvatar";
 import { adminService, type AdminHostApplication } from "@/services/admin.service";
 
 /* ─── status styles ──────────────────────────────────────── */
@@ -18,10 +19,6 @@ const DOT_STYLES: Record<Status, string> = {
   approved: "bg-emerald-500",
   rejected: "bg-red-500",
 };
-
-function initials(name: string) {
-  return name.split(" ").slice(0, 2).map(p => p[0]).join("").toUpperCase();
-}
 
 /* ─── reject modal ───────────────────────────────────────── */
 function RejectModal({ onClose, onConfirm, loading }: {
@@ -278,13 +275,12 @@ export default function AdminHostApplications() {
                         >
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-3">
-                              {app.user?.photo ? (
-                                <img src={app.user.photo} alt={app.user.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
-                              ) : (
-                                <div className="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center text-xs font-bold text-on-secondary-container shrink-0">
-                                  {initials(app.user?.name ?? "?")}
-                                </div>
-                              )}
+                              <UserAvatar
+                                name={app.user?.name ?? "User"}
+                                photo={app.user?.photo}
+                                className="w-9 h-9 rounded-full bg-secondary-container"
+                                initialsClassName="text-xs text-on-secondary-container"
+                              />
                               <div>
                                 <p className="font-headline font-semibold text-sm text-on-surface">{app.user?.name}</p>
                                 <p className="text-[10px] text-on-surface-variant">{app.user?.email}</p>
@@ -361,17 +357,13 @@ export default function AdminHostApplications() {
 
             {/* Profile hero */}
             <div className="flex flex-col items-center pt-6 pb-6 px-6">
-              {selected.media?.personalPhoto ? (
-                <img
-                  src={selected.media.personalPhoto}
-                  alt={selected.user?.name}
-                  className="w-24 h-24 rounded-2xl object-cover shadow-lg mb-4"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-2xl bg-secondary-container flex items-center justify-center font-headline font-black text-4xl text-on-secondary-container shadow-lg mb-4">
-                  {initials(selected.user?.name ?? "?")}
-                </div>
-              )}
+              <UserAvatar
+                name={selected.user?.name ?? "User"}
+                photo={selected.media?.personalPhoto}
+                className="w-24 h-24 rounded-2xl bg-secondary-container shadow-lg mb-4"
+                initialsClassName="text-4xl text-on-secondary-container font-black"
+                imgClassName="w-full h-full object-cover"
+              />
               <h3 className="font-headline font-extrabold text-xl text-primary">{selected.user?.name}</h3>
               <p className="text-xs text-on-surface-variant mt-1">{selected.user?.email}</p>
               <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">

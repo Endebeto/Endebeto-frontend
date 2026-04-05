@@ -289,7 +289,7 @@ function buildMailtoLink(email: string | undefined, experienceTitle: string) {
 }
 
 interface ContactHostButtonProps {
-  host: { name?: string; email?: string; phone?: string } | undefined;
+  host: { name?: string; email?: string; phone?: string; hostStory?: string } | undefined;
   experienceTitle: string;
   booked: boolean;
   compact?: boolean;
@@ -643,6 +643,17 @@ const ExperienceDetail = () => {
               />
             </div>
 
+            {exp.host?.hostStory?.trim() && (
+              <div className="mb-4 rounded-xl bg-surface-container-low/80 dark:bg-zinc-900/60 border border-outline-variant/15 dark:border-zinc-800 px-4 py-3">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant dark:text-zinc-500 mb-1.5">
+                  From the host
+                </p>
+                <p className="text-xs text-on-surface dark:text-zinc-200 leading-relaxed italic">
+                  &ldquo;{exp.host.hostStory.trim()}&rdquo;
+                </p>
+              </div>
+            )}
+
             {/* Gallery strip — max 4 previews; last shows +N to open lightbox for the rest */}
             <div className="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-5 px-5 py-4">
               {galleryPreviewSlots.map(({ imageIndex, src, moreCount }) => (
@@ -907,6 +918,17 @@ const ExperienceDetail = () => {
                 booked={hasUpcomingBookingHere}
               />
             </div>
+
+            {exp.host?.hostStory?.trim() && (
+              <div className="rounded-xl bg-surface-container-low p-5 border border-outline-variant/15">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">
+                  From the host
+                </p>
+                <p className="text-sm text-on-surface-variant leading-relaxed italic">
+                  &ldquo;{exp.host.hostStory.trim()}&rdquo;
+                </p>
+              </div>
+            )}
 
             {/* Specs */}
             <div className="grid grid-cols-3 gap-3">

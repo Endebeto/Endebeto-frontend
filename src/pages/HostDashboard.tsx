@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import HostLayout from "@/components/HostLayout";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/context/AuthContext";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import { experiencesService, type Experience } from "@/services/experiences.service";
@@ -28,9 +29,6 @@ const statusStyle: Record<string, string> = {
 const statusLabel: Record<string, string> = {
   upcoming: "Upcoming", completed: "Completed", expired: "Expired", cancelled: "Cancelled",
 };
-
-const initials = (name?: string) =>
-  (name ?? "?").split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
 /* ─── component ──────────────────────────────────────── */
 export default function HostDashboard() {
@@ -307,18 +305,14 @@ export default function HostDashboard() {
                           {/* Guest */}
                           <td className="px-4 md:px-8 py-4">
                             <div className="flex items-center gap-2.5">
-                              {b.user?.photo ? (
-                                <img
-                                  src={b.user.photo}
-                                  alt={b.user.name}
-                                  className="w-8 h-8 rounded-full object-cover shrink-0 border border-outline-variant/20 dark:border-zinc-700"
-                                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                                />
-                              ) : (
-                                <div className="w-8 h-8 rounded-full bg-secondary-container dark:bg-emerald-900/50 flex items-center justify-center shrink-0 text-[10px] font-bold text-primary dark:text-green-400">
-                                  {initials(b.user?.name)}
-                                </div>
-                              )}
+                              <UserAvatar
+                                name={b.user?.name ?? "Guest"}
+                                photo={b.user?.photo}
+                                className="w-8 h-8 rounded-full shrink-0 border border-outline-variant/20 dark:border-zinc-700 bg-secondary-container dark:bg-emerald-900/50"
+                                initialsClassName="text-[10px] text-primary dark:text-green-400"
+                                imgClassName="w-full h-full rounded-full object-cover"
+                                alt={b.user?.name ?? ""}
+                              />
                               <div className="min-w-0">
                                 <p className="text-xs font-semibold text-on-surface dark:text-white truncate max-w-[100px]">
                                   {b.user?.name ?? "—"}

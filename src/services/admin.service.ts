@@ -145,21 +145,28 @@ export const adminService = {
     api.get<{ status: string; data: PlatformStats }>("/admin/stats"),
 
   getDashboardCharts: (params?: { months?: number }) =>
-    api.get<{ status: string; data: DashboardCharts }>("/admin/dashboard/charts", { params }),
+    api.get<{ status: string; data: DashboardCharts }>(
+      "/admin/dashboard/charts",
+      { params },
+    ),
 
   /* Host Applications */
   getHostApplications: (params?: { status?: string }) =>
-    api.get<{ status: string; results: number; data: { applications: AdminHostApplication[] } }>(
-      "/host-applications/admin/all",
-      { params }
-    ),
+    api.get<{
+      status: string;
+      results: number;
+      data: { applications: AdminHostApplication[] };
+    }>("/host-applications/admin/all", { params }),
   approveHostApplication: (id: string, notes?: string) =>
     api.patch(`/host-applications/${id}/approve`, { notes }),
   rejectHostApplication: (id: string, reason: string) =>
-    api.patch(`/host-applications/${id}/reject`, { reason }),
+    api.patch(`/host-applications/${id}/reject`, { rejectionReason: reason }),
 
   /** Admin catalog: filter = live | suspended | draft */
-  getAdminCatalog: (filter: "live" | "suspended" | "draft", params?: { page?: number; limit?: number }) =>
+  getAdminCatalog: (
+    filter: "live" | "suspended" | "draft",
+    params?: { page?: number; limit?: number },
+  ) =>
     api.get<{
       status: string;
       results: number;
@@ -171,11 +178,17 @@ export const adminService = {
   suspendExperience: (id: string, reason: string) =>
     api.patch(`/experiences/${id}/suspend`, { reason }),
 
-  reinstateExperience: (id: string) => api.patch(`/experiences/${id}/reinstate`),
+  reinstateExperience: (id: string) =>
+    api.patch(`/experiences/${id}/reinstate`),
 
   /* Users */
   /** Backend factory.getAll: `data: { data: User[] }` */
-  getUsers: (params?: { page?: number; limit?: number; search?: string; role?: string }) =>
+  getUsers: (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    role?: string;
+  }) =>
     api.get<{
       status: string;
       results: number;
@@ -183,15 +196,15 @@ export const adminService = {
     }>("/users", { params }),
   updateUser: (id: string, data: Partial<{ role: string; active: boolean }>) =>
     api.patch(`/users/${id}`, data),
-  deleteUser: (id: string) =>
-    api.delete(`/users/${id}`),
+  deleteUser: (id: string) => api.delete(`/users/${id}`),
 
   /* Withdrawals / Payouts */
   getWithdrawals: (params?: { status?: string }) =>
-    api.get<{ status: string; results: number; data: { withdrawals: AdminWithdrawal[] } }>(
-      "/admin/payouts/withdrawals",
-      { params }
-    ),
+    api.get<{
+      status: string;
+      results: number;
+      data: { withdrawals: AdminWithdrawal[] };
+    }>("/admin/payouts/withdrawals", { params }),
   markWithdrawalPaid: (id: string, paymentReceiptUrl: string) =>
     api.post(`/admin/payouts/withdrawals/${id}/mark-paid`, {
       paymentReceiptUrl: paymentReceiptUrl.trim(),
@@ -199,7 +212,8 @@ export const adminService = {
   markWithdrawalFailed: (id: string, reason?: string) =>
     api.post(`/admin/payouts/withdrawals/${id}/mark-failed`, { reason }),
   exportPayouts: () =>
-    api.post<{ status: string; data: { csv: string; filename: string; count: number } }>(
-      "/admin/payouts/exports"
-    ),
+    api.post<{
+      status: string;
+      data: { csv: string; filename: string; count: number };
+    }>("/admin/payouts/exports"),
 };

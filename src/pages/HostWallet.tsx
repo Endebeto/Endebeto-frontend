@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Banknote, Wallet, ArrowDownToLine, FileText,
@@ -74,6 +74,11 @@ function WithdrawModal({
   });
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const clientRequestIdRef = useRef(
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `wr-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+  );
 
   const touch = (field: keyof typeof touched) =>
     setTouched((p) => ({ ...p, [field]: true }));
@@ -110,6 +115,7 @@ function WithdrawModal({
         bankName:      form.bankName,
         accountName:   form.accountName.trim(),
         accountNumber: form.accountNumber.trim(),
+        clientRequestId: clientRequestIdRef.current,
       }),
     onSuccess: () => {
       setSubmitted(true);
@@ -474,8 +480,9 @@ export default function HostWallet() {
   const [search, setSearch]       = useState("");
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [activeTab, setActiveTab] = useState<"earnings" | "withdrawals">("earnings");
-  const [page, setPage]           = useState(1);
   const [earningsPage, setEarningsPage] = useState(1);
+
+  const WITHDRAWALS_FETCH_LIMIT = 200;
 
   const { data: walletData, isLoading: walletLoading } = useQuery({
     queryKey: ["my-wallet"],
@@ -484,8 +491,9 @@ export default function HostWallet() {
   });
 
   const { data: withdrawalsData, isLoading: withdrawalsLoading } = useQuery({
-    queryKey: ["my-withdrawals", page],
-    queryFn: () => walletService.getWithdrawals({ page, limit: PAGE_SIZE }),
+    queryKey: ["my-withdrawals"],
+    queryFn: () =>
+      walletService.getWithdrawals({ page: 1, limit: WITHDRAWALS_FETCH_LIMIT }),
     staleTime: 30_000,
   });
 
@@ -497,8 +505,7 @@ export default function HostWallet() {
 
   const wallet      = walletData?.data.data.wallet;
   const withdrawals: WithdrawalRequest[] = withdrawalsData?.data.data.withdrawals ?? [];
-  const totalW      = withdrawalsData?.data.total ?? 0;
-  const totalPages  = Math.ceil(totalW / PAGE_SIZE);
+  const totalW      = withdrawalsData?.data.total ?? withdrawals.length;
 
   const earnings: EarningRow[] = earningsData?.data.data.earnings ?? [];
   const totalE      = earningsData?.data.total ?? 0;
@@ -506,23 +513,33 @@ export default function HostWallet() {
 
   const availableETB = wallet ? wallet.availableBalanceCents / 100 : 0;
 
-  // client-side search over the current page
-  const filtered = search
-    ? withdrawals.filter((w) => {
-        const q = search.toLowerCase();
-        const dest = w.destination;
-        return (
-          w._id.toLowerCase().includes(q) ||
-          (dest?.bankName ?? "").toLowerCase().includes(q) ||
-          (dest?.accountName ?? "").toLowerCase().includes(q)
-        );
-      })
-    : withdrawals;
+  const withdrawalMatchesSearch = (w: WithdrawalRequest, qRaw: string) => {
+    const q = qRaw.trim().toLowerCase();
+    if (!q) return true;
+    const dest = w.destination;
+    return (
+      w._id.toLowerCase().includes(q) ||
+      (dest?.bankName ?? "").toLowerCase().includes(q) ||
+      (dest?.accountName ?? "").toLowerCase().includes(q)
+    );
+  };
+
+  const pendingWithdrawals = withdrawals.filter((w) => w.status === "pending_transfer");
+  const historyWithdrawals = withdrawals.filter(
+    (w) => w.status === "paid" || w.status === "failed" || w.status === "canceled"
+  );
+
+  const filteredPending = search
+    ? pendingWithdrawals.filter((w) => withdrawalMatchesSearch(w, search))
+    : pendingWithdrawals;
+  const filteredHistory = search
+    ? historyWithdrawals.filter((w) => withdrawalMatchesSearch(w, search))
+    : historyWithdrawals;
 
   const invalidateAll = () => {
-    queryClient.invalidateQueries({ queryKey: ["my-wallet"] });
-    queryClient.invalidateQueries({ queryKey: ["my-withdrawals"] });
-    queryClient.invalidateQueries({ queryKey: ["my-earnings"] });
+    void queryClient.invalidateQueries({ queryKey: ["my-wallet"] });
+    void queryClient.invalidateQueries({ queryKey: ["my-withdrawals"] });
+    void queryClient.invalidateQueries({ queryKey: ["my-earnings"] });
   };
 
   return (
@@ -639,7 +656,7 @@ export default function HostWallet() {
               )}
             </div>
             <p className="text-[11px] text-on-surface-variant dark:text-zinc-500 mt-4 leading-relaxed">
-              Your withdrawal is being processed — typically arrives in 3–5 business days.
+              Money for pending bank transfers — typically arrives in 3–5 business days. Each request stays in your history.
             </p>
           </div>
         </div>
@@ -748,79 +765,96 @@ export default function HostWallet() {
             </>
           )}
 
-          {/* ── Withdrawals Tab ── */}
+          {/* ── Withdrawals Tab (pending vs history — each request is its own row) ── */}
           {activeTab === "withdrawals" && (
             <>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-surface-container-low dark:bg-zinc-800 text-on-surface-variant dark:text-zinc-400 text-[10px] uppercase tracking-widest font-bold">
-                  <th className="px-8 py-4">Date</th>
-                  <th className="px-4 py-4">Reference</th>
-                  <th className="px-4 py-4">Type</th>
-                  <th className="px-4 py-4">Destination</th>
-                  <th className="px-4 py-4">Amount</th>
-                  <th className="px-4 py-4">Receipt</th>
-                  <th className="px-8 py-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant/10 dark:divide-zinc-800">
-                {withdrawalsLoading ? (
-                  <tr>
-                    <td colSpan={7} className="px-8 py-12 text-center">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-green-400 mx-auto" />
-                    </td>
-                  </tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-8 py-12 text-center text-sm text-on-surface-variant dark:text-zinc-400">
-                      {search ? "No withdrawals match your search." : "No withdrawals yet. Submit your first withdrawal above."}
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((w) => <TxRow key={w._id} w={w} />)
-                )}
-              </tbody>
-            </table>
-          </div>
+              <p className="px-8 py-3 text-[11px] text-on-surface-variant dark:text-zinc-500 border-b border-outline-variant/10 dark:border-zinc-700 leading-relaxed">
+                Each payout request is kept on file. Requesting a new withdrawal adds a row — it does not replace completed or failed payouts.
+              </p>
 
-          {/* pagination */}
-          {totalPages > 1 && (
-            <div className="px-8 py-5 bg-white dark:bg-zinc-900 border-t border-outline-variant/10 dark:border-zinc-700 flex items-center justify-between">
-              <span className="text-xs text-on-surface-variant dark:text-zinc-400">
-                Page {page} of {totalPages} · {totalW} total
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => p - 1)}
-                  className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-primary dark:text-green-400 hover:bg-surface-container-low dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" /> Previous
-                </button>
-                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${
-                      p === page
-                        ? "bg-primary text-white dark:bg-green-600"
-                        : "text-on-surface-variant dark:text-zinc-400 hover:bg-surface-container-low dark:hover:bg-zinc-800"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-                <button
-                  disabled={page === totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-primary dark:text-green-400 hover:bg-surface-container-low dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  Next <ChevronRight className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          )}
+              {withdrawalsLoading ? (
+                <div className="flex justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary dark:text-green-400" />
+                </div>
+              ) : (
+                <>
+                  <div className="px-8 py-3 bg-amber-50/70 dark:bg-amber-950/25 border-b border-outline-variant/10 dark:border-zinc-800">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-amber-900 dark:text-amber-400">
+                      Pending requests ({filteredPending.length})
+                    </h3>
+                    <p className="text-[10px] text-on-surface-variant dark:text-zinc-500 mt-0.5">
+                      In queue for bank transfer
+                    </p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="bg-surface-container-low dark:bg-zinc-800 text-on-surface-variant dark:text-zinc-400 text-[10px] uppercase tracking-widest font-bold">
+                          <th className="px-8 py-4">Date</th>
+                          <th className="px-4 py-4">Reference</th>
+                          <th className="px-4 py-4">Type</th>
+                          <th className="px-4 py-4">Destination</th>
+                          <th className="px-4 py-4">Amount</th>
+                          <th className="px-4 py-4">Receipt</th>
+                          <th className="px-8 py-4">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-outline-variant/10 dark:divide-zinc-800">
+                        {filteredPending.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-8 py-8 text-center text-sm text-on-surface-variant dark:text-zinc-400">
+                              {search ? "No pending withdrawals match your search." : "No pending withdrawals."}
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredPending.map((w) => <TxRow key={w._id} w={w} />)
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="px-8 py-3 bg-surface-container-low/60 dark:bg-zinc-800/40 border-t border-b border-outline-variant/10 dark:border-zinc-800">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-primary dark:text-green-400">
+                      Withdrawal history ({filteredHistory.length})
+                    </h3>
+                    <p className="text-[10px] text-on-surface-variant dark:text-zinc-500 mt-0.5">
+                      Paid, failed, or cancelled — permanent record
+                    </p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="bg-surface-container-low dark:bg-zinc-800 text-on-surface-variant dark:text-zinc-400 text-[10px] uppercase tracking-widest font-bold">
+                          <th className="px-8 py-4">Date</th>
+                          <th className="px-4 py-4">Reference</th>
+                          <th className="px-4 py-4">Type</th>
+                          <th className="px-4 py-4">Destination</th>
+                          <th className="px-4 py-4">Amount</th>
+                          <th className="px-4 py-4">Receipt</th>
+                          <th className="px-8 py-4">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-outline-variant/10 dark:divide-zinc-800">
+                        {filteredHistory.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-8 py-8 text-center text-sm text-on-surface-variant dark:text-zinc-400">
+                              {search ? "No past withdrawals match your search." : "No completed withdrawals yet."}
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredHistory.map((w) => <TxRow key={w._id} w={w} />)
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {totalW > WITHDRAWALS_FETCH_LIMIT && (
+                    <p className="px-8 py-3 text-[10px] text-amber-700 dark:text-amber-400 border-t border-outline-variant/10 dark:border-zinc-700">
+                      Showing the {WITHDRAWALS_FETCH_LIMIT} most recent of {totalW} requests. Ask support if you need a full statement.
+                    </p>
+                  )}
+                </>
+              )}
             </>
           )}
 

@@ -65,9 +65,16 @@ export default function HostCreateExperience() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // Use only the categories the host was approved to offer
+  // Use only the categories the host was approved to offer.
+  // Hosts approved before the approvedCategories field was introduced
+  // have an empty array — fall back to the full list so they aren't blocked.
+  const ALL_CATEGORIES = [
+    'Cultural Heritage', 'Food & Cuisine', 'Nature & Wildlife',
+    'Adventure', 'History', 'Art & Craft', 'Music & Dance', 'Religion & Spirituality',
+  ];
   const approvedCategories = user?.approvedCategories ?? [];
-  const defaultCategory = approvedCategories[0] ?? "";
+  const categoryOptions = approvedCategories.length > 0 ? approvedCategories : ALL_CATEGORIES;
+  const defaultCategory = categoryOptions[0] ?? "";
 
   const [form, setForm] = useState<FormData>({
     title: "", summary: "", description: "", category: defaultCategory,
@@ -95,24 +102,24 @@ export default function HostCreateExperience() {
     (e) => e.category === form.category && e.status !== "rejected"
   );
 
-  const coverRef   = useRef<HTMLInputElement>(null);
+  const coverRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
   const set = (k: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((p) => ({ ...p, [k]: e.target.value }));
 
-  const coverPreview   = coverFile   ? URL.createObjectURL(coverFile)   : null;
+  const coverPreview = coverFile ? URL.createObjectURL(coverFile) : null;
   const galleryPreview = galleryFiles.map((f) => URL.createObjectURL(f));
 
   const removeGallery = (i: number) =>
     setGalleryFiles((p) => p.filter((_, idx) => idx !== i));
 
   /* determine which sections have content (for step indicator) */
-  const infoFilled     = !!form.title && !!form.description;
+  const infoFilled = !!form.title && !!form.description;
   const scheduleFilled = !!form.price && !!form.duration && !!form.nextOccurrenceAt;
-  const mediaFilled    = !!coverFile;
+  const mediaFilled = !!coverFile;
   const locationFilled = !!form.location;
-  const stepStatus     = [infoFilled, scheduleFilled, mediaFilled, locationFilled];
+  const stepStatus = [infoFilled, scheduleFilled, mediaFilled, locationFilled];
 
   const canSubmit = infoFilled && scheduleFilled && mediaFilled && locationFilled;
 
@@ -159,18 +166,18 @@ export default function HostCreateExperience() {
       fd.append("status", "draft");
       fd.append("title", form.title);
       fd.append("category", form.category);
-      if (form.summary.trim())       fd.append("summary", form.summary);
-      if (form.description.trim())   fd.append("description", form.description);
-      if (form.price)                fd.append("price", form.price);
-      if (form.duration.trim())      fd.append("duration", form.duration);
-      if (form.maxGuests)            fd.append("maxGuests", form.maxGuests);
-      if (form.nextOccurrenceAt)     fd.append("nextOccurrenceAt", form.nextOccurrenceAt);
-      if (form.location.trim())      fd.append("location", form.location);
-      if (form.address.trim())       fd.append("address", form.address);
-      if (pin?.lat)                  fd.append("latitude", String(pin.lat));
-      if (pin?.lng)                  fd.append("longitude", String(pin.lng));
-      if (coverFile)                 fd.append("imageCover", coverFile);
-      galleryFiles.forEach((f) =>    fd.append("images", f));
+      if (form.summary.trim()) fd.append("summary", form.summary);
+      if (form.description.trim()) fd.append("description", form.description);
+      if (form.price) fd.append("price", form.price);
+      if (form.duration.trim()) fd.append("duration", form.duration);
+      if (form.maxGuests) fd.append("maxGuests", form.maxGuests);
+      if (form.nextOccurrenceAt) fd.append("nextOccurrenceAt", form.nextOccurrenceAt);
+      if (form.location.trim()) fd.append("location", form.location);
+      if (form.address.trim()) fd.append("address", form.address);
+      if (pin?.lat) fd.append("latitude", String(pin.lat));
+      if (pin?.lng) fd.append("longitude", String(pin.lng));
+      if (coverFile) fd.append("imageCover", coverFile);
+      galleryFiles.forEach((f) => fd.append("images", f));
 
       await experiencesService.create(fd);
       await queryClient.invalidateQueries({ queryKey: ["my-experiences"] });
@@ -210,24 +217,22 @@ export default function HostCreateExperience() {
             <div className="absolute top-5 left-0 right-0 h-0.5 bg-surface-container-high dark:bg-zinc-700" />
 
             {STEPS.map((label, i) => {
-              const done   = stepStatus[i];
+              const done = stepStatus[i];
               const active = !done && stepStatus.slice(0, i).every(Boolean);
               return (
                 <div key={label} className="flex flex-col items-center gap-2 bg-surface dark:bg-zinc-950 px-2 relative z-10">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-headline font-bold text-sm shadow-sm transition-all ${
-                      done
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-headline font-bold text-sm shadow-sm transition-all ${done
                         ? "bg-primary text-white shadow-primary/30"
                         : active
-                        ? "bg-primary text-white shadow-primary/20"
-                        : "bg-surface-container-highest dark:bg-zinc-700 text-on-surface-variant dark:text-zinc-400"
-                    }`}
+                          ? "bg-primary text-white shadow-primary/20"
+                          : "bg-surface-container-highest dark:bg-zinc-700 text-on-surface-variant dark:text-zinc-400"
+                      }`}
                   >
                     {done ? <CheckCircle2 className="h-5 w-5" /> : i + 1}
                   </div>
-                  <span className={`text-[10px] font-bold uppercase tracking-widest ${
-                    done || active ? "text-primary dark:text-green-400" : "text-on-surface-variant dark:text-zinc-500"
-                  }`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${done || active ? "text-primary dark:text-green-400" : "text-on-surface-variant dark:text-zinc-500"
+                    }`}>
                     {label}
                   </span>
                 </div>
@@ -272,19 +277,13 @@ export default function HostCreateExperience() {
                       Category
                       <Lock className="h-3 w-3 text-on-surface-variant dark:text-zinc-500" />
                     </label>
-                    {approvedCategories.length > 0 ? (
-                      <select value={form.category} onChange={set("category")} className={inputCls}>
-                        {approvedCategories.map((c) => (
-                          <option key={c} value={c}>
-                            {c}{myExperiences.some((e) => e.category === c && e.status !== "rejected") ? " (already used)" : ""}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className={`${inputCls} text-on-surface-variant dark:text-zinc-500 cursor-not-allowed opacity-60`}>
-                        No approved categories
-                      </div>
-                    )}
+                    <select value={form.category} onChange={set("category")} className={inputCls}>
+                      {categoryOptions.map((c) => (
+                        <option key={c} value={c}>
+                          {c}{myExperiences.some((e) => e.category === c && e.status !== "rejected") ? " (already used)" : ""}
+                        </option>
+                      ))}
+                    </select>
                     {categoryTaken ? (
                       <p className="mt-1.5 text-xs text-error dark:text-red-400 flex items-center gap-1">
                         <AlertCircle className="h-3 w-3 shrink-0" />
@@ -582,9 +581,9 @@ export default function HostCreateExperience() {
               <h3 className="text-lg font-headline font-bold text-white mb-5">Verification Steps</h3>
               <ul className="space-y-4">
                 {[
-                  { done: true,  label: "Identity Confirmed",  sub: "Government ID verified on 12/04/24" },
-                  { done: true,  label: "Host Onboarding",     sub: "Heritage Standards course completed" },
-                  { done: false, label: "Experience Audit",    sub: "Will begin after submission" },
+                  { done: true, label: "Identity Confirmed", sub: "Government ID verified on 12/04/24" },
+                  { done: true, label: "Host Onboarding", sub: "Heritage Standards course completed" },
+                  { done: false, label: "Experience Audit", sub: "Will begin after submission" },
                 ].map((item) => (
                   <li key={item.label} className={`flex items-start gap-3 ${!item.done ? "opacity-50" : ""}`}>
                     {item.done

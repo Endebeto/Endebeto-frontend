@@ -83,11 +83,14 @@ export const walletService = {
     bankName: string;
     accountName: string;
     accountNumber: string;
+    /** Idempotency: same id + same host reuses one request if still pending (backend may enforce). */
+    clientRequestId?: string;
   }) =>
     api.post<{ status: string; data: { withdrawal: WithdrawalRequest } }>(
       "/withdrawals",
       {
         amountCents: Math.round(payload.amountETB * 100),
+        ...(payload.clientRequestId ? { clientRequestId: payload.clientRequestId } : {}),
         destination: {
           bankName:           payload.bankName,
           accountName:        payload.accountName,

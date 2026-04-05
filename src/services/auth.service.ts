@@ -24,6 +24,8 @@ export interface User {
   email: string;
   photo?: string;
   bio?: string;
+  /** Short “gist” shown on your experience pages (approved hosts). */
+  hostStory?: string;
   phone?: string;
   role: "user" | "admin";
   hostStatus: "none" | "pending" | "approved" | "rejected";
@@ -46,7 +48,7 @@ export const authService = {
   getMe: () =>
     api.get<{ status: string; data: { data: User } }>("/users/me"),
 
-  updateMe: (data: FormData | Partial<Pick<User, "name" | "email" | "photo" | "bio">>) =>
+  updateMe: (data: FormData | Partial<Pick<User, "name" | "email" | "photo" | "bio" | "phone" | "hostStory">>) =>
     api.patch<{ status: string; data: { user: User } }>("/users/updateMe", data, {
       headers: data instanceof FormData ? { "Content-Type": "multipart/form-data" } : {},
     }),
@@ -78,4 +80,7 @@ export const authService = {
 
   verifyEmail: (token: string) =>
     api.get(`/users/verifyEmail/${token}`),
+
+  resendVerificationEmail: (email: string) =>
+    api.post<{ status: string; message: string }>('/users/resendVerificationEmail', { email }),
 };

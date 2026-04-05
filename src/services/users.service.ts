@@ -4,7 +4,7 @@ import type { User } from "./auth.service";
 export interface UserListResponse {
   status: string;
   results: number;
-  data: { users: User[] };
+  data: { data: User[] };
 }
 
 export const usersService = {

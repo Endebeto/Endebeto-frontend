@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
+import { UserAvatar } from "@/components/UserAvatar";
 import { adminService, type AdminUser } from "@/services/admin.service";
 
 /* ─── types ─────────────────────────────────────────────── */
@@ -25,10 +26,6 @@ const HOST_BADGE: Record<string, string> = {
   pending:  "bg-surface-variant text-outline",
   rejected: "bg-red-100 text-red-700",
 };
-
-function initials(name: string) {
-  return name.split(" ").slice(0, 2).map(n => n[0]).join("").toUpperCase();
-}
 
 /** Maps backend authProvider + legacy provider */
 function authProviderRaw(u: AdminUser): string {
@@ -156,13 +153,13 @@ function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void })
           </button>
         </div>
         <div className="flex flex-col items-center py-8 px-6 border-b border-outline-variant/10">
-          {user.photo ? (
-            <img src={user.photo} alt={user.name} className="w-20 h-20 rounded-2xl object-cover shadow-md mb-4" />
-          ) : (
-            <div className="w-20 h-20 rounded-2xl bg-secondary-container flex items-center justify-center font-headline font-black text-3xl text-on-secondary-container shadow-md mb-4">
-              {initials(user.name)}
-            </div>
-          )}
+          <UserAvatar
+            name={user.name}
+            photo={user.photo}
+            className="w-20 h-20 rounded-2xl bg-secondary-container shadow-md mb-4"
+            initialsClassName="text-3xl text-on-secondary-container font-black"
+            imgClassName="w-full h-full object-cover"
+          />
           <p className="font-headline font-extrabold text-lg text-primary">{user.name}</p>
           <p className="text-xs text-on-surface-variant mt-0.5">{user.email}</p>
           <div className="flex items-center gap-2 mt-3">
@@ -322,13 +319,12 @@ export default function AdminUsers() {
                             {/* Name */}
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-2.5">
-                                {user.photo ? (
-                                  <img src={user.photo} alt={user.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
-                                ) : (
-                                  <div className="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center text-xs font-bold text-on-secondary-container shrink-0">
-                                    {initials(user.name)}
-                                  </div>
-                                )}
+                                <UserAvatar
+                                  name={user.name}
+                                  photo={user.photo}
+                                  className="w-9 h-9 rounded-full bg-secondary-container"
+                                  initialsClassName="text-xs text-on-secondary-container"
+                                />
                                 <div>
                                   <p className="text-sm font-bold text-primary leading-none">{user.name}</p>
                                   {user.active === false && (

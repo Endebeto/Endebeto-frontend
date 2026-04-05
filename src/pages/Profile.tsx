@@ -28,6 +28,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/auth.service";
 import type { User as AuthUser } from "@/services/auth.service";
@@ -35,14 +36,6 @@ import { bookingsService, type Booking } from "@/services/bookings.service";
 
 /* ─── types ─────────────────────────────────────────────── */
 type Tab = "personal" | "security" | "notifications" | "bookings";
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0]?.toUpperCase() ?? "")
-    .join("");
-}
 
 function apiErrMessage(e: unknown): string {
   if (typeof e === "object" && e !== null && "response" in e) {
@@ -118,7 +111,6 @@ export default function Profile() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const displayName = user?.name ?? "";
-  const initials = getInitials(displayName);
   const isAdmin = user?.role === "admin";
   const isHost = user?.hostStatus === "approved" || isAdmin;
 
@@ -154,13 +146,14 @@ export default function Profile() {
           {mobileView === "menu" && (
             <div className="px-4 pt-5 pb-10 space-y-4">
               <div className="bg-primary rounded-2xl p-5 flex items-center gap-4 shadow-lg shadow-primary/20">
-                <div className="w-14 h-14 rounded-2xl bg-white/15 overflow-hidden flex items-center justify-center font-headline font-black text-white text-xl shrink-0 border-2 border-white/20">
-                  {user?.photo ? (
-                    <img src={user.photo} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    initials
-                  )}
-                </div>
+                <UserAvatar
+                  name={displayName || "User"}
+                  photo={user?.photo}
+                  className="w-14 h-14 rounded-2xl bg-white/15 border-2 border-white/20"
+                  initialsClassName="text-white text-xl font-black"
+                  imgClassName="w-full h-full object-cover"
+                  alt=""
+                />
                 <div className="min-w-0">
                   <p className="font-headline font-extrabold text-white text-base truncate">{displayName}</p>
                   <p className="text-white/60 text-xs mt-0.5">{user?.email}</p>
@@ -263,13 +256,14 @@ export default function Profile() {
           <aside className="w-56 shrink-0">
             <div className="sticky top-16 bg-white dark:bg-[#2d3133] rounded-2xl shadow-sm p-4">
               <div className="flex items-center gap-3 mb-5 px-1">
-                <div className="w-10 h-10 rounded-full bg-secondary-container overflow-hidden flex items-center justify-center font-headline font-bold text-on-secondary-container text-sm shrink-0">
-                  {user?.photo ? (
-                    <img src={user.photo} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    initials
-                  )}
-                </div>
+                <UserAvatar
+                  name={displayName || "User"}
+                  photo={user?.photo}
+                  className="w-10 h-10 rounded-full bg-secondary-container text-sm"
+                  initialsClassName="text-on-secondary-container text-sm"
+                  imgClassName="w-full h-full rounded-full object-cover"
+                  alt=""
+                />
                 <div className="min-w-0">
                   <p className="font-headline font-bold text-primary text-sm truncate">{displayName}</p>
                   <p className="text-[10px] text-on-surface-variant capitalize">
@@ -377,12 +371,12 @@ function ProfileContent({
 }: ContentProps) {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const initials = getInitials(user?.name ?? "");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [bio, setBio] = useState(user?.bio ?? "");
+  const [hostStory, setHostStory] = useState(user?.hostStory ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -398,6 +392,7 @@ function ProfileContent({
     setName(user.name);
     setEmail(user.email);
     setBio(user.bio ?? "");
+    setHostStory(user.hostStory ?? "");
     setPhone(user.phone ?? "");
   }, [user]);
 
@@ -427,6 +422,7 @@ function ProfileContent({
         email: email.trim(),
         bio: bio.trim(),
         phone: phone.trim(),
+        ...(user.hostStatus === "approved" ? { hostStory: hostStory.trim() } : {}),
       });
       updateUser(res.data.data.user);
       toast.success("Profile updated");
@@ -527,13 +523,14 @@ function ProfileContent({
 
             <div className="flex flex-col md:flex-row gap-6 items-start">
               <div className="relative shrink-0">
-                <div className="w-24 h-24 rounded-2xl bg-surface-container overflow-hidden border-4 border-background shadow-sm flex items-center justify-center">
-                  {user?.photo ? (
-                    <img src={user.photo} alt={user.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="font-headline font-black text-3xl text-primary">{initials}</span>
-                  )}
-                </div>
+                <UserAvatar
+                  name={user?.name ?? "User"}
+                  photo={user?.photo}
+                  className="w-24 h-24 rounded-2xl bg-surface-container border-4 border-background shadow-sm"
+                  initialsClassName="text-primary text-3xl font-black"
+                  imgClassName="w-full h-full object-cover rounded-2xl"
+                  alt={user?.name ?? ""}
+                />
                 <button
                   type="button"
                   disabled={uploadingPhoto}
@@ -595,6 +592,25 @@ function ProfileContent({
                   />
                   <p className="text-[11px] text-on-surface-variant mt-1">{bio.length}/500</p>
                 </div>
+                {user?.hostStatus === "approved" && (
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1.5">
+                      Host story <span className="font-normal text-on-surface-variant/80">(gist)</span>
+                    </label>
+                    <p className="text-[11px] text-on-surface-variant mb-2 leading-relaxed">
+                      A short, personal blurb guests see on your experience pages—why you host, what you love sharing. Keep it authentic and concise.
+                    </p>
+                    <textarea
+                      value={hostStory}
+                      onChange={(ev) => setHostStory(ev.target.value.slice(0, 400))}
+                      rows={3}
+                      maxLength={400}
+                      placeholder="e.g. I grew up in Addis and want every guest to taste real home-style injera and hear the stories behind each dish…"
+                      className="w-full text-sm bg-surface-container-low border-none rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
+                    />
+                    <p className="text-[11px] text-on-surface-variant mt-1">{hostStory.length}/400</p>
+                  </div>
+                )}
               </div>
             </div>
 

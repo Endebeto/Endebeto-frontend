@@ -3,14 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Sun, Moon, Menu, X, LogOut, LayoutDashboard, Compass } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0]?.toUpperCase() ?? "")
-    .join("");
-}
+import { UserAvatar } from "@/components/UserAvatar";
 
 const Navbar = () => {
   const location  = useLocation();
@@ -45,8 +38,6 @@ const Navbar = () => {
     ...(isHost  && !isAdmin ? [{ to: "/host-dashboard", label: "Host Dashboard" }] : []),
     ...(isAdmin             ? [{ to: "/admin",           label: "Admin Dashboard" }] : []),
   ];
-
-  const initials = user ? getInitials(user.name) : "";
 
   return (
     <>
@@ -95,13 +86,14 @@ const Navbar = () => {
                     className="flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-primary/5 transition-colors group"
                     title={user.name}
                   >
-                    <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-headline font-bold text-xs select-none">
-                      {user.photo ? (
-                        <img src={user.photo} alt={user.name} className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        initials
-                      )}
-                    </div>
+                    <UserAvatar
+                      name={user.name}
+                      photo={user.photo}
+                      className="w-7 h-7 rounded-full bg-primary text-white text-xs"
+                      initialsClassName="text-white text-xs"
+                      imgClassName="w-full h-full rounded-full object-cover"
+                      alt={user.name}
+                    />
                     <span className="text-xs font-headline font-bold text-on-surface-variant group-hover:text-primary transition-colors max-w-[80px] truncate">
                       {user.name.split(" ")[0]}
                     </span>
@@ -168,13 +160,14 @@ const Navbar = () => {
                 <>
                   {/* User identity */}
                   <div className="flex items-center gap-3 px-6 py-3">
-                    <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-headline font-bold text-sm shrink-0">
-                      {user.photo ? (
-                        <img src={user.photo} alt={user.name} className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        initials
-                      )}
-                    </div>
+                    <UserAvatar
+                      name={user.name}
+                      photo={user.photo}
+                      className="w-8 h-8 rounded-full bg-primary text-white text-sm"
+                      initialsClassName="text-white text-sm"
+                      imgClassName="w-full h-full rounded-full object-cover"
+                      alt={user.name}
+                    />
                     <div className="min-w-0">
                       <p className="font-headline font-bold text-sm text-on-surface truncate">{user.name}</p>
                       <p className="text-[11px] text-on-surface-variant truncate">{user.email}</p>
