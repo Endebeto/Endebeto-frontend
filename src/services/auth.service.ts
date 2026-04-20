@@ -14,7 +14,6 @@ export interface SignupPayload {
 
 export interface AuthResponse {
   status: string;
-  token: string;
   data: { user: User };
 }
 
@@ -44,6 +43,8 @@ export const authService = {
 
   signup: (payload: SignupPayload) =>
     api.post<AuthResponse>("/users/signup", payload),
+
+  logout: () => api.get<{ status: string }>("/users/logout"),
 
   getMe: () =>
     api.get<{ status: string; data: { data: User } }>("/users/me"),

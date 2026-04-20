@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { authService, type User } from "@/services/auth.service";
 
@@ -26,11 +27,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setLoading(false);
-      return;
-    }
     try {
       const res = await authService.getMe();
       // /users/me uses handlerFactory.getOne → { data: { data: user } }
@@ -38,7 +34,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(freshUser);
       localStorage.setItem("user", JSON.stringify(freshUser));
     } catch {
-      localStorage.removeItem("token");
       localStorage.removeItem("user");
       setUser(null);
     } finally {
@@ -52,8 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const res = await authService.login({ email, password });
-    const { token, data } = res.data;
-    localStorage.setItem("token", token);
+    const { data } = res.data;
     localStorage.setItem("user", JSON.stringify(data.user));
     setUser(data.user);
   };
@@ -69,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
+    authService.logout().catch(() => {});
     localStorage.removeItem("user");
     setUser(null);
   };
