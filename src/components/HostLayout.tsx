@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Compass, PlusCircle, Wallet, Users,
   Settings, LogOut, Bell, HelpCircle, Menu, X,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const navLinks = [
   { icon: LayoutDashboard, label: "Dashboard",         href: "/host-dashboard" },
@@ -37,11 +38,11 @@ export default function HostLayout({
   const { pathname } = useLocation();
   const displayInitials = hostInitials || computeInitials(hostName);
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    logout();
     navigate("/login");
   };
 

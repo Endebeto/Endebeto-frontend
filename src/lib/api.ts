@@ -9,14 +9,9 @@ const api = axios.create({
   timeout: 15000,
 });
 
-// Attach JWT from localStorage on every request.
 // For FormData bodies, delete the default Content-Type so the browser sets
 // multipart/form-data with the correct boundary automatically.
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
   if (config.data instanceof FormData) {
     delete config.headers["Content-Type"];
   }
@@ -33,12 +28,20 @@ api.interceptors.response.use(
       if (url.includes("/users/updateMyPassword")) {
         return Promise.reject(error);
       }
-      const publicPaths = ["/users/login", "/users/signup", "/users/forgotPassword"];
+      // NOTE: /users/me is used for "session refresh" on app load; a 401 is normal
+      // when not logged in or after secrets/env change. Do not hard-redirect-loop.
+      const publicPaths = [
+        "/users/login",
+        "/users/signup",
+        "/users/forgotPassword",
+        "/users/me",
+      ];
       const isPublic = publicPaths.some((p) => url.includes(p));
       if (!isPublic) {
-        localStorage.removeItem("token");
         localStorage.removeItem("user");
-        window.location.href = "/login";
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
       }
     }
     return Promise.reject(error);
