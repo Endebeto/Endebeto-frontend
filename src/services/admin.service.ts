@@ -1,25 +1,103 @@
 import api from "@/lib/api";
 
 /* ─── Platform Stats ─────────────────────────────────────── */
+export type CompareWindow = "rolling30" | "month";
+
+export interface PlatformStatsWindow {
+  start: string;
+  end: string;
+}
+
 export interface PlatformStats {
+  /* Totals (lifetime / current state) */
   totalUsers: number;
-  newUsersThisMonth: number;
   approvedHosts: number;
+  suspendedUsers: number;
   totalBookings: number;
-  grossRevenue: number;
-  platformFeesCollected: number;
+  upcomingBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
   pendingApplications: number;
-  /** Unpublished drafts (not pending admin approval) */
   draftExperiences: number;
+  pendingExperiences: number;
   /** Approved & publicly visible (not suspended) */
   liveExperiences: number;
   suspendedExperiences: number;
+
+  /* Money — all cents */
+  grossRevenueCents: number;
+  platformFeesCents: number;
+  avgBookingValueCents: number;
+
+  /* Period-over-period pairs (current vs previous window) */
+  newUsersCurr: number;
+  newUsersPrev: number;
+  newHostsCurr: number;
+  newHostsPrev: number;
+  bookingsCurr: number;
+  bookingsPrev: number;
+  grossRevenueCurrCents: number;
+  grossRevenuePrevCents: number;
+  platformFeesCurrCents: number;
+  platformFeesPrevCents: number;
+
+  /* Payouts */
+  pendingWithdrawalsCount: number;
+  pendingWithdrawalsCents: number;
+  paidWithdrawalsLifetimeCents: number;
+  failedWithdrawalsCount: number;
+
+  /* Reviews / ratings */
+  totalReviews: number;
+  reviewsCurr: number;
+  /** Weighted average over approved experiences' ratings (0 when no ratings). */
+  avgPlatformRating: number;
+
+  /* Meta */
+  platformFeeRate: number;
+  compareWindow: CompareWindow;
+  windows: { curr: PlatformStatsWindow; prev: PlatformStatsWindow };
 }
 
 export interface DashboardCharts {
   labels: string[];
   newUsers: number[];
   bookings: number[];
+  revenueCents: number[];
+  feesCents: number[];
+}
+
+export interface TopExperienceHost {
+  _id?: string;
+  name?: string;
+  email?: string;
+  photo?: string;
+}
+
+export interface TopExperience {
+  _id: string;
+  title: string;
+  imageCover?: string;
+  price?: number;
+  ratingsAverage?: number;
+  ratingsQuantity?: number;
+  nextOccurrenceAt?: string | null;
+  suspended?: boolean;
+  bookings: number;
+  grossCents: number;
+  host?: TopExperienceHost | null;
+}
+
+export interface TopHost {
+  _id: string;
+  name?: string;
+  email?: string;
+  photo?: string;
+  phone?: string;
+  hostStatus?: "pending" | "approved" | "rejected" | "none" | null;
+  bookings: number;
+  grossCents: number;
+  experiencesCount: number;
 }
 
 /* ─── Host Applications ──────────────────────────────────── */
@@ -66,6 +144,11 @@ export interface AdminExperience {
     name: string;
     email: string;
     photo?: string;
+    phone?: string;
+    hostStory?: string;
+    hostStatus?: "pending" | "approved" | "rejected" | "none" | null;
+    createdAt?: string;
+    bio?: string;
   };
   price: number;
   duration: number | string;
@@ -89,11 +172,54 @@ export interface AdminExperience {
   suspendedBy?: { _id: string; name?: string; email?: string };
 }
 
+export type AdminBookingStatus =
+  | "upcoming"
+  | "completed"
+  | "expired"
+  | "cancelled";
+
+export interface AdminExperienceBookingStats {
+  upcoming: number;
+  completed: number;
+  cancelled: number;
+  expired: number;
+  totalGuestsServed: number;
+  upcomingGuests: number;
+  grossRevenue: number;
+  completedRevenue: number;
+}
+
+export interface AdminBooking {
+  _id: string;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+    photo?: string;
+    phone?: string;
+  } | null;
+  price: number;
+  quantity: number;
+  status: AdminBookingStatus;
+  paid: boolean;
+  txRef?: string;
+  experienceDate?: string;
+  completedAt?: string;
+  createdAt: string;
+}
+
+export interface SuspendExperienceNotifications {
+  hostEmailed: boolean;
+  guestsEmailed: number;
+  emailConfigured: boolean;
+}
+
 /* ─── Admin Users ────────────────────────────────────────── */
 export interface AdminUser {
   _id: string;
   name: string;
   email: string;
+  phone?: string;
   photo?: string;
   role: "admin" | "host" | "user";
   hostStatus?: "pending" | "approved" | "rejected" | "none" | null;
@@ -106,6 +232,9 @@ export interface AdminUser {
   googleId?: string;
   facebookId?: string;
   createdAt?: string;
+  suspensionReason?: string | null;
+  suspendedAt?: string | null;
+  suspendedBy?: { _id: string; name?: string; email?: string } | null;
 }
 
 /* ─── Withdrawals ────────────────────────────────────────── */
@@ -141,12 +270,29 @@ export interface AdminWithdrawal {
 /* ─── API calls ──────────────────────────────────────────── */
 export const adminService = {
   /* Stats */
-  getStats: () =>
-    api.get<{ status: string; data: PlatformStats }>("/admin/stats"),
+  getStats: (params?: { compare?: CompareWindow }) =>
+    api.get<{ status: string; data: PlatformStats }>("/admin/stats", {
+      params,
+    }),
 
   getDashboardCharts: (params?: { months?: number }) =>
     api.get<{ status: string; data: DashboardCharts }>(
       "/admin/dashboard/charts",
+      { params },
+    ),
+
+  getTopExperiences: (params?: {
+    limit?: number;
+    by?: "revenue" | "bookings" | "rating";
+  }) =>
+    api.get<{ status: string; data: TopExperience[] }>(
+      "/admin/dashboard/top-experiences",
+      { params },
+    ),
+
+  getTopHosts: (params?: { limit?: number }) =>
+    api.get<{ status: string; data: TopHost[] }>(
+      "/admin/dashboard/top-hosts",
       { params },
     ),
 
@@ -162,9 +308,9 @@ export const adminService = {
   rejectHostApplication: (id: string, reason: string) =>
     api.patch(`/host-applications/${id}/reject`, { rejectionReason: reason }),
 
-  /** Admin catalog: filter = live | suspended | draft */
+  /** Admin catalog: filter = live | expired | suspended | draft */
   getAdminCatalog: (
-    filter: "live" | "suspended" | "draft",
+    filter: "live" | "expired" | "suspended" | "draft",
     params?: { page?: number; limit?: number },
   ) =>
     api.get<{
@@ -176,10 +322,44 @@ export const adminService = {
     }>("/experiences/admin/catalog", { params: { filter, ...params } }),
 
   suspendExperience: (id: string, reason: string) =>
-    api.patch(`/experiences/${id}/suspend`, { reason }),
+    api.patch<{
+      status: string;
+      data: {
+        data: AdminExperience;
+        notifications: SuspendExperienceNotifications;
+      };
+    }>(`/experiences/${id}/suspend`, { reason }),
 
   reinstateExperience: (id: string) =>
-    api.patch(`/experiences/${id}/reinstate`),
+    api.patch<{
+      status: string;
+      data: {
+        data: AdminExperience;
+        notifications: { guestsEmailed: number; emailConfigured: boolean };
+      };
+    }>(`/experiences/${id}/reinstate`),
+
+  getAdminExperienceDetail: (id: string) =>
+    api.get<{
+      status: string;
+      data: {
+        experience: AdminExperience;
+        bookingStats: AdminExperienceBookingStats;
+      };
+    }>(`/experiences/${id}/admin-detail`),
+
+  getAdminExperienceBookings: (
+    id: string,
+    params?: { status?: AdminBookingStatus; page?: number; limit?: number },
+  ) =>
+    api.get<{
+      status: string;
+      results: number;
+      total: number;
+      page: number;
+      pages: number;
+      data: AdminBooking[];
+    }>(`/experiences/${id}/admin-bookings`, { params }),
 
   /* Users */
   /** Backend factory.getAll: `data: { data: User[] }` */
@@ -197,6 +377,22 @@ export const adminService = {
     }>("/users", { params }),
   updateUser: (id: string, data: Partial<{ role: string; active: boolean }>) =>
     api.patch(`/users/${id}`, data),
+  suspendUser: (id: string, reason?: string) =>
+    api.patch<{
+      status: string;
+      data: {
+        data: AdminUser;
+        notifications: { userEmailed: boolean; emailConfigured: boolean };
+      };
+    }>(`/users/${id}/suspend`, { reason }),
+  reinstateUser: (id: string) =>
+    api.patch<{
+      status: string;
+      data: {
+        data: AdminUser;
+        notifications: { userEmailed: boolean; emailConfigured: boolean };
+      };
+    }>(`/users/${id}/reinstate`),
   deleteUser: (id: string) => api.delete(`/users/${id}`),
 
   /* Withdrawals / Payouts */

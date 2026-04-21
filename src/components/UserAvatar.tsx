@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getUserInitials, isDisplayableProfilePhotoUrl } from "@/lib/profilePhoto";
 
 type UserAvatarProps = {
-  name: string;
+  name: string | undefined | null;
   photo?: string | null;
   /** Outer box: size, shape, background for initials state */
   className?: string;
@@ -37,7 +37,7 @@ export function UserAvatar({
       {urlOk ? (
         <img
           src={photo!.trim()}
-          alt={alt ?? name}
+          alt={alt ?? name ?? ""}
           className={imgClassName}
           onError={() => setImgFailed(true)}
         />

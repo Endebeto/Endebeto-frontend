@@ -4,12 +4,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Users, CheckCircle, MoreVertical,
   ChevronLeft, ChevronRight, Leaf, Mail,
-  X, Ban, Trash2, Loader2, AlertCircle, ShieldOff,
+  X, Ban, Trash2, Loader2, AlertCircle, ShieldOff, RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { UserAvatar } from "@/components/UserAvatar";
 import { adminService, type AdminUser } from "@/services/admin.service";
+import { useAuth } from "@/context/AuthContext";
 
 type StatusFilter = "all" | "active" | "suspended";
 
@@ -122,21 +123,32 @@ function ConfirmDialog({
 
 /* ─── action menu ───────────────────────────────────────── */
 function ActionMenu({
-  user, onSuspend, onDelete, onClose,
+  user, canSuspend, onSuspend, onDelete, onClose,
 }: {
   user: AdminUser;
+  canSuspend: boolean;
   onSuspend: (u: AdminUser) => void;
   onDelete: (u: AdminUser) => void;
   onClose: () => void;
 }) {
   return (
     <div className="absolute right-4 top-full mt-1 z-50 w-44 bg-white dark:bg-[#2d3133] rounded-xl shadow-xl border border-outline-variant/20 py-1 overflow-hidden">
-      <button
-        onClick={() => { onSuspend(user); onClose(); }}
-        className="flex items-center gap-2.5 w-full px-3 py-2.5 text-xs font-semibold text-amber-600 hover:bg-amber-50 transition-colors"
-      >
-        <Ban className="h-3.5 w-3.5" /> {user.active === false ? "Restore Account" : "Suspend User"}
-      </button>
+      {canSuspend ? (
+        <button
+          onClick={() => { onSuspend(user); onClose(); }}
+          className="flex items-center gap-2.5 w-full px-3 py-2.5 text-xs font-semibold text-amber-600 hover:bg-amber-50 transition-colors"
+        >
+          {user.active === false ? <RotateCcw className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
+          {user.active === false ? "Reinstate Account" : "Suspend User"}
+        </button>
+      ) : (
+        <div
+          className="flex items-center gap-2.5 w-full px-3 py-2.5 text-xs font-semibold text-outline-variant cursor-not-allowed"
+          title="Admins and your own account cannot be suspended from here."
+        >
+          <Ban className="h-3.5 w-3.5" /> Suspend User
+        </div>
+      )}
       <div className="my-1 border-t border-outline-variant/10" />
       <button
         onClick={() => { onDelete(user); onClose(); }}
@@ -145,6 +157,69 @@ function ActionMenu({
         <Trash2 className="h-3.5 w-3.5" /> Delete Account
       </button>
     </div>
+  );
+}
+
+/* ─── suspend dialog with reason ─────────────────────────── */
+function SuspendUserDialog({
+  user, onClose, onConfirm, loading,
+}: {
+  user: AdminUser;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  loading?: boolean;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const [reason, setReason] = useState("");
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-[#2d3133] rounded-2xl w-full max-w-md p-6 shadow-2xl pointer-events-auto">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+            <Ban className="h-5 w-5 text-amber-700 dark:text-amber-400" />
+          </div>
+          <div>
+            <h3 className="font-headline font-extrabold text-lg text-primary">Suspend Account</h3>
+            <p className="text-xs text-on-surface-variant mt-0.5 truncate">{user.name} · {user.email}</p>
+          </div>
+        </div>
+        <p className="text-xs text-on-surface-variant mb-3">
+          Suspending will block this user from logging in, signing up with the same email, or using OAuth. They'll be notified by email if SMTP is configured.
+        </p>
+        <label className="block text-xs font-bold text-primary mb-2">
+          Reason (shown to the user) <span className="text-outline-variant font-medium">— optional</span>
+        </label>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value.slice(0, 500))}
+          rows={3}
+          placeholder="e.g. Repeated violations of our community guidelines."
+          className="w-full bg-white dark:bg-zinc-800 border border-outline-variant/40 dark:border-zinc-600 rounded-xl px-4 py-3 text-sm text-on-surface dark:text-white outline-none focus:ring-2 focus:ring-primary/20 resize-none mb-1"
+        />
+        <p className="text-[10px] text-on-surface-variant text-right mb-5">{reason.length}/500</p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="px-4 py-2 rounded-xl text-sm font-bold text-on-surface-variant hover:bg-surface-container transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm(reason.trim())}
+            disabled={loading}
+            className="px-5 py-2 rounded-xl text-sm font-bold text-white bg-amber-600 flex items-center gap-1.5 disabled:opacity-60"
+          >
+            {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Suspend
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -202,6 +277,30 @@ function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void })
             </div>
           ))}
         </div>
+
+        {user.active === false && (
+          <div className="px-6 pb-6">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-xl p-4 space-y-2">
+              <p className="text-[11px] font-bold text-red-700 dark:text-red-400 uppercase tracking-wide flex items-center gap-1.5">
+                <ShieldOff className="h-3.5 w-3.5" /> Suspension details
+              </p>
+              {user.suspensionReason && (
+                <p className="text-sm text-red-900 dark:text-red-100 leading-relaxed">
+                  {user.suspensionReason}
+                </p>
+              )}
+              <p className="text-[11px] text-red-800/80 dark:text-red-400/90">
+                {user.suspendedAt ? new Date(user.suspendedAt).toLocaleString() : "Unknown date"}
+                {user.suspendedBy?.name && ` · by ${user.suspendedBy.name}`}
+              </p>
+              {!user.suspensionReason && !user.suspendedAt && (
+                <p className="text-[11px] text-red-800/80 dark:text-red-400/90">
+                  Legacy suspension — no audit trail was captured.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </aside>
     </div>,
     document.body
@@ -219,6 +318,7 @@ const STATUS_TABS: { key: StatusFilter; label: string }[] = [
 
 export default function AdminUsers() {
   const qc = useQueryClient();
+  const { user: currentUser } = useAuth();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -241,16 +341,50 @@ export default function AdminUsers() {
   const totalPages = Math.ceil(totalUsers / PAGE_SIZE);
 
   const suspendMutation = useMutation({
-    mutationFn: ({ id, active }: { id: string; active: boolean }) =>
-      adminService.updateUser(id, { active }),
-    onSuccess: () => {
-      const msg = suspendTarget?.active === false ? "Account restored" : "Account suspended";
-      toast.success(msg);
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      adminService.suspendUser(id, reason),
+    onSuccess: (res) => {
+      const { emailConfigured, userEmailed } = res.data.data.notifications;
+      if (emailConfigured && userEmailed) {
+        toast.success("Account suspended. User notified by email.");
+      } else if (emailConfigured) {
+        toast.success("Account suspended. Email notification could not be delivered.");
+      } else {
+        toast.success("Account suspended. Email notifications skipped — SMTP not configured.");
+      }
       qc.invalidateQueries({ queryKey: ["admin-users"] });
       qc.invalidateQueries({ queryKey: ["admin-stats"] });
       setSuspendTarget(null);
     },
-    onError: () => toast.error("Failed to update user"),
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Failed to suspend user";
+      toast.error(msg);
+    },
+  });
+
+  const reinstateMutation = useMutation({
+    mutationFn: (id: string) => adminService.reinstateUser(id),
+    onSuccess: (res) => {
+      const { emailConfigured, userEmailed } = res.data.data.notifications;
+      if (emailConfigured && userEmailed) {
+        toast.success("Account reinstated. User notified by email.");
+      } else if (emailConfigured) {
+        toast.success("Account reinstated. Email notification could not be delivered.");
+      } else {
+        toast.success("Account reinstated. Email notifications skipped — SMTP not configured.");
+      }
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      setSuspendTarget(null);
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Failed to reinstate user";
+      toast.error(msg);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -423,6 +557,10 @@ export default function AdminUsers() {
                               {openMenu === user._id && (
                                 <ActionMenu
                                   user={user}
+                                  canSuspend={
+                                    user.role !== "admin" &&
+                                    user._id !== currentUser?._id
+                                  }
                                   onSuspend={(u) => { setDrawerUser(null); setSuspendTarget(u); }}
                                   onDelete={(u) => { setDrawerUser(null); setDeleteTarget(u); }}
                                   onClose={() => setOpenMenu(null)}
@@ -497,17 +635,28 @@ export default function AdminUsers() {
         <UserDrawer user={drawerUser} onClose={() => setDrawerUser(null)} />
       )}
 
-      {/* Suspend confirm — z-[100] always above drawer z-[60] */}
-      {suspendTarget && (
+      {/* Suspend / reinstate — z-[100] always above drawer z-[60] */}
+      {suspendTarget && suspendTarget.active === false && (
         <ConfirmDialog
-          title={suspendTarget.active === false ? "Restore Account" : "Suspend Account"}
-          message={suspendTarget.active === false
-            ? `Restore access for ${suspendTarget.name}? They will be able to log in again.`
-            : `Suspend ${suspendTarget.name}? They will lose access and see a suspension message at login.`}
-          confirmLabel={suspendTarget.active === false ? "Restore" : "Suspend"}
-          confirmClass={suspendTarget.active === false ? "bg-primary" : "bg-amber-600"}
+          title="Reinstate Account"
+          message={`Reinstate access for ${suspendTarget.name}? They'll be able to log in again and will be notified by email if SMTP is configured.`}
+          confirmLabel="Reinstate"
+          confirmClass="bg-primary"
+          loading={reinstateMutation.isPending}
+          onConfirm={() => reinstateMutation.mutate(suspendTarget._id)}
+          onClose={() => setSuspendTarget(null)}
+        />
+      )}
+      {suspendTarget && suspendTarget.active !== false && (
+        <SuspendUserDialog
+          user={suspendTarget}
           loading={suspendMutation.isPending}
-          onConfirm={() => suspendMutation.mutate({ id: suspendTarget._id, active: suspendTarget.active === false })}
+          onConfirm={(reason) =>
+            suspendMutation.mutate({
+              id: suspendTarget._id,
+              reason: reason || undefined,
+            })
+          }
           onClose={() => setSuspendTarget(null)}
         />
       )}

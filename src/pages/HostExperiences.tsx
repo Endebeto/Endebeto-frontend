@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Plus, MapPin, Users, Timer, Star, MoreVertical,
   CheckCircle2, Clock, XCircle, Pencil, Calendar,
-  Trash2, Eye, Search, SlidersHorizontal, Loader2,
+  Ban, Eye, Search, SlidersHorizontal, Loader2,
   RefreshCw, AlertCircle,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -42,10 +42,20 @@ function RescheduleModal({ exp, onClose }: { exp: Experience; onClose: () => voi
 
   const minDateTime = (() => {
     const d = new Date();
-    d.setMinutes(d.getMinutes() + 5);
+    d.setDate(d.getDate() + 1);
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   })();
+
+  const submitReschedule = () => {
+    if (!date) return;
+    const picked = new Date(date);
+    if (picked.getTime() < Date.now() + 24 * 60 * 60 * 1000) {
+      toast.error("New date must be at least 1 day from now.");
+      return;
+    }
+    mutation.mutate(picked.toISOString());
+  };
 
   const mutation = useMutation({
     mutationFn: (iso: string) => experiencesService.updateNextOccurrence(exp._id ?? exp.id, iso),
@@ -89,7 +99,7 @@ function RescheduleModal({ exp, onClose }: { exp: Experience; onClose: () => voi
           </button>
           <button type="button"
             disabled={!date || mutation.isPending}
-            onClick={() => mutation.mutate(new Date(date).toISOString())}
+            onClick={submitReschedule}
             className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
             {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Reschedule
@@ -101,11 +111,21 @@ function RescheduleModal({ exp, onClose }: { exp: Experience; onClose: () => voi
 }
 
 /* ─── action menu ────────────────────────────────────── */
-function ActionMenu({ exp, onReschedule, onDelete }: { exp: Experience; onReschedule: (exp: Experience) => void; onDelete: (id: string) => void }) {
+function ActionMenu({
+  exp,
+  onReschedule,
+  onStop,
+}: {
+  exp: Experience;
+  onReschedule: (exp: Experience) => void;
+  onStop: (exp: Experience) => void;
+}) {
   const [open, setOpen] = useState(false);
   const id = exp._id ?? exp.id;
-  const showReschedule = exp.status === "approved" && isExpired(exp);
-  const isPubliclyVisible = exp.status === "approved" && !exp.suspended;
+  const expired = isExpired(exp);
+  const isPubliclyVisible = exp.status === "approved" && !exp.suspended && !expired;
+  // Stop is only meaningful for approved listings that are currently scheduled (live).
+  const canStop = exp.status === "approved" && !!exp.nextOccurrenceAt && !expired;
 
   return (
     <div className="relative">
@@ -127,17 +147,21 @@ function ActionMenu({ exp, onReschedule, onDelete }: { exp: Experience; onResche
               className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors">
               <Pencil className="h-3.5 w-3.5 text-on-surface-variant" /> Edit
             </Link>
-            {exp.status === "approved" && !showReschedule && (
+            {exp.status === "approved" && !expired && (
               <button onClick={() => { onReschedule(exp); setOpen(false); }}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors">
                 <Calendar className="h-3.5 w-3.5 text-on-surface-variant" /> Set Next Date
               </button>
             )}
-            <div className="my-1 border-t border-outline-variant/20 dark:border-zinc-700" />
-            <button onClick={() => { onDelete(id); setOpen(false); }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-error hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-              <Trash2 className="h-3.5 w-3.5" /> Delete
-            </button>
+            {canStop && (
+              <>
+                <div className="my-1 border-t border-outline-variant/20 dark:border-zinc-700" />
+                <button onClick={() => { onStop(exp); setOpen(false); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-error hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <Ban className="h-3.5 w-3.5" /> Stop
+                </button>
+              </>
+            )}
           </div>
         </>
       )}
@@ -145,17 +169,77 @@ function ActionMenu({ exp, onReschedule, onDelete }: { exp: Experience; onResche
   );
 }
 
+/* ─── stop confirmation modal ────────────────────────── */
+function StopModal({
+  exp,
+  onClose,
+  onConfirm,
+  isPending,
+}: {
+  exp: Experience;
+  onClose: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/15 dark:border-zinc-700 max-w-sm w-full p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+            <Ban className="h-5 w-5 text-error dark:text-red-400" />
+          </div>
+          <div>
+            <h3 className="font-headline font-bold text-on-surface dark:text-white">Stop this experience?</h3>
+            <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 line-clamp-1">{exp.title}</p>
+          </div>
+        </div>
+
+        <p className="text-sm text-on-surface-variant dark:text-zinc-300 leading-relaxed mb-5">
+          It will no longer accept bookings and will disappear from the public catalog. You can bring it back anytime by rescheduling.
+          Reviews and booking history are preserved.
+        </p>
+
+        <div className="flex gap-3">
+          <button type="button" onClick={onClose} disabled={isPending}
+            className="flex-1 py-2.5 rounded-xl border border-outline-variant/30 dark:border-zinc-600 text-sm font-semibold text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-800 transition-colors disabled:opacity-50">
+            Cancel
+          </button>
+          <button type="button" onClick={onConfirm} disabled={isPending}
+            className="flex-1 py-2.5 rounded-xl bg-error text-white text-sm font-semibold hover:bg-error/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
+            Stop
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── experience card ────────────────────────────────── */
-function ExpCard({ exp, onReschedule, onDelete }: { exp: Experience; onReschedule: (e: Experience) => void; onDelete: (id: string) => void }) {
+function ExpCard({
+  exp,
+  onReschedule,
+  onStop,
+}: {
+  exp: Experience;
+  onReschedule: (e: Experience) => void;
+  onStop: (e: Experience) => void;
+}) {
   const isSuspended = exp.status === "approved" && exp.suspended;
+  const expired = exp.status === "approved" && !exp.suspended && isExpired(exp);
   const s = statusCfg[exp.status ?? "draft"] ?? statusCfg.draft;
-  const Icon = isSuspended ? AlertCircle : s.icon;
-  const expired = isExpired(exp);
+  const Icon = isSuspended ? AlertCircle : expired ? Clock : s.icon;
   const id = exp._id ?? exp.id;
+  const suspendedBadgeCls =
+    "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700";
+  const expiredBadgeCls =
+    "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800";
   const badgeCls = isSuspended
-    ? "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
-    : s.cls;
-  const badgeLabel = isSuspended ? "Suspended" : s.label;
+    ? suspendedBadgeCls
+    : expired
+      ? expiredBadgeCls
+      : s.cls;
+  const badgeLabel = isSuspended ? "Suspended" : expired ? "Expired" : s.label;
 
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-outline-variant/10 dark:border-zinc-700 shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
@@ -171,7 +255,7 @@ function ExpCard({ exp, onReschedule, onDelete }: { exp: Experience; onReschedul
           <Icon className="h-3 w-3" />{badgeLabel}
         </span>
         <div className="absolute top-2.5 right-2.5">
-          <ActionMenu exp={exp} onReschedule={onReschedule} onDelete={onDelete} />
+          <ActionMenu exp={exp} onReschedule={onReschedule} onStop={onStop} />
         </div>
       </div>
 
@@ -267,6 +351,7 @@ export default function HostExperiences() {
   const [search, setSearch]           = useState("");
   const [tab, setTab]                 = useState<TabFilter>("all");
   const [rescheduleExp, setReschedule] = useState<Experience | null>(null);
+  const [stopExp, setStopExp]         = useState<Experience | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["my-experiences"],
@@ -275,13 +360,19 @@ export default function HostExperiences() {
 
   const exps: Experience[] = data?.data.data.data ?? [];
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => experiencesService.delete(id),
+  const stopMutation = useMutation({
+    mutationFn: (id: string) => experiencesService.stop(id),
     onSuccess: () => {
-      toast.success("Experience deleted.");
+      toast.success("Experience stopped. You can reschedule it anytime.");
       queryClient.invalidateQueries({ queryKey: ["my-experiences"] });
+      setStopExp(null);
     },
-    onError: () => toast.error("Failed to delete experience."),
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to stop experience.";
+      toast.error(msg);
+    },
   });
 
   const counts = {
@@ -315,6 +406,14 @@ export default function HostExperiences() {
     >
       {rescheduleExp && (
         <RescheduleModal exp={rescheduleExp} onClose={() => setReschedule(null)} />
+      )}
+      {stopExp && (
+        <StopModal
+          exp={stopExp}
+          onClose={() => !stopMutation.isPending && setStopExp(null)}
+          onConfirm={() => stopMutation.mutate(stopExp._id ?? stopExp.id)}
+          isPending={stopMutation.isPending}
+        />
       )}
 
       <main className="p-10 max-w-[1440px]">
@@ -416,7 +515,7 @@ export default function HostExperiences() {
                 key={exp._id ?? exp.id}
                 exp={exp}
                 onReschedule={setReschedule}
-                onDelete={(id) => deleteMutation.mutate(id)}
+                onStop={setStopExp}
               />
             ))}
           </div>

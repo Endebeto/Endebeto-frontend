@@ -123,9 +123,14 @@ export default function HostEditExperience() {
           setPin({ lat: exp.latitude, lng: exp.longitude, displayName: exp.location ?? "" });
         }
 
-        /* Check booking lock */
+        /* Check booking lock. Mirrors backend `checkBookingLock`:
+           only lock when there are upcoming bookings AND the listing is still
+           scheduled for a future date. Expired or unscheduled listings stay
+           editable so the host can update info before rescheduling. */
         const { booked, maxGuests: mg } = availRes.data.data;
-        if (booked > 0) {
+        const nextAt = exp.nextOccurrenceAt ? new Date(exp.nextOccurrenceAt) : null;
+        const hasFutureDate = !!nextAt && nextAt.getTime() > Date.now();
+        if (booked > 0 && hasFutureDate) {
           setIsLocked(true);
           setLockedReason(`${booked} of ${mg} guest slot${booked > 1 ? "s" : ""} already booked — sensitive fields are locked.`);
         }

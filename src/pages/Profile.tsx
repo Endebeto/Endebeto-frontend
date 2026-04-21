@@ -470,7 +470,6 @@ function ProfileContent({
         password: passwordNew,
         passwordConfirm,
       });
-      localStorage.setItem("token", res.data.token);
       updateUser(res.data.data.user);
       setPasswordCurrent("");
       setPasswordNew("");

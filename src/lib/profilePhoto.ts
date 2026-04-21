@@ -11,7 +11,8 @@ export function isDisplayableProfilePhotoUrl(raw: string | undefined | null): bo
   return false;
 }
 
-export function getUserInitials(name: string): string {
+export function getUserInitials(name: string | undefined | null): string {
+  if (!name || typeof name !== "string") return "?";
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
   return parts

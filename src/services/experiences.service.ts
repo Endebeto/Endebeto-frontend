@@ -103,8 +103,9 @@ export const experiencesService = {
       timeout: data instanceof FormData ? 120_000 : 15_000,
     }),
 
-  delete: (id: string) =>
-    api.delete(`/experiences/${id}`),
+  // Host/admin Stop: clears the schedule without deleting the listing or reviews.
+  stop: (id: string) =>
+    api.patch<ExperienceResponse>(`/experiences/${id}/stop`),
 
   approve: (id: string) =>
     api.patch<ExperienceResponse>(`/experiences/${id}/approve`),

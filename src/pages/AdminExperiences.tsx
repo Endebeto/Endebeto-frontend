@@ -3,13 +3,28 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   MapPin, Users, Timer, Star, DollarSign, ImageIcon, Eye, X, ChevronRight,
   Calendar, Loader2, AlertCircle, ExternalLink, Ban, RotateCcw,
+  Phone, Mail, TrendingUp, CalendarClock, ChevronLeft, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
-import { adminService, type AdminExperience } from "@/services/admin.service";
+import {
+  adminService,
+  type AdminExperience,
+  type AdminBooking,
+  type AdminBookingStatus,
+  type AdminExperienceBookingStats,
+} from "@/services/admin.service";
 
 type ExpStatus = "pending" | "approved" | "rejected" | "draft";
-type TabKey = "live" | "suspended" | "draft";
+type TabKey = "live" | "expired" | "suspended" | "draft";
+
+// Approved + (missing or past-dated) nextOccurrenceAt + not suspended = Expired.
+// Expired is deduced, not stored, so host-facing, admin-facing, and API views stay in sync.
+function isExpired(exp: AdminExperience): boolean {
+  if (exp.status !== "approved" || exp.suspended) return false;
+  if (!exp.nextOccurrenceAt) return true;
+  return new Date(exp.nextOccurrenceAt).getTime() <= Date.now();
+}
 
 function hostInitials(name: string) {
   return name?.split(" ").slice(0, 2).map((p) => p[0]).join("").toUpperCase() ?? "??";
@@ -48,8 +63,12 @@ const statusBadge: Record<ExpStatus, string> = {
 const suspendedBadge =
   "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700";
 
+const expiredBadge =
+  "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800";
+
 const TAB_LABEL: Record<TabKey, string> = {
   live: "Live",
+  expired: "Expired",
   suspended: "Suspended",
   draft: "Drafts",
 };
@@ -113,6 +132,367 @@ function SuspendModal({
   );
 }
 
+const BOOKING_FILTERS: { key: "all" | AdminBookingStatus; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "upcoming", label: "Upcoming" },
+  { key: "completed", label: "Completed" },
+  { key: "cancelled", label: "Cancelled" },
+  { key: "expired", label: "Expired" },
+];
+
+const BOOKING_STATUS_BADGE: Record<AdminBookingStatus, string> = {
+  upcoming:
+    "bg-primary/10 text-primary dark:bg-primary/20 dark:text-green-300 border-primary/20",
+  completed:
+    "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800",
+  cancelled:
+    "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
+  expired:
+    "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600",
+};
+
+function fmtEtb(amount: number | undefined | null) {
+  const value = Number(amount) || 0;
+  return `ETB ${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+}
+
+function HostCard({ exp }: { exp: AdminExperience }) {
+  const host = exp.host;
+  if (!host) return null;
+  const memberSince = host.createdAt
+    ? new Date(host.createdAt).toLocaleDateString(undefined, {
+        month: "short",
+        year: "numeric",
+      })
+    : null;
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied.`);
+    } catch {
+      toast.error("Could not copy to clipboard.");
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-outline-variant/20 dark:border-zinc-700 p-4 space-y-3">
+      <div className="flex items-center gap-3">
+        {host.photo ? (
+          <img
+            src={host.photo}
+            alt={host.name}
+            className="w-12 h-12 rounded-full object-cover border border-outline-variant/30 dark:border-zinc-700"
+          />
+        ) : (
+          <div className="w-12 h-12 rounded-full bg-primary/15 dark:bg-primary/30 text-primary dark:text-green-300 text-sm font-bold flex items-center justify-center">
+            {hostInitials(host.name ?? "")}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-headline font-bold text-on-surface dark:text-white truncate">
+            {host.name}
+          </p>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            {host.hostStatus && (
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  host.hostStatus === "approved"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800"
+                    : host.hostStatus === "pending"
+                      ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800"
+                      : "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600"
+                }`}
+              >
+                {String(host.hostStatus).charAt(0).toUpperCase() +
+                  String(host.hostStatus).slice(1)}
+              </span>
+            )}
+            {memberSince && (
+              <span className="text-[11px] text-on-surface-variant dark:text-zinc-400">
+                Host since {memberSince}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <button
+          type="button"
+          onClick={() => copyToClipboard(host.email, "Email")}
+          className="w-full flex items-center gap-2 text-left text-xs text-on-surface-variant dark:text-zinc-300 hover:text-primary dark:hover:text-green-400 transition-colors"
+        >
+          <Mail className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">{host.email}</span>
+          <Copy className="h-3 w-3 opacity-50 ml-auto shrink-0" />
+        </button>
+        {host.phone && (
+          <button
+            type="button"
+            onClick={() => copyToClipboard(host.phone!, "Phone")}
+            className="w-full flex items-center gap-2 text-left text-xs text-on-surface-variant dark:text-zinc-300 hover:text-primary dark:hover:text-green-400 transition-colors"
+          >
+            <Phone className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{host.phone}</span>
+            <Copy className="h-3 w-3 opacity-50 ml-auto shrink-0" />
+          </button>
+        )}
+      </div>
+
+      {host.hostStory && (
+        <p className="text-xs text-on-surface-variant dark:text-zinc-400 leading-relaxed line-clamp-3 border-t border-outline-variant/10 dark:border-zinc-700 pt-3">
+          {host.hostStory}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function KpiStrip({
+  stats,
+  isLoading,
+}: {
+  stats: AdminExperienceBookingStats | undefined;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-5 gap-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="bg-surface dark:bg-zinc-800 rounded-xl p-3 border border-outline-variant/20 dark:border-zinc-700 h-16 animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  }
+  const s = stats ?? {
+    upcoming: 0,
+    completed: 0,
+    cancelled: 0,
+    expired: 0,
+    totalGuestsServed: 0,
+    upcomingGuests: 0,
+    grossRevenue: 0,
+    completedRevenue: 0,
+  };
+  const cells: {
+    icon: typeof Eye;
+    label: string;
+    value: string;
+    sub?: string;
+  }[] = [
+    {
+      icon: CalendarClock,
+      label: "Upcoming",
+      value: String(s.upcoming),
+      sub: `${s.upcomingGuests} guests`,
+    },
+    {
+      icon: Star,
+      label: "Completed",
+      value: String(s.completed),
+    },
+    {
+      icon: Ban,
+      label: "Cancelled",
+      value: String(s.cancelled),
+    },
+    {
+      icon: Users,
+      label: "Guests served",
+      value: String(s.totalGuestsServed),
+    },
+    {
+      icon: TrendingUp,
+      label: "Gross revenue",
+      value: fmtEtb(s.grossRevenue),
+    },
+  ];
+  return (
+    <div className="grid grid-cols-5 gap-2">
+      {cells.map((c) => (
+        <div
+          key={c.label}
+          className="bg-surface dark:bg-zinc-800 rounded-xl p-3 border border-outline-variant/20 dark:border-zinc-700"
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <c.icon className="h-3 w-3 text-primary dark:text-green-400" />
+            <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 font-medium uppercase tracking-wide">
+              {c.label}
+            </p>
+          </div>
+          <p className="text-sm font-bold text-on-surface dark:text-white">
+            {c.value}
+          </p>
+          {c.sub && (
+            <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 mt-0.5">
+              {c.sub}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BookingsSection({ expId }: { expId: string }) {
+  const [filter, setFilter] = useState<"all" | AdminBookingStatus>("all");
+  const [page, setPage] = useState(1);
+  const limit = 10;
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["admin-exp-bookings", expId, filter, page],
+    queryFn: () =>
+      adminService
+        .getAdminExperienceBookings(expId, {
+          status: filter === "all" ? undefined : filter,
+          page,
+          limit,
+        })
+        .then((r) => r.data),
+    staleTime: 15_000,
+  });
+
+  const bookings: AdminBooking[] = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const pages = data?.pages ?? 1;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wide">
+          Bookings {total > 0 && `(${total})`}
+        </p>
+      </div>
+
+      <div className="flex gap-1.5 mb-3 flex-wrap">
+        {BOOKING_FILTERS.map((f) => {
+          const active = f.key === filter;
+          return (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => {
+                setFilter(f.key);
+                setPage(1);
+              }}
+              className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                active
+                  ? "bg-primary/10 dark:bg-primary/20 border-primary/30 dark:border-green-400/40 text-primary dark:text-green-300"
+                  : "border-outline-variant/30 dark:border-zinc-600 text-on-surface-variant dark:text-zinc-400 hover:text-on-surface dark:hover:text-white"
+              }`}
+            >
+              {f.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        </div>
+      ) : isError ? (
+        <div className="flex items-center gap-2 text-xs text-red-500 py-6 justify-center">
+          <AlertCircle className="h-4 w-4" /> Failed to load bookings.
+        </div>
+      ) : bookings.length === 0 ? (
+        <div className="text-center py-8 text-xs text-on-surface-variant dark:text-zinc-400">
+          No {filter === "all" ? "" : filter} bookings for this experience.
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {bookings.map((b) => {
+            const amount = (b.price ?? 0) * (b.quantity ?? 1);
+            const dateStr = b.experienceDate
+              ? new Date(b.experienceDate).toLocaleDateString()
+              : "—";
+            return (
+              <div
+                key={b._id}
+                className="bg-white dark:bg-zinc-900 rounded-lg border border-outline-variant/15 dark:border-zinc-700 px-3 py-2 flex items-center gap-2 text-xs"
+              >
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  {b.user?.photo ? (
+                    <img
+                      src={b.user.photo}
+                      alt={b.user.name}
+                      className="w-7 h-7 rounded-full object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+                      {hostInitials(b.user?.name ?? "??")}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-on-surface dark:text-white truncate">
+                      {b.user?.name ?? "Deleted user"}
+                    </p>
+                    <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 truncate">
+                      {b.user?.email ?? ""}
+                    </p>
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-on-surface dark:text-zinc-200">{dateStr}</p>
+                  <p className="text-[10px] text-on-surface-variant dark:text-zinc-400">
+                    Qty {b.quantity ?? 1}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="font-semibold text-on-surface dark:text-white">
+                    {fmtEtb(amount)}
+                  </p>
+                  {b.txRef && (
+                    <p
+                      className="text-[10px] font-mono text-on-surface-variant dark:text-zinc-500 truncate max-w-[100px]"
+                      title={b.txRef}
+                    >
+                      {b.txRef}
+                    </p>
+                  )}
+                </div>
+                <span
+                  className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${BOOKING_STATUS_BADGE[b.status]}`}
+                >
+                  {b.status}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {pages > 1 && (
+        <div className="flex items-center justify-between mt-3 text-xs text-on-surface-variant dark:text-zinc-400">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1 || isLoading}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-outline-variant/30 dark:border-zinc-600 disabled:opacity-40 hover:bg-surface dark:hover:bg-zinc-800"
+          >
+            <ChevronLeft className="h-3 w-3" /> Prev
+          </button>
+          <span>
+            Page {data?.page ?? page} of {pages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(pages, p + 1))}
+            disabled={page >= pages || isLoading}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-outline-variant/30 dark:border-zinc-600 disabled:opacity-40 hover:bg-surface dark:hover:bg-zinc-800"
+          >
+            Next <ChevronRight className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DetailPanel({
   exp,
   tab,
@@ -129,6 +509,15 @@ function DetailPanel({
   reinstatePending: boolean;
 }) {
   const status = (exp.status ?? "draft") as ExpStatus;
+
+  const { data: detailData, isLoading: detailLoading } = useQuery({
+    queryKey: ["admin-exp-detail", exp._id],
+    queryFn: () =>
+      adminService.getAdminExperienceDetail(exp._id).then((r) => r.data.data),
+    staleTime: 30_000,
+  });
+  const detailExp = detailData?.experience ?? exp;
+  const bookingStats = detailData?.bookingStats;
   const address = locationText(exp) || "Location not set";
   const images = exp.images ?? [];
   // Public experience route is /experiences/:id — always use _id
@@ -137,8 +526,19 @@ function DetailPanel({
   const showSuspend = tab === "live" && status === "approved" && !exp.suspended;
   const showReinstate = tab === "suspended" && exp.suspended;
 
-  const overlayBadgeClass = exp.suspended ? suspendedBadge : statusBadge[status];
-  const overlayLabel = exp.suspended ? "Suspended" : status === "approved" ? "Live" : status.charAt(0).toUpperCase() + status.slice(1);
+  const expired = isExpired(exp);
+  const overlayBadgeClass = exp.suspended
+    ? suspendedBadge
+    : expired
+      ? expiredBadge
+      : statusBadge[status];
+  const overlayLabel = exp.suspended
+    ? "Suspended"
+    : expired
+      ? "Expired"
+      : status === "approved"
+        ? "Live"
+        : status.charAt(0).toUpperCase() + status.slice(1);
 
   return (
     <div className="flex flex-col h-full">
@@ -211,24 +611,20 @@ function DetailPanel({
         )}
 
         <div>
-          <h2 className="font-headline font-extrabold text-lg text-on-surface dark:text-white leading-tight mb-1">
+          <h2 className="font-headline font-extrabold text-lg text-on-surface dark:text-white leading-tight mb-3">
             {exp.title}
           </h2>
-          <div className="flex items-center gap-2">
-            {exp.host?.photo ? (
-              <img src={exp.host.photo} alt={exp.host.name} className="w-6 h-6 rounded-full object-cover" />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-primary/15 dark:bg-primary/30 text-primary dark:text-green-300 text-[10px] font-bold flex items-center justify-center">
-                {hostInitials(exp.host?.name ?? "")}
-              </div>
-            )}
-            <span className="text-xs text-on-surface-variant dark:text-zinc-400">
-              by <strong className="text-on-surface dark:text-white">{exp.host?.name}</strong>
-              <span className="mx-1">·</span>
-              {exp.host?.email}
-            </span>
-          </div>
+          <HostCard exp={detailExp} />
         </div>
+
+        <div>
+          <p className="text-xs font-semibold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wide mb-2">
+            Booking KPIs
+          </p>
+          <KpiStrip stats={bookingStats} isLoading={detailLoading} />
+        </div>
+
+        <BookingsSection expId={exp._id} />
 
         {exp.suspended && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-xl p-4 space-y-2">
@@ -366,10 +762,20 @@ export default function AdminExperiences() {
 
   const suspendMutation = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) => adminService.suspendExperience(id, reason),
-    onSuccess: () => {
-      toast.success("Listing suspended.");
+    onSuccess: (res) => {
+      const notifications = res.data.data.notifications;
+      if (notifications?.emailConfigured) {
+        const guestsPart = notifications.guestsEmailed
+          ? `, plus ${notifications.guestsEmailed} guest${notifications.guestsEmailed === 1 ? "" : "s"}`
+          : "";
+        toast.success(`Listing suspended. Host notified by email${guestsPart}.`);
+      } else {
+        toast.success("Listing suspended. Email notifications skipped — SMTP not configured.");
+      }
       queryClient.invalidateQueries({ queryKey: ["admin-experiences-manage"] });
       queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-exp-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-exp-bookings"] });
       setSuspendModalExp(null);
       setSelected(null);
     },
@@ -381,10 +787,20 @@ export default function AdminExperiences() {
 
   const reinstateMutation = useMutation({
     mutationFn: (id: string) => adminService.reinstateExperience(id),
-    onSuccess: () => {
-      toast.success("Listing reinstated.");
+    onSuccess: (res) => {
+      const notifications = res.data.data.notifications;
+      if (notifications?.emailConfigured) {
+        const guestsPart = notifications.guestsEmailed
+          ? ` ${notifications.guestsEmailed} guest${notifications.guestsEmailed === 1 ? "" : "s"} notified.`
+          : "";
+        toast.success(`Listing reinstated.${guestsPart}`);
+      } else {
+        toast.success("Listing reinstated. Email notifications skipped — SMTP not configured.");
+      }
       queryClient.invalidateQueries({ queryKey: ["admin-experiences-manage"] });
       queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-exp-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-exp-bookings"] });
       setSelected(null);
     },
     onError: (err: unknown) => {
@@ -407,6 +823,7 @@ export default function AdminExperiences() {
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "live", label: TAB_LABEL.live },
+    { key: "expired", label: TAB_LABEL.expired },
     { key: "suspended", label: TAB_LABEL.suspended },
     { key: "draft", label: TAB_LABEL.draft },
   ];
@@ -490,10 +907,13 @@ export default function AdminExperiences() {
               filtered.map((exp) => {
                 const isSelected = selected?._id === exp._id;
                 const st = (exp.status ?? "draft") as ExpStatus;
+                const rowExpired = isExpired(exp);
                 const rowBadge =
                   tab === "suspended" || exp.suspended
                     ? { cls: suspendedBadge, label: "Suspended" }
-                    : { cls: statusBadge[st], label: st === "approved" ? "Live" : st };
+                    : rowExpired
+                      ? { cls: expiredBadge, label: "Expired" }
+                      : { cls: statusBadge[st], label: st === "approved" ? "Live" : st };
                 return (
                   <button
                     key={exp._id}

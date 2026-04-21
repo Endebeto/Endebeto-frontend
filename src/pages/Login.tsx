@@ -16,8 +16,13 @@ const Login = () => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (searchParams.get("error") === "oauth_failed") {
+    const err = searchParams.get("error");
+    if (err === "oauth_failed") {
       setOauthError("OAuth sign-in failed. Please try again or use email & password.");
+    } else if (err === "suspended") {
+      setOauthError(
+        "This account has been suspended. Please contact support if you believe this is a mistake.",
+      );
     }
   }, [searchParams]);
 
