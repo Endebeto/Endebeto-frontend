@@ -1,0 +1,12 @@
+# Frontend repo root. Verify Netlify UI: build command / publish match, or clear UI and use this file.
+# Set VITE_API_URL (and OAuth redirect URIs in your IdP) per deploy context as needed.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback: serve index.html for client routes (e.g. /oauth-success, deep links).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
