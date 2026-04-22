@@ -14,6 +14,7 @@ import AdminHostApplications from "./pages/AdminHostApplications";
 import AdminUsers from "./pages/AdminUsers";
 import AdminPayouts from "./pages/AdminPayouts";
 import AdminExperiences from "./pages/AdminExperiences";
+import AdminReviews from "./pages/AdminReviews";
 import HostDashboard from "./pages/HostDashboard";
 import HostWallet from "./pages/HostWallet";
 import HostCreateExperience from "./pages/HostCreateExperience";
@@ -93,6 +94,7 @@ const AppRoutes = () => (
     <Route path="/admin/host-applications" element={<ProtectedRoute allowedRoles={["admin"]}><AdminHostApplications /></ProtectedRoute>} />
     <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["admin"]}><AdminUsers /></ProtectedRoute>} />
     <Route path="/admin/payouts" element={<ProtectedRoute allowedRoles={["admin"]}><AdminPayouts /></ProtectedRoute>} />
+    <Route path="/admin/reviews" element={<ProtectedRoute allowedRoles={["admin"]}><AdminReviews /></ProtectedRoute>} />
 
     <Route path="*" element={<NotFound />} />
   </Routes>

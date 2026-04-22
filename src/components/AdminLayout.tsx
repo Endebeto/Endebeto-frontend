@@ -1,14 +1,30 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, Users, Compass, FileText, CreditCard,
-  Bell, Settings, Search, Menu, X,
+  LayoutDashboard,
+  Users,
+  Compass,
+  FileText,
+  CreditCard,
+  Bell,
+  Settings,
+  Search,
+  Menu,
+  X,
+  Home,
+  MessageSquare,
 } from "lucide-react";
 
 const navLinks = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
   { icon: Users, label: "Users", href: "/admin/users" },
-  { icon: Compass, label: "Experience Management", href: "/admin/experiences" },
+  {
+    icon: Compass,
+    label: "Experiences",
+    href: "/admin/experiences",
+    title: "Experiences (catalog management)",
+  },
+  { icon: MessageSquare, label: "Reviews", href: "/admin/reviews" },
   { icon: FileText, label: "Host Applications", href: "/admin/host-applications" },
   { icon: CreditCard, label: "Payouts", href: "/admin/payouts" },
 ];
@@ -57,6 +73,7 @@ export default function AdminLayout({
             <Link
               key={item.href}
               to={item.href}
+              title={"title" in item ? item.title : undefined}
               className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-headline font-semibold transition-all duration-200 ${isActive
                 ? "bg-white/15 text-white shadow-inner translate-x-1"
                 : "text-white/55 hover:bg-white/8 hover:text-white/85 hover:translate-x-0.5"
@@ -71,6 +88,15 @@ export default function AdminLayout({
           );
         })}
       </nav>
+
+      <Link
+        to="/"
+        className="mt-4 flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-headline font-semibold text-white/50 hover:text-white/85 hover:bg-white/8 transition-colors"
+        title="Back to the public site"
+      >
+        <Home className="h-4 w-4 shrink-0" />
+        <span>View site</span>
+      </Link>
 
       {/* Admin chip */}
       <div className="mt-auto pt-5 border-t border-white/10">
@@ -150,6 +176,22 @@ export default function AdminLayout({
             <button className="sm:hidden p-1.5 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors">
               <Search className="h-[18px] w-[18px]" />
             </button>
+            <Link
+              to="/"
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold text-primary border border-primary/20 hover:bg-primary/5 transition-colors"
+              title="Back to the public site"
+            >
+              <Home className="h-3.5 w-3.5 shrink-0" />
+              <span>View site</span>
+            </Link>
+            <Link
+              to="/"
+              className="sm:hidden p-1.5 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
+              aria-label="View site"
+              title="View site"
+            >
+              <Home className="h-[18px] w-[18px] text-primary" />
+            </Link>
             <button
               onClick={() => navigate("/admin")}
               className="relative p-1.5 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
