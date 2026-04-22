@@ -100,6 +100,25 @@ export interface TopHost {
   experiencesCount: number;
 }
 
+/* ─── Guest reviews (moderation) ───────────────────────────── */
+export interface AdminReview {
+  _id: string;
+  review: string;
+  rating: number;
+  createdAt: string;
+  user: {
+    _id: string;
+    name?: string;
+    email?: string;
+    photo?: string;
+  };
+  experience: {
+    _id: string;
+    title?: string;
+    slug?: string;
+  } | null;
+}
+
 /* ─── Host Applications ──────────────────────────────────── */
 export interface HostApplicationMedia {
   nationalIdFront?: string;
@@ -295,6 +314,23 @@ export const adminService = {
       "/admin/dashboard/top-hosts",
       { params },
     ),
+
+  getAdminReviews: (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    minRating?: number;
+    maxRating?: number;
+  }) =>
+    api.get<{
+      status: string;
+      results: number;
+      page: number;
+      pages: number;
+      data: { data: AdminReview[] };
+    }>("/admin/reviews", { params }),
+
+  deleteReview: (id: string) => api.delete(`/reviews/${id}`),
 
   /* Host Applications */
   getHostApplications: (params?: { status?: string }) =>
