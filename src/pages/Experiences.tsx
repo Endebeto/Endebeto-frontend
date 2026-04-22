@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, ChevronLeft, ChevronRight, Star, ChevronDown, X, Calendar } from "lucide-react";
+import { MapPin, ChevronLeft, ChevronRight, Star, ChevronDown, X, Calendar, CircleDot } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -219,6 +219,8 @@ const Experiences = () => {
   const [minRating, setMinRating] = useState(0);
   const [dateFrom, setDateFrom]   = useState("");
   const [dateTo, setDateTo]       = useState("");
+  /** When true, experiences with no remaining spots (isSoldOut) are hidden. */
+  const [hideSoldOut, setHideSoldOut] = useState(true);
   const [page, setPage]           = useState(1);
 
   const sortRef = useRef<HTMLDivElement>(null!);
@@ -258,13 +260,16 @@ const Experiences = () => {
     setMinRating(0);
     setDateFrom("");
     setDateTo("");
+    setHideSoldOut(false);
     setPage(1);
   };
   const anyActive = locationActive || priceActive || ratingActive || dateActive;
+  const showSummaryBar = anyActive || hideSoldOut;
 
   /* filter + sort */
   const filtered = allExperiences
     .filter((e) => {
+      if (hideSoldOut && e.isSoldOut === true) return false;
       if (locationActive && !e.location.toLowerCase().includes(locationQ.toLowerCase())) return false;
       if (e.price < minPrice) return false;
       if (maxPriceFilter > 0 && e.price > maxPriceFilter) return false;
@@ -448,8 +453,34 @@ const Experiences = () => {
                   </div>
                 </FilterDropdown>
 
+                {/* Availability: hide fully booked (sold out) experiences */}
+                <FilterDropdown
+                  label="Availability"
+                  icon={<CircleDot className="h-3 w-3" />}
+                  active={hideSoldOut}
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">
+                    Bookable listings
+                  </p>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-on-surface">
+                    <input
+                      type="checkbox"
+                      className="rounded border-outline-variant"
+                      checked={hideSoldOut}
+                      onChange={(e) => {
+                        setHideSoldOut(e.target.checked);
+                        setPage(1);
+                      }}
+                    />
+                    Hide sold out
+                  </label>
+                  <p className="text-[10px] text-on-surface-variant mt-2 leading-relaxed">
+                    Hides experiences where all guest spots are already booked.
+                  </p>
+                </FilterDropdown>
+
                 {/* Clear all */}
-                {anyActive && (
+                {showSummaryBar && (
                   <button
                     onClick={clearAll}
                     className="flex items-center gap-1 text-[10px] font-semibold text-on-surface-variant hover:text-primary transition-colors"
@@ -492,8 +523,20 @@ const Experiences = () => {
             </div>
 
             {/* Active filter summary */}
-            {anyActive && (
+            {showSummaryBar && (
               <div className="mt-2 pt-2 border-t border-outline-variant/20 flex flex-wrap gap-1.5">
+                {hideSoldOut && (
+                  <span className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
+                    Available only
+                    <button
+                      type="button"
+                      onClick={() => { setHideSoldOut(false); setPage(1); }}
+                      aria-label="Show sold out experiences"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </span>
+                )}
                 {locationActive && (
                   <span className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
                     📍 {locationQ}
@@ -541,7 +584,12 @@ const Experiences = () => {
                 ? "No experiences are currently scheduled. Check back soon!"
                 : "No experiences match your filters."}
             </p>
-            {anyActive && (
+            {allExperiences.length > 0 && hideSoldOut && !anyActive && (
+              <p className="text-on-surface-variant text-xs mb-2 max-w-sm mx-auto">
+                Everything visible is currently sold out. Turn off &quot;Hide sold out&quot; under Availability to see those listings.
+              </p>
+            )}
+            {showSummaryBar && (
               <button onClick={clearAll} className="text-xs font-bold text-primary hover:underline">
                 Clear filters
               </button>

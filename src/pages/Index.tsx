@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
   TrendingUp,
@@ -19,6 +19,7 @@ import ctaBg from "@/assets/cta-bg.jpg";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
 import TestimonialSlider from "@/components/TestimonialSlider";
+import { persistRefParam } from "@/lib/referral";
 
 /* ─── static data ─────────────────────────────────────── */
 
@@ -169,13 +170,22 @@ function StatItem({
 
 const Index = () => {
   const [current, setCurrent] = useState(0);
+  const [searchParams] = useSearchParams();
 
-  // featured experiences from API
-  const { data: featuredData } = useQuery({
+  useEffect(() => {
+    persistRefParam(searchParams.get("ref") ?? undefined);
+  }, [searchParams]);
+
+  // featured experiences from API (fetch extra, then take top-rated with spots left for display)
+  const { data: featuredData, isLoading: featuredLoading } = useQuery({
     queryKey: ["experiences-featured"],
-    queryFn: () => experiencesService.getAll({ limit: 4, sort: "-ratingsAverage" }),
+    queryFn: () => experiencesService.getAll({ limit: 16, sort: "-ratingsAverage" }),
   });
-  const featuredExperiences = featuredData?.data.data.data ?? [];
+  const rawFeatured = featuredData?.data.data.data ?? [];
+  const featuredExperiences = useMemo(
+    () => rawFeatured.filter((e) => e.isSoldOut !== true).slice(0, 4),
+    [rawFeatured],
+  );
 
   // hero auto-slide
   useEffect(() => {
@@ -258,72 +268,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* ── How It Works ── */}
-      <section className="py-20 md:py-28 bg-primary overflow-hidden">
-        <div className="container">
-          <div
-            ref={howRef.ref as React.RefObject<HTMLDivElement>}
-            className={`reveal ${howRef.isVisible ? "visible" : ""}`}
-          >
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-14 md:mb-20">
-              <div>
-                <span className="inline-block text-accent font-headline font-bold text-xs uppercase tracking-[0.2em] mb-3">
-                  Simple Process
-                </span>
-                <h2 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white leading-tight">
-                  How it works
-                </h2>
-              </div>
-              <p className="text-white/60 max-w-xs text-sm leading-relaxed sm:text-right">
-                Three simple steps to start your authentic Ethiopian journey.
-              </p>
-            </div>
-
-            {/* Steps */}
-            <div
-              className={`grid grid-cols-1 md:grid-cols-3 gap-px bg-white/10 rounded-3xl overflow-hidden reveal-stagger ${
-                howRef.isVisible ? "visible" : ""
-              }`}
-            >
-              {howItWorks.map(({ icon: Icon, title, desc }, i) => (
-                <div
-                  key={title}
-                  className="group relative bg-primary hover:bg-white/5 transition-colors duration-300 p-8 md:p-10 flex flex-col gap-6"
-                >
-                  {/* Step number watermark */}
-                  <span className="absolute top-6 right-7 font-headline font-black text-6xl md:text-8xl text-white/[0.06] select-none leading-none pointer-events-none">
-                    0{i + 1}
-                  </span>
-
-                  {/* Icon badge */}
-                  <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center shrink-0">
-                    <Icon className="h-6 w-6 text-accent" />
-                  </div>
-
-                  {/* Step label */}
-                  <div>
-                    <p className="text-accent font-headline font-bold text-xs uppercase tracking-widest mb-2">
-                      Step 0{i + 1}
-                    </p>
-                    <h3 className="font-headline text-xl md:text-2xl font-extrabold text-white mb-3 leading-snug">
-                      {title}
-                    </h3>
-                    <p className="text-white/60 text-sm leading-relaxed">
-                      {desc}
-                    </p>
-                  </div>
-
-                  {/* Arrow connector (desktop only, not last item) */}
-                  {i < howItWorks.length - 1 && (
-                    <ArrowRight className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30 z-10" />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ── Why Choose Us ── */}
       <section className="py-24 bg-surface-container-low relative overflow-hidden">
@@ -429,6 +373,73 @@ const Index = () => {
         </div>
       </section>
 
+            {/* ── How It Works ── */}
+            <section className="py-20 md:py-28 bg-primary overflow-hidden">
+        <div className="container">
+          <div
+            ref={howRef.ref as React.RefObject<HTMLDivElement>}
+            className={`reveal ${howRef.isVisible ? "visible" : ""}`}
+          >
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-14 md:mb-20">
+              <div>
+                <span className="inline-block text-accent font-headline font-bold text-xs uppercase tracking-[0.2em] mb-3">
+                  Simple Process
+                </span>
+                <h2 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white leading-tight">
+                  How it works
+                </h2>
+              </div>
+              <p className="text-white/60 max-w-xs text-sm leading-relaxed sm:text-right">
+                Three simple steps to start your authentic Ethiopian journey.
+              </p>
+            </div>
+
+            {/* Steps */}
+            <div
+              className={`grid grid-cols-1 md:grid-cols-3 gap-px bg-white/10 rounded-3xl overflow-hidden reveal-stagger ${
+                howRef.isVisible ? "visible" : ""
+              }`}
+            >
+              {howItWorks.map(({ icon: Icon, title, desc }, i) => (
+                <div
+                  key={title}
+                  className="group relative bg-primary hover:bg-white/5 transition-colors duration-300 p-8 md:p-10 flex flex-col gap-6"
+                >
+                  {/* Step number watermark */}
+                  <span className="absolute top-6 right-7 font-headline font-black text-6xl md:text-8xl text-white/[0.06] select-none leading-none pointer-events-none">
+                    0{i + 1}
+                  </span>
+
+                  {/* Icon badge */}
+                  <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center shrink-0">
+                    <Icon className="h-6 w-6 text-accent" />
+                  </div>
+
+                  {/* Step label */}
+                  <div>
+                    <p className="text-accent font-headline font-bold text-xs uppercase tracking-widest mb-2">
+                      Step 0{i + 1}
+                    </p>
+                    <h3 className="font-headline text-xl md:text-2xl font-extrabold text-white mb-3 leading-snug">
+                      {title}
+                    </h3>
+                    <p className="text-white/60 text-sm leading-relaxed">
+                      {desc}
+                    </p>
+                  </div>
+
+                  {/* Arrow connector (desktop only, not last item) */}
+                  {i < howItWorks.length - 1 && (
+                    <ArrowRight className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30 z-10" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Featured Experiences ── */}
       <section className="py-24 bg-background">
         <div className="container">
@@ -450,21 +461,27 @@ const Index = () => {
               featCards.isVisible ? "visible" : ""
             }`}
           >
-            {featuredExperiences.length > 0
-              ? featuredExperiences.map((exp) => (
-                  <DestinationCard
-                    key={exp._id}
-                    id={exp._id}
-                    image={exp.imageCover}
-                    location={exp.location}
-                    title={exp.title}
-                    description={exp.summary || exp.description}
-                    reviewCount={exp.ratingsQuantity}
-                  />
-                ))
-              : Array.from({ length: 4 }).map((_, i) => (
+            {featuredLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="h-[400px] rounded-2xl bg-surface-container animate-pulse" />
                 ))
+              : featuredExperiences.length > 0
+                ? featuredExperiences.map((exp) => (
+                    <DestinationCard
+                      key={exp._id}
+                      id={exp._id}
+                      image={exp.imageCover}
+                      location={exp.location}
+                      title={exp.title}
+                      description={exp.summary || exp.description}
+                      reviewCount={exp.ratingsQuantity}
+                    />
+                  ))
+                : (
+                    <p className="col-span-full text-center text-sm text-on-surface-variant py-8">
+                      No bookable featured experiences right now. Browse the full catalog for more.
+                    </p>
+                  )
             }
           </div>
           <div

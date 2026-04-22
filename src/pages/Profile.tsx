@@ -33,17 +33,13 @@ import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/auth.service";
 import type { User as AuthUser } from "@/services/auth.service";
 import { bookingsService, type Booking } from "@/services/bookings.service";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 /* ─── types ─────────────────────────────────────────────── */
 type Tab = "personal" | "security" | "notifications" | "bookings";
 
 function apiErrMessage(e: unknown): string {
-  if (typeof e === "object" && e !== null && "response" in e) {
-    const r = (e as { response?: { data?: { message?: string } } }).response;
-    if (r?.data?.message && typeof r.data.message === "string") return r.data.message;
-  }
-  if (e instanceof Error) return e.message;
-  return "Something went wrong";
+  return getFriendlyErrorMessage(e);
 }
 
 function formatBookingDate(iso?: string) {

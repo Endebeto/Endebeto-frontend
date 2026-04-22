@@ -9,6 +9,7 @@ import Navbar from "@/components/Navbar";
 import { toast } from "sonner";
 import { hostApplicationsService } from "@/services/hostApplications.service";
 import { useAuth } from "@/context/AuthContext";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 /* ─── types ──────────────────────────────────────────── */
 interface Step1 { fullName: string; phoneNumber: string; cityRegion: string; fullAddress: string; languagesSpoken: string[]; aboutYou: string; }
@@ -213,7 +214,7 @@ export default function HostApply() {
       if (!url) throw new Error("URL not returned");
       setStep3(p => ({ ...p, [field]: { status: "done", url } }));
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Upload failed";
+      const msg = getFriendlyErrorMessage(err, "Upload failed");
       setStep3(p => ({ ...p, [field]: { status: "error", msg } }));
       toast.error(`${field}: ${msg}`);
     }
@@ -233,7 +234,7 @@ export default function HostApply() {
         return { ...p, envPhotos };
       });
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Upload failed";
+      const msg = getFriendlyErrorMessage(err, "Upload failed");
       setStep3(p => {
         const envPhotos = [...p.envPhotos];
         envPhotos[idx] = { status: "error", msg };
@@ -329,8 +330,7 @@ export default function HostApply() {
       }
       setCurrentStep((p) => p + 1);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to save. Please try again.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Failed to save. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -344,8 +344,7 @@ export default function HostApply() {
       toast.success("Application submitted! We'll be in touch within 48 hours.");
       navigate("/host/application-status");
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Submission failed. Please try again.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Submission failed. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -664,7 +663,7 @@ export default function HostApply() {
                     if (!url) throw new Error("URL not returned");
                     setStep3(p => { const envPhotos = [...p.envPhotos]; envPhotos[i] = { status: "done", url }; return { ...p, envPhotos }; });
                   } catch (err: unknown) {
-                    const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Upload failed";
+                    const msg = getFriendlyErrorMessage(err, "Upload failed");
                     setStep3(p => { const envPhotos = [...p.envPhotos]; envPhotos[i] = { status: "error", msg }; return { ...p, envPhotos }; });
                     toast.error(`Hosting photo: ${msg}`);
                   }

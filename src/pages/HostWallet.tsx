@@ -11,6 +11,7 @@ import HostLayout from "@/components/HostLayout";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { walletService, type WithdrawalRequest, type EarningRow } from "@/services/wallet.service";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 /* ─── helpers ────────────────────────────────────────── */
 const etb = (cents: number) =>
@@ -122,13 +123,10 @@ function WithdrawModal({
       onSuccess();
     },
     onError: (err: unknown) => {
-      const apiMsg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      const netErr = (err as { code?: string })?.code;
-      const msg = apiMsg
-        ?? (netErr === "ERR_NETWORK" ? "Network error — please check your connection and try again." : undefined)
-        ?? "Failed to submit withdrawal request. Please try again.";
-      toast.error(msg, { duration: 6000 });
+      toast.error(
+        getFriendlyErrorMessage(err, "Failed to submit withdrawal request. Please try again."),
+        { duration: 6000 },
+      );
     },
   });
 

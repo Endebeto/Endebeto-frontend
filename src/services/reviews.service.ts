@@ -29,9 +29,17 @@ export const reviewsService = {
       payload
     ),
 
-  update: (reviewId: string, payload: { review?: string; rating?: number }) =>
-    api.patch(`/reviews/${reviewId}`, payload),
+  /** Must include experienceId — reviews are nested under `/experiences/:id/reviews/:reviewId`. */
+  update: (
+    experienceId: string,
+    reviewId: string,
+    payload: { review: string; rating: number }
+  ) =>
+    api.patch<{ status: string; data: { review: Review } }>(
+      `/experiences/${experienceId}/reviews/${reviewId}`,
+      payload
+    ),
 
-  delete: (reviewId: string) =>
-    api.delete(`/reviews/${reviewId}`),
+  delete: (experienceId: string, reviewId: string) =>
+    api.delete(`/experiences/${experienceId}/reviews/${reviewId}`),
 };

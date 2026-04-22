@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { Review as ExperienceReview } from "@/services/experiences.service";
 import { Link, useSearchParams } from "react-router-dom";
 import { useInfiniteQuery, useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -11,9 +12,15 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { MY_BOOKINGS_REVIEW_BANNER_QUERY_KEY } from "@/components/ReviewPendingBanner";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import { experiencesService } from "@/services/experiences.service";
 import { reviewsService } from "@/services/reviews.service";
+import {
+  REVIEW_WINDOW_DAYS,
+  canOfferReview,
+  getExperienceId,
+} from "@/lib/reviewEligibility";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,8 +34,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
-const REVIEW_WINDOW_DAYS = 7;
 /** Page size for GET /bookings/me — use Load more for additional pages */
 const BOOKINGS_PAGE_SIZE = 20;
 
@@ -51,39 +58,9 @@ function experienceTitle(b: Booking) {
   return "Experience";
 }
 
-function getExperienceId(b: Booking): string {
-  if (typeof b.experience === "object" && b.experience?._id) return b.experience._id;
-  return String(b.experience);
-}
-
 function isExperienceSuspended(b: Booking): boolean {
   const ex = b.experience;
   return typeof ex === "object" && ex !== null && Boolean(ex.suspended);
-}
-
-function isPastOrEqualExperienceDate(iso?: string): boolean {
-  if (!iso) return false;
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return false;
-  return t <= Date.now();
-}
-
-function isWithinReviewWindow(experienceDateIso?: string): boolean {
-  if (!experienceDateIso) return false;
-  const t = new Date(experienceDateIso).getTime();
-  if (Number.isNaN(t)) return false;
-  const deadline = t + REVIEW_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-  return Date.now() <= deadline;
-}
-
-/** Matches backend `validateBookingForReview` intent: completed, paid, date passed, within window. */
-function canOfferReview(booking: Booking): boolean {
-  return (
-    booking.paid &&
-    booking.status === "completed" &&
-    isPastOrEqualExperienceDate(booking.experienceDate) &&
-    isWithinReviewWindow(booking.experienceDate)
-  );
 }
 
 function partitionBookings(list: Booking[]) {
@@ -95,12 +72,7 @@ function partitionBookings(list: Booking[]) {
 }
 
 function apiErrMessage(e: unknown): string {
-  if (typeof e === "object" && e !== null && "response" in e) {
-    const r = (e as { response?: { data?: { message?: string } } }).response;
-    if (r?.data?.message && typeof r.data.message === "string") return r.data.message;
-  }
-  if (e instanceof Error) return e.message;
-  return "Something went wrong";
+  return getFriendlyErrorMessage(e);
 }
 
 /* ─── Chapa tx_ref handling ─────────────────────────────── */
@@ -158,27 +130,50 @@ function ReviewExperienceDialog({
   experienceId,
   experienceTitle: title,
   userId,
+  existingReview,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   experienceId: string;
   experienceTitle: string;
   userId: string;
+  existingReview?: Pick<ExperienceReview, "_id" | "review" | "rating"> | null;
 }) {
   const queryClient = useQueryClient();
   const [rating, setRating] = useState(5);
   const [text, setText] = useState("");
 
-  const mutation = useMutation({
-    mutationFn: () =>
-      reviewsService.create(experienceId, { review: text.trim(), rating }),
-    onSuccess: async () => {
-      toast.success("Thanks for your review!");
-      onOpenChange(false);
-      setText("");
+  const isEdit = Boolean(existingReview?._id);
+
+  useEffect(() => {
+    if (!open) return;
+    if (existingReview) {
+      setRating(existingReview.rating);
+      setText(existingReview.review);
+    } else {
       setRating(5);
+      setText("");
+    }
+  }, [open, existingReview]);
+
+  const mutation = useMutation({
+    mutationFn: () => {
+      const payload = { review: text.trim(), rating };
+      if (isEdit && existingReview) {
+        return reviewsService.update(experienceId, existingReview._id, payload);
+      }
+      return reviewsService.create(experienceId, payload);
+    },
+    onSuccess: async () => {
+      toast.success(isEdit ? "Review updated." : "Thanks for your review!");
+      onOpenChange(false);
+      if (!isEdit) {
+        setText("");
+        setRating(5);
+      }
       await queryClient.invalidateQueries({ queryKey: ["experience-reviews-mine", experienceId, userId] });
       await queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
+      await queryClient.invalidateQueries({ queryKey: [...MY_BOOKINGS_REVIEW_BANNER_QUERY_KEY] });
       await queryClient.invalidateQueries({ queryKey: ["experience", experienceId] });
     },
     onError: (e) => {
@@ -190,7 +185,7 @@ function ReviewExperienceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Review experience</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit your review" : "Review experience"}</DialogTitle>
           <DialogDescription className="line-clamp-2">{title}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
@@ -236,7 +231,7 @@ function ReviewExperienceDialog({
             onClick={() => mutation.mutate()}
           >
             {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Submit review
+            {isEdit ? "Save changes" : "Submit review"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -264,12 +259,23 @@ function ReviewCell({ booking, userId, userRole }: { booking: Booking; userId?: 
     return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />;
   }
 
-  const hasReview = reviews?.some((r) => r.user._id === userId);
-  if (hasReview) {
+  const myReview = reviews?.find((r) => r.user._id === userId);
+
+  if (myReview) {
     return (
-      <span className="text-[10px] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-        Review submitted
-      </span>
+      <>
+        <Button type="button" size="sm" variant="secondary" className="shrink-0 text-xs h-8" onClick={() => setOpen(true)}>
+          Edit review
+        </Button>
+        <ReviewExperienceDialog
+          open={open}
+          onOpenChange={setOpen}
+          experienceId={exId}
+          experienceTitle={experienceTitle(booking)}
+          userId={userId}
+          existingReview={{ _id: myReview._id, review: myReview.review, rating: myReview.rating }}
+        />
+      </>
     );
   }
 
@@ -284,6 +290,7 @@ function ReviewCell({ booking, userId, userRole }: { booking: Booking; userId?: 
         experienceId={exId}
         experienceTitle={experienceTitle(booking)}
         userId={userId}
+        existingReview={null}
       />
     </>
   );
@@ -308,10 +315,7 @@ function CancelBookingDialog({
       onClose();
     },
     onError: (err: unknown) => {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to cancel booking. Please try again.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Failed to cancel booking. Please try again."));
     },
   });
 
@@ -555,8 +559,7 @@ export default function MyBookings() {
 
           {isError && (
             <p className="text-red-600 text-sm py-8 text-center">
-              {(error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-                "Could not load bookings."}
+              {getFriendlyErrorMessage(error, "Could not load bookings.")}
             </p>
           )}
 

@@ -1,4 +1,6 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+import { getFriendlyErrorMessage } from "./errors";
+import { logger } from "./logger";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1";
 
@@ -18,15 +20,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// On 401, clear stored credentials and redirect to login
+// Response interceptor: normalise errors, redirect on unauthenticated.
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  (error: AxiosError) => {
+    // Log only to our dev-only logger — production builds silence it.
+    logger.error("[api]", error?.config?.url, error?.response?.status);
+
     if (error.response?.status === 401) {
       const url = error.config?.url ?? "";
       // Wrong current password returns 401 — don't force logout on Profile
       if (url.includes("/users/updateMyPassword")) {
-        return Promise.reject(error);
+        return Promise.reject(decorateError(error));
       }
       // NOTE: /users/me is used for "session refresh" on app load; a 401 is normal
       // when not logged in or after secrets/env change. Do not hard-redirect-loop.
@@ -44,8 +49,24 @@ api.interceptors.response.use(
         }
       }
     }
-    return Promise.reject(error);
+
+    return Promise.reject(decorateError(error));
   }
 );
+
+/**
+ * Attach a sanitised, user-displayable message on every rejected request
+ * so callers can simply do `toast.error(err.friendlyMessage)` without
+ * risking leakage of raw 5xx payloads.
+ */
+function decorateError(error: AxiosError): AxiosError {
+  try {
+    (error as AxiosError & { friendlyMessage?: string }).friendlyMessage =
+      getFriendlyErrorMessage(error);
+  } catch {
+    /* never let the interceptor itself throw */
+  }
+  return error;
+}
 
 export default api;

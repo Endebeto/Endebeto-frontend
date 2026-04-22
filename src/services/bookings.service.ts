@@ -27,6 +27,8 @@ export interface Booking {
   experienceDate?: string;
   status: "upcoming" | "completed" | "expired" | "cancelled";
   paid: boolean;
+  /** From GET /bookings/me: whether this user already left a review for this experience. */
+  userHasReviewed?: boolean;
   completedAt?: string;
   createdAt: string;
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { authService } from "@/services/auth.service";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 type Status = "loading" | "success" | "error";
 
@@ -25,8 +26,7 @@ const VerifyEmail = () => {
       .catch((err) => {
         setStatus("error");
         setMessage(
-          err?.response?.data?.message ??
-            "The verification link is invalid or has expired."
+          getFriendlyErrorMessage(err, "The verification link is invalid or has expired."),
         );
       });
   }, [token]);

@@ -1,29 +1,69 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Sun, Moon, Menu, X, LogOut, LayoutDashboard, Compass } from "lucide-react";
+import {
+  Sun,
+  Moon,
+  Menu,
+  X,
+  LogOut,
+  LayoutDashboard,
+  Compass,
+} from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
+import {
+  ReviewPendingBanner,
+  REVIEW_BANNER_HEIGHT_PX,
+} from "@/components/ReviewPendingBanner";
+import { cn } from "@/lib/utils";
 
 const Navbar = () => {
-  const location  = useLocation();
-  const navigate  = useNavigate();
-  const isActive  = (path: string) => location.pathname === path;
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isActive = (path: string) => location.pathname === path;
   const { theme, toggle } = useTheme();
   const { user, isAuthenticated, loading, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [reviewBannerVisible, setReviewBannerVisible] = useState(false);
+  const onReviewBannerVisible = useCallback((visible: boolean) => {
+    setReviewBannerVisible(visible);
+  }, []);
 
   const isAdmin = user?.role === "admin";
-  const isHost  = user?.hostStatus === "approved" || isAdmin;
+  const isHost = user?.hostStatus === "approved" || isAdmin;
 
   /* close menu on route change */
-  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   /* lock body scroll when menu is open */
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [menuOpen]);
+
+  const promoText = (
+    import.meta.env.VITE_PROMO_BANNER_TEXT as string | undefined
+  )?.trim();
+  const promoUrl = (
+    import.meta.env.VITE_PROMO_BANNER_URL as string | undefined
+  )?.trim();
+  const showPromo = Boolean(promoText);
+
+  useLayoutEffect(() => {
+    const px =
+      48 +
+      (showPromo ? 36 : 0) +
+      (reviewBannerVisible ? REVIEW_BANNER_HEIGHT_PX : 0);
+    document.documentElement.style.setProperty("--header-stack", `${px}px`);
+    return () => {
+      document.documentElement.style.setProperty("--header-stack", "48px");
+    };
+  }, [showPromo, reviewBannerVisible]);
 
   const handleSignOut = () => {
     logout();
@@ -34,109 +74,159 @@ const Navbar = () => {
   const navLinks = [
     { to: "/experiences", label: "Experiences" },
     // Only show for non-host, non-admin users (or unauthenticated)
-    ...(!isAuthenticated || (!isHost && !isAdmin) ? [{ to: "/become-host", label: "Become a Host" }] : []),
-    ...(isHost  && !isAdmin ? [{ to: "/host-dashboard", label: "Host Dashboard" }] : []),
-    ...(isAdmin             ? [{ to: "/admin",           label: "Admin Dashboard" }] : []),
+    ...(!isAuthenticated || (!isHost && !isAdmin)
+      ? [{ to: "/become-host", label: "Become a Host" }]
+      : []),
+    ...(isHost && !isAdmin
+      ? [{ to: "/host-dashboard", label: "Host Dashboard" }]
+      : []),
+    ...(isAdmin ? [{ to: "/admin", label: "Admin Dashboard" }] : []),
   ];
 
   return (
     <>
-      <nav className="fixed top-0 w-full z-50 glass-nav shadow-sm shadow-emerald-900/5">
-        <div className="container flex h-12 items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="font-headline text-lg font-black tracking-tighter text-primary">
-            Endebeto
-          </Link>
-
-          {/* Desktop nav links */}
-          <div className="hidden items-center gap-6 md:flex font-headline font-bold text-xs tracking-tight">
-            {navLinks.map(({ to, label }) => (
-              <Link
-                key={to}
-                to={to}
-                className={`transition-colors ${
-                  isActive(to)
-                    ? "text-primary border-b-2 border-accent pb-0.5"
-                    : "text-on-surface-variant hover:text-primary"
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-
-          {/* Right side */}
-          <div className="flex items-center gap-0.5">
-            {/* Theme toggle */}
-            <button
-              onClick={toggle}
-              className="p-1.5 rounded-full text-on-surface-variant hover:bg-primary/5 transition-colors"
-              aria-label="Toggle dark mode"
+      <header className="fixed top-0 w-full z-50">
+        <nav className="w-full bg-transparent" aria-label="Main">
+          <div className="container flex h-12 items-center">
+            <div
+              className={cn(
+                "flex w-full min-w-0 h-9 sm:h-10 items-center justify-between gap-3 sm:gap-4",
+                "rounded-full px-3 sm:px-4",
+                "border border-white/50 bg-white/30 shadow-sm shadow-slate-900/5",
+                "backdrop-blur-xl backdrop-saturate-150",
+                "dark:border-white/10 dark:bg-zinc-900/80 dark:shadow-black/20",
+                "ring-1 ring-black/[0.04] dark:ring-white/5"
+              )}
             >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
+              <Link
+                to="/"
+                className="font-headline shrink-0 text-lg font-black tracking-tighter text-primary drop-shadow-sm"
+              >
+                Endebeto
+              </Link>
 
-            {/* Desktop — auth area */}
-            {!loading && (
-              <div className="hidden md:flex items-center gap-2 ml-1">
-                {isAuthenticated && user ? (
-                  /* Avatar linked to profile */
+              <div className="hidden min-w-0 items-center gap-1 md:flex md:gap-0.5 lg:gap-1 font-headline text-xs font-semibold tracking-tight">
+                {navLinks.map(({ to, label }) => (
                   <Link
-                    to="/profile"
-                    className="flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-primary/5 transition-colors group"
-                    title={user.name}
+                    key={to}
+                    to={to}
+                    className={cn(
+                      "shrink-0 rounded-lg px-2.5 py-1.5 font-semibold transition-colors",
+                      isActive(to)
+                        ? "text-primary"
+                        : "text-slate-800/90 hover:bg-primary/10 hover:text-primary dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-primary"
+                    )}
                   >
-                    <UserAvatar
-                      name={user.name}
-                      photo={user.photo}
-                      className="w-7 h-7 rounded-full bg-primary text-white text-xs"
-                      initialsClassName="text-white text-xs"
-                      imgClassName="w-full h-full rounded-full object-cover"
-                      alt={user.name}
-                    />
-                    <span className="text-xs font-headline font-bold text-on-surface-variant group-hover:text-primary transition-colors max-w-[80px] truncate">
-                      {user.name.split(" ")[0]}
+                    <span
+                      className={cn(
+                        "inline-block border-b-2 border-transparent pb-0.5",
+                        isActive(to) && "border-accent"
+                      )}
+                    >
+                      {label}
                     </span>
                   </Link>
-                ) : (
-                  /* Sign In button */
-                  <Link
-                    to="/login"
-                    className="px-3 py-1.5 bg-primary text-white font-headline font-bold text-xs rounded-xl hover:opacity-90 transition-opacity shadow-sm shadow-primary/20"
-                  >
-                    Sign In
-                  </Link>
-                )}
+                ))}
               </div>
-            )}
 
-            {/* Hamburger — mobile only */}
-            <button
-              onClick={() => setMenuOpen((o) => !o)}
-              className="md:hidden p-1.5 rounded-full text-on-surface-variant hover:bg-primary/5 transition-colors"
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
-            >
-              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <button
+                  onClick={toggle}
+                  className="rounded-full p-1.5 text-slate-700 transition-colors drop-shadow-sm hover:bg-primary/10 hover:text-primary dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-primary"
+                  aria-label="Toggle dark mode"
+                >
+                  {theme === "dark" ? (
+                    <Sun className="h-4 w-4" />
+                  ) : (
+                    <Moon className="h-4 w-4" />
+                  )}
+                </button>
+
+                {!loading && (
+                  <div className="hidden items-center gap-2 md:flex">
+                    {isAuthenticated && user ? (
+                      <Link
+                        to="/profile"
+                        className="group flex items-center gap-2 rounded-xl px-2 py-0.5 transition-colors hover:bg-primary/5 dark:hover:bg-white/5"
+                        title={user.name}
+                      >
+                        <UserAvatar
+                          name={user.name}
+                          photo={user.photo}
+                          className="h-7 w-7 rounded-full bg-primary text-white text-xs"
+                          initialsClassName="text-white text-xs"
+                          imgClassName="h-full w-full rounded-full object-cover"
+                          alt={user.name}
+                        />
+                        <span className="max-w-[80px] truncate font-headline text-xs font-bold text-slate-800 transition-colors group-hover:text-primary dark:text-zinc-200 dark:group-hover:text-primary">
+                          {user.name.split(" ")[0]}
+                        </span>
+                      </Link>
+                    ) : (
+                      <Link
+                        to="/login"
+                        className="rounded-xl bg-primary px-3 py-1.5 font-headline text-xs font-bold text-white shadow-sm shadow-primary/20 transition-opacity hover:opacity-90"
+                      >
+                        Sign In
+                      </Link>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setMenuOpen((o) => !o)}
+                  className="rounded-full p-1.5 text-slate-700 transition-colors drop-shadow-sm hover:bg-primary/10 hover:text-primary dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-primary md:hidden"
+                  aria-label={menuOpen ? "Close menu" : "Open menu"}
+                >
+                  {menuOpen ? (
+                    <X className="h-5 w-5" />
+                  ) : (
+                    <Menu className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-outline-variant/30" />
-      </nav>
+        </nav>
+        {showPromo && (
+          <div className="w-full text-center text-[10px] sm:text-[11px] font-bold leading-snug px-3 py-1.5 bg-tertiary-container text-on-tertiary-container border-b border-outline-variant/20">
+            {promoUrl && /^https?:\/\//i.test(promoUrl) ? (
+              <a
+                href={promoUrl}
+                className="underline decoration-2 underline-offset-2 hover:opacity-90"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {promoText}
+              </a>
+            ) : (
+              <span>{promoText}</span>
+            )}
+          </div>
+        )}
+        <ReviewPendingBanner onVisibleChange={onReviewBannerVisible} />
+      </header>
 
       {/* Mobile drawer */}
       <div
         className={`fixed inset-0 z-[60] md:hidden transition-all duration-300 ${
-          menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          menuOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
         }`}
       >
         {/* Backdrop */}
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMenuOpen(false)} />
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={() => setMenuOpen(false)}
+        />
 
         {/* Panel */}
         <div
-          className={`absolute top-12 left-0 right-0 bg-white dark:bg-zinc-900 border-b border-outline-variant/20 shadow-xl transition-transform duration-300 ${
+          className={`absolute left-0 right-0 bg-white dark:bg-zinc-900 border-b border-outline-variant/20 shadow-xl transition-transform duration-300 ${
             menuOpen ? "translate-y-0" : "-translate-y-4"
           }`}
+          style={{ top: "var(--header-stack, 48px)" }}
         >
           <nav className="flex flex-col py-2">
             {/* Main nav links */}
@@ -158,22 +248,6 @@ const Navbar = () => {
             <div className="border-t border-outline-variant/20 mt-2 pt-2">
               {isAuthenticated && user ? (
                 <>
-                  {/* User identity */}
-                  <div className="flex items-center gap-3 px-6 py-3">
-                    <UserAvatar
-                      name={user.name}
-                      photo={user.photo}
-                      className="w-8 h-8 rounded-full bg-primary text-white text-sm"
-                      initialsClassName="text-white text-sm"
-                      imgClassName="w-full h-full rounded-full object-cover"
-                      alt={user.name}
-                    />
-                    <div className="min-w-0">
-                      <p className="font-headline font-bold text-sm text-on-surface truncate">{user.name}</p>
-                      <p className="text-[11px] text-on-surface-variant truncate">{user.email}</p>
-                    </div>
-                  </div>
-
                   <Link
                     to="/profile"
                     className="flex items-center gap-3 px-6 py-3 font-headline font-bold text-sm text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
@@ -182,13 +256,19 @@ const Navbar = () => {
                   </Link>
 
                   {isAdmin && (
-                    <Link to="/admin" className="flex items-center gap-3 px-6 py-3 font-headline font-bold text-sm text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors">
+                    <Link
+                      to="/admin"
+                      className="flex items-center gap-3 px-6 py-3 font-headline font-bold text-sm text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
+                    >
                       <LayoutDashboard className="h-4 w-4" />
                       Admin Dashboard
                     </Link>
                   )}
                   {isHost && !isAdmin && (
-                    <Link to="/host-dashboard" className="flex items-center gap-3 px-6 py-3 font-headline font-bold text-sm text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors">
+                    <Link
+                      to="/host-dashboard"
+                      className="flex items-center gap-3 px-6 py-3 font-headline font-bold text-sm text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
+                    >
                       <Compass className="h-4 w-4" />
                       Host Dashboard
                     </Link>

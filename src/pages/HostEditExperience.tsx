@@ -10,6 +10,7 @@ import LocationPicker, { type PinLocation } from "@/components/LocationPicker";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { experiencesService, type Experience } from "@/services/experiences.service";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 /* ─── types ──────────────────────────────────────────── */
 interface FormFields {
@@ -214,8 +215,7 @@ export default function HostEditExperience() {
       await experiencesService.update(id, buildFormData(false));
       setSuccess(true);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to save changes. Please try again.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Failed to save changes. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -231,8 +231,7 @@ export default function HostEditExperience() {
       toast.success("Experience posted! It will go live after admin review.");
       navigate("/host/experiences");
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to post experience.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Failed to post experience."));
     } finally {
       setPosting(false);
     }

@@ -3,6 +3,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import App from "./App.tsx";
 import "./index.css";
 import { createQueryClient } from "./lib/query-client";
+import { initProductionLogger } from "./lib/logger";
+
+initProductionLogger();
 
 const queryClient = createQueryClient();
 

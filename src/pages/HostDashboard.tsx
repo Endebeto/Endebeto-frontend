@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Banknote, CalendarDays, Compass, TrendingUp,
   PlusCircle, Wallet, Clock, ChevronRight, Star, ArrowRight,
-  Users, Leaf, Loader2, AlertCircle, Phone, X,
+  Users, Leaf, Loader2, AlertCircle, Phone, X, Ban,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import HostLayout from "@/components/HostLayout";
@@ -43,6 +43,8 @@ export default function HostDashboard() {
   };
 
   const firstName = user?.name?.split(" ")[0] ?? "Host";
+  const listingLocked =
+    user?.hostStatus === "approved" && user?.hostListingSuspended === true;
 
   /* Fetch last 50 bookings so we have enough to build performance stats */
   const { data: bookingsData, isLoading: bLoading, isError: bError } = useQuery({
@@ -123,6 +125,22 @@ export default function HostDashboard() {
             Here's a live snapshot of your hosting activity.
           </p>
         </header>
+
+        {listingLocked && (
+          <div className="mb-6 flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl">
+            <div className="w-9 h-9 rounded-xl bg-amber-200/80 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
+              <Ban className="h-4 w-4 text-amber-900 dark:text-amber-200" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-amber-950 dark:text-amber-100">
+                Listings are temporarily limited
+              </p>
+              <p className="text-xs text-amber-900/80 dark:text-amber-200/90 mt-1 leading-relaxed">
+                You can sign in and view your experiences, but creating new listings or editing schedules is turned off. If you have questions, contact support.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ── Phone nudge banner ───────────────────────── */}
         {!user?.phone && !phoneNudgeDismissed && (
@@ -234,11 +252,21 @@ export default function HostDashboard() {
             <div className="relative z-10 h-full flex flex-col justify-between">
               <h4 className="text-xl font-headline font-bold mb-6 text-white">Quick Actions</h4>
               <div className="space-y-3">
-                <Link to="/host/experiences/create"
-                  className="w-full flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 transition-colors rounded-xl font-medium border border-white/15 text-sm">
-                  <span className="flex items-center gap-3"><PlusCircle className="h-4 w-4" />Create Experience</span>
-                  <ChevronRight className="h-4 w-4 opacity-60" />
-                </Link>
+                {listingLocked ? (
+                  <div
+                    className="w-full flex items-center justify-between p-4 bg-white/5 rounded-xl font-medium border border-white/10 text-sm opacity-50 cursor-not-allowed"
+                    title="Listing changes are currently disabled for your account."
+                  >
+                    <span className="flex items-center gap-3"><PlusCircle className="h-4 w-4" />Create Experience</span>
+                    <ChevronRight className="h-4 w-4 opacity-40" />
+                  </div>
+                ) : (
+                  <Link to="/host/experiences/create"
+                    className="w-full flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 transition-colors rounded-xl font-medium border border-white/15 text-sm">
+                    <span className="flex items-center gap-3"><PlusCircle className="h-4 w-4" />Create Experience</span>
+                    <ChevronRight className="h-4 w-4 opacity-60" />
+                  </Link>
+                )}
                 <Link to="/host/wallet"
                   className="w-full flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 transition-colors rounded-xl font-medium border border-white/15 text-sm">
                   <span className="flex items-center gap-3"><Wallet className="h-4 w-4" />Withdraw Funds</span>
@@ -378,9 +406,13 @@ export default function HostDashboard() {
                 <div className="text-center py-6">
                   <Compass className="h-8 w-8 text-on-surface-variant/30 dark:text-zinc-600 mx-auto mb-2" />
                   <p className="text-sm text-on-surface-variant dark:text-zinc-400">No active experiences yet.</p>
-                  <Link to="/host/experiences/create" className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary dark:text-green-400 hover:underline">
-                    <PlusCircle className="h-3.5 w-3.5" /> Create one
-                  </Link>
+                  {listingLocked ? (
+                    <p className="mt-3 text-xs text-on-surface-variant dark:text-zinc-500">Creating experiences is currently disabled for your account.</p>
+                  ) : (
+                    <Link to="/host/experiences/create" className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary dark:text-green-400 hover:underline">
+                      <PlusCircle className="h-3.5 w-3.5" /> Create one
+                    </Link>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-6">

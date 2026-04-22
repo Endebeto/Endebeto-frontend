@@ -1,25 +1,22 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback, useMemo, useLayoutEffect } from "react";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   MapPin, Star, Clock, Users, Globe,
   AlertCircle, ArrowRight, ChevronLeft, ChevronRight, ExternalLink, X,
-  Share2, Heart, Loader2, Plus, Mail, Lock, MessageCircle,
+  Share2, Link2, Heart, Loader2, Plus, Mail, Lock, MessageCircle,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { experiencesService, type Review } from "@/services/experiences.service";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import { useAuth } from "@/context/AuthContext";
+import { persistRefParam } from "@/lib/referral";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 function apiErrMessage(e: unknown): string {
-  if (typeof e === "object" && e !== null && "response" in e) {
-    const r = (e as { response?: { data?: { message?: string } } }).response;
-    if (r?.data?.message && typeof r.data.message === "string") return r.data.message;
-  }
-  if (e instanceof Error) return e.message;
-  return "Could not start payment. Try again.";
+  return getFriendlyErrorMessage(e, "Could not start payment. Try again.");
 }
 
 function bookingExperienceId(b: Booking): string {
@@ -443,33 +440,6 @@ const ExperienceDetail = () => {
     );
   }, [isAuthenticated, id, myBookingsPayload]);
 
-  /** Chapa: GET /bookings/checkout-session/:experienceId → redirect to checkout_url; return lands on /my-bookings?tx_ref= (Phase 5). */
-  const startCheckout = useCallback(async () => {
-    if (!id) return;
-    if (!isAuthenticated) {
-      navigate("/login", { state: { from: `/experiences/${id}` } });
-      return;
-    }
-    if (hasUpcomingBookingHere) {
-      toast.info("You already have an upcoming booking for this experience.");
-      return;
-    }
-    setCheckoutLoading(true);
-    try {
-      const res = await bookingsService.getCheckoutSession(id, guests);
-      const url = res.data.checkout_url;
-      if (!url) {
-        toast.error("Payment link was not returned. Please try again.");
-        return;
-      }
-      window.location.assign(url);
-    } catch (e) {
-      toast.error(apiErrMessage(e));
-    } finally {
-      setCheckoutLoading(false);
-    }
-  }, [id, isAuthenticated, guests, navigate, hasUpcomingBookingHere]);
-
   /** Mobile: open sheet to confirm guests, then pay. Desktop: pay uses sidebar guest count directly. */
   const openMobileBookingSheet = () => {
     if (!isAuthenticated) {
@@ -489,6 +459,68 @@ const ExperienceDetail = () => {
     queryFn: () => experiencesService.getOne(id!),
     enabled: !!id,
   });
+
+  const expForAvail = data?.data?.data?.data;
+
+  const { data: availPayload } = useQuery({
+    queryKey: ["booking-availability", id],
+    queryFn: async () => {
+      const res = await bookingsService.getAvailability(id!);
+      return res.data.data;
+    },
+    enabled: Boolean(id && expForAvail),
+  });
+
+  const maxBookable = useMemo(() => {
+    if (!expForAvail) return 1;
+    const cap = Math.min(
+      expForAvail.maxGuests,
+      availPayload?.available ?? expForAvail.maxGuests
+    );
+    return Math.max(0, cap);
+  }, [expForAvail, availPayload?.available]);
+
+  useLayoutEffect(() => {
+    setGuests((g) => {
+      if (maxBookable === 0) return 0;
+      return Math.min(Math.max(1, g), maxBookable);
+    });
+  }, [maxBookable]);
+
+  /** Chapa: GET /bookings/checkout-session/:experienceId → redirect to checkout_url; return lands on /my-bookings?tx_ref= (Phase 5). */
+  const startCheckout = useCallback(async () => {
+    if (!id) return;
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: `/experiences/${id}` } });
+      return;
+    }
+    if (hasUpcomingBookingHere) {
+      toast.info("You already have an upcoming booking for this experience.");
+      return;
+    }
+    if (maxBookable === 0) {
+      toast.error("No spots available for the next date.");
+      return;
+    }
+    if (guests < 1 || guests > maxBookable) {
+      toast.error("Choose a valid number of guests for the remaining spots.");
+      return;
+    }
+    setCheckoutLoading(true);
+    try {
+      const res = await bookingsService.getCheckoutSession(id, guests);
+      const url = res.data.checkout_url;
+      if (!url) {
+        toast.error("Payment link was not returned. Please try again.");
+        return;
+      }
+      window.location.assign(url);
+    } catch (e) {
+      toast.error(apiErrMessage(e));
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }, [id, isAuthenticated, guests, navigate, hasUpcomingBookingHere, maxBookable]);
 
   const [saved, setSaved]               = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -515,9 +547,38 @@ const ExperienceDetail = () => {
   const totalReviews = reviewsData?.data.results ?? 0;
   const hasMore      = reviews.length < totalReviews;
 
-  if (isLoading) return <DetailSkeleton />;
-
   const exp = data?.data.data.data;
+
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    persistRefParam(searchParams.get("ref") ?? undefined);
+  }, [searchParams]);
+
+  const handleCopyPublicLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Link copied to clipboard");
+    } catch {
+      toast.error("Could not copy link");
+    }
+  }, []);
+
+  const handleShareExperience = useCallback(async () => {
+    const title = exp?.title ?? "Endebeto experience";
+    const url = window.location.href;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title, text: title, url });
+      } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") return;
+        await handleCopyPublicLink();
+      }
+    } else {
+      await handleCopyPublicLink();
+    }
+  }, [exp?.title, handleCopyPublicLink]);
+
+  if (isLoading) return <DetailSkeleton />;
 
   if (isError || !exp) {
     return (
@@ -534,9 +595,7 @@ const ExperienceDetail = () => {
     );
   }
 
-  const fee       = 120;
   const totalBase = exp.price * guests;
-  const total     = totalBase + fee;
 
   const allGalleryImages = buildGalleryUrls(exp.imageCover, exp.images);
   const galleryPreviewSlots = getGalleryPreviewSlots(allGalleryImages);
@@ -573,7 +632,10 @@ const ExperienceDetail = () => {
           </button>
 
           {/* Floating nav buttons */}
-          <div className="absolute top-0 left-0 right-0 flex justify-between items-center px-4 pt-12 z-20">
+          <div
+            className="absolute top-0 left-0 right-0 flex justify-between items-center px-4 z-20"
+            style={{ paddingTop: "var(--header-stack, 48px)" }}
+          >
             <button
               onClick={() => navigate(-1)}
               className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md"
@@ -581,7 +643,20 @@ const ExperienceDetail = () => {
               <ChevronLeft className="h-5 w-5 text-on-surface" />
             </button>
             <div className="flex gap-2">
-              <button className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md">
+              <button
+                type="button"
+                onClick={() => void handleCopyPublicLink()}
+                className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md"
+                aria-label="Copy public experience link"
+              >
+                <Link2 className="h-4 w-4 text-on-surface" />
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleShareExperience()}
+                className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md"
+                aria-label="Share experience"
+              >
                 <Share2 className="h-4 w-4 text-on-surface" />
               </button>
               <button
@@ -623,6 +698,26 @@ const ExperienceDetail = () => {
                 <span>({exp.ratingsQuantity} reviews)</span>
               </span>
             </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void handleCopyPublicLink()}
+                className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/30 bg-surface-container-low/80 px-3 py-1.5 text-[11px] font-bold text-primary"
+              >
+                <Link2 className="h-3.5 w-3.5" /> Copy link
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleShareExperience()}
+                className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/30 bg-surface-container-low/80 px-3 py-1.5 text-[11px] font-bold text-primary"
+              >
+                <Share2 className="h-3.5 w-3.5" /> Share
+              </button>
+            </div>
+            <p className="text-[10px] text-on-surface-variant/80 mt-2 leading-snug">
+              Only share the public experience link.
+            </p>
 
             {/* Host row */}
             <div className="flex items-center justify-between py-4 mt-3 border-t border-b border-outline-variant/15 dark:border-zinc-800">
@@ -807,11 +902,11 @@ const ExperienceDetail = () => {
           <div className="flex flex-col items-stretch gap-1 flex-1 max-w-[200px]">
             <button
               type="button"
-              disabled={hasUpcomingBookingHere}
+              disabled={hasUpcomingBookingHere || maxBookable === 0}
               onClick={openMobileBookingSheet}
               className="w-full py-2.5 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md shadow-primary/20 disabled:opacity-50 disabled:pointer-events-none"
             >
-              {hasUpcomingBookingHere ? "Already booked" : "Book Now"}
+              {hasUpcomingBookingHere ? "Already booked" : maxBookable === 0 ? "Sold out" : "Book Now"}
             </button>
             {hasUpcomingBookingHere && (
               <Link
@@ -900,6 +995,26 @@ const ExperienceDetail = () => {
         {/* Content grid */}
         <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-3 gap-10">
           <div className="col-span-2 space-y-8">
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => void handleCopyPublicLink()}
+                className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container-low px-4 py-2 text-xs font-bold text-primary hover:bg-surface-container transition-colors"
+              >
+                <Link2 className="h-4 w-4" /> Copy link
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleShareExperience()}
+                className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container-low px-4 py-2 text-xs font-bold text-primary hover:bg-surface-container transition-colors"
+              >
+                <Share2 className="h-4 w-4" /> Share
+              </button>
+              <p className="text-[11px] text-on-surface-variant max-w-md">
+                Only share the public experience link.
+              </p>
+            </div>
 
             {/* Host card */}
             <div className="flex items-center justify-between p-4 bg-surface-container-low rounded-xl">
@@ -1131,7 +1246,7 @@ const ExperienceDetail = () => {
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    disabled={hasUpcomingBookingHere}
+                    disabled={hasUpcomingBookingHere || maxBookable === 0 || guests <= 1}
                     onClick={() => setGuests((g) => Math.max(1, g - 1))}
                     className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold hover:bg-primary hover:text-white transition-colors disabled:opacity-40 disabled:pointer-events-none"
                   >
@@ -1140,17 +1255,20 @@ const ExperienceDetail = () => {
                   <span className="font-headline font-bold w-4 text-center text-sm">{guests}</span>
                   <button
                     type="button"
-                    disabled={hasUpcomingBookingHere}
-                    onClick={() => setGuests((g) => Math.min(exp.maxGuests, g + 1))}
+                    disabled={hasUpcomingBookingHere || maxBookable === 0 || guests >= maxBookable}
+                    onClick={() => setGuests((g) => Math.min(maxBookable, g + 1))}
                     className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold hover:bg-primary hover:text-white transition-colors disabled:opacity-40 disabled:pointer-events-none"
                   >
                     +
                   </button>
                 </div>
               </div>
+              {maxBookable === 0 && (
+                <p className="mb-3 text-xs font-semibold text-amber-800 dark:text-amber-200">No spots left for the next date.</p>
+              )}
               <button
                 type="button"
-                disabled={checkoutLoading || hasUpcomingBookingHere}
+                disabled={checkoutLoading || hasUpcomingBookingHere || maxBookable === 0}
                 onClick={() => {
                   if (!isAuthenticated) {
                     navigate("/login", { state: { from: `/experiences/${id}` } });
@@ -1176,8 +1294,7 @@ const ExperienceDetail = () => {
               </p>
               <div className="mt-4 pt-4 border-t border-outline-variant/20 space-y-2.5 text-xs">
                 <div className="flex justify-between text-on-surface-variant"><span>{exp.price.toLocaleString()} ETB × {guests} guest{guests > 1 ? "s" : ""}</span><span>{totalBase.toLocaleString()} ETB</span></div>
-                <div className="flex justify-between text-on-surface-variant"><span>Heritage preservation fee</span><span>{fee} ETB</span></div>
-                <div className="flex justify-between font-headline font-bold text-primary text-sm pt-1.5 border-t border-outline-variant/20"><span>Total</span><span>{total.toLocaleString()} ETB</span></div>
+                <div className="flex justify-between font-headline font-bold text-primary text-sm pt-1.5 border-t border-outline-variant/20"><span>Total</span><span>{totalBase.toLocaleString()} ETB</span></div>
               </div>
             </div>
           </div>
@@ -1216,7 +1333,7 @@ const ExperienceDetail = () => {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  disabled={hasUpcomingBookingHere}
+                  disabled={hasUpcomingBookingHere || maxBookable === 0 || guests <= 1}
                   onClick={() => setGuests((g) => Math.max(1, g - 1))}
                   className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold hover:bg-primary hover:text-white transition-colors disabled:opacity-40 disabled:pointer-events-none"
                 >
@@ -1225,22 +1342,24 @@ const ExperienceDetail = () => {
                 <span className="font-headline font-bold w-4 text-center text-sm">{guests}</span>
                 <button
                   type="button"
-                  disabled={hasUpcomingBookingHere}
-                  onClick={() => setGuests((g) => Math.min(exp.maxGuests, g + 1))}
+                  disabled={hasUpcomingBookingHere || maxBookable === 0 || guests >= maxBookable}
+                  onClick={() => setGuests((g) => Math.min(maxBookable, g + 1))}
                   className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-primary font-bold hover:bg-primary hover:text-white transition-colors disabled:opacity-40 disabled:pointer-events-none"
                 >
                   +
                 </button>
               </div>
             </div>
+            {maxBookable === 0 && (
+              <p className="mb-3 text-xs font-semibold text-amber-800 dark:text-amber-200">No spots left for the next date.</p>
+            )}
             <div className="mb-4 pt-3 border-t border-outline-variant/20 space-y-2 text-xs">
               <div className="flex justify-between text-on-surface-variant"><span>{exp.price.toLocaleString()} ETB × {guests}</span><span>{(exp.price * guests).toLocaleString()} ETB</span></div>
-              <div className="flex justify-between text-on-surface-variant"><span>Heritage preservation fee</span><span>120 ETB</span></div>
-              <div className="flex justify-between font-headline font-bold text-primary text-sm pt-1.5 border-t border-outline-variant/20"><span>Total</span><span>{(exp.price * guests + 120).toLocaleString()} ETB</span></div>
+              <div className="flex justify-between font-headline font-bold text-primary text-sm pt-1.5 border-t border-outline-variant/20"><span>Total</span><span>{(exp.price * guests).toLocaleString()} ETB</span></div>
             </div>
             <button
               type="button"
-              disabled={checkoutLoading || hasUpcomingBookingHere}
+              disabled={checkoutLoading || hasUpcomingBookingHere || maxBookable === 0}
               onClick={() => void startCheckout()}
               className="w-full py-3 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md disabled:opacity-60 inline-flex items-center justify-center gap-2"
             >

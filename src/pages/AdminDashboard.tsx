@@ -35,6 +35,8 @@ import {
   AreaChart,
   Area,
 } from "recharts";
+import type { TooltipProps } from "recharts";
+import type { ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 import AdminLayout from "@/components/AdminLayout";
 import { UserAvatar } from "@/components/UserAvatar";
 import { DeltaBadge } from "@/components/admin/DeltaBadge";
@@ -114,16 +116,11 @@ const EMPTY_STATS: PlatformStats = {
   },
 };
 
+/* Align with Recharts generic tooltip payload (ValueType / NameType) */
+type ChartTooltipProps = TooltipProps<ValueType, NameType>;
+
 /* ─── tooltips ───────────────────────────────────────────── */
-function BarTooltipBody({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: Array<{ name?: string; value?: number }>;
-  label?: string;
-}) {
+function BarTooltipBody({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-outline-variant/20 bg-white dark:bg-zinc-800 px-3 py-2.5 text-xs shadow-lg max-w-[220px]">
@@ -144,15 +141,7 @@ function BarTooltipBody({
   );
 }
 
-function AreaTooltipBody({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: Array<{ name?: string; value?: number }>;
-  label?: string;
-}) {
+function AreaTooltipBody({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-outline-variant/20 bg-white dark:bg-zinc-800 px-3 py-2.5 text-xs shadow-lg max-w-[220px]">
@@ -173,13 +162,7 @@ function AreaTooltipBody({
   );
 }
 
-function PieTooltipBody({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: Array<{ name?: string; value?: number }>;
-}) {
+function PieTooltipBody({ active, payload }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   const row = payload[0];
   const n = Number(row.value);

@@ -4,6 +4,8 @@ import { Eye, EyeOff, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import heroHighlands from "@/assets/hero-highlands.jpg";
 import { useAuth } from "@/context/AuthContext";
+import { getStoredRef } from "@/lib/referral";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 const Signup = () => {
   const { signup, isAuthenticated } = useAuth();
@@ -29,14 +31,11 @@ const Signup = () => {
     if (passwordWeak || !passwordsMatch) return;
     setSubmitting(true);
     try {
-      await signup(name, email, password, confirm);
+      await signup(name, email, password, confirm, getStoredRef());
       setSubmitted(true);
       toast.success("Account created! Please check your email to verify.");
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Registration failed. Please try again.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Registration failed. Please try again."));
     } finally {
       setSubmitting(false);
     }

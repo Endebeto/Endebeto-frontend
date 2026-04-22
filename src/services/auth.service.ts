@@ -10,6 +10,8 @@ export interface SignupPayload {
   email: string;
   password: string;
   passwordConfirm: string;
+  /** Optional referrer user id (Mongo ObjectId) from `?ref=` or stored ref. */
+  referredBy?: string;
 }
 
 export interface AuthResponse {
@@ -28,6 +30,11 @@ export interface User {
   phone?: string;
   role: "user" | "admin";
   hostStatus: "none" | "pending" | "approved" | "rejected";
+  /** When true, approved host cannot create or edit experience listings. */
+  hostListingSuspended?: boolean;
+  hostListingSuspendedReason?: string | null;
+  hostListingSuspendedAt?: string | null;
+  hostListingSuspendedBy?: { _id: string; name?: string; email?: string } | null;
   /** Categories the host was approved to offer. Populated from their host application on approval. */
   approvedCategories?: string[];
   /** Present when returned from API; OAuth users may not use password change. */

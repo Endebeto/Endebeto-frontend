@@ -11,6 +11,7 @@ import LocationPicker, { type PinLocation } from "@/components/LocationPicker";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { experiencesService } from "@/services/experiences.service";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 /* ─── types ──────────────────────────────────────────── */
 interface FormData {
@@ -147,8 +148,7 @@ export default function HostCreateExperience() {
       await experiencesService.create(fd);
       setSuccess(true);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to submit experience. Please try again.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Failed to submit experience. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -184,8 +184,7 @@ export default function HostCreateExperience() {
       toast.success("Draft saved! You can continue editing it from My Experiences.");
       navigate("/host/experiences");
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to save draft.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Failed to save draft."));
     } finally {
       setSavingDraft(false);
     }

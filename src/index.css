@@ -19,6 +19,8 @@ html {
 
 @layer base {
   :root {
+    /* Fixed header height: Navbar sets --header-stack for nav + optional promo + optional review banner */
+    --header-stack: 48px;
     /* Reference design tokens (exact hex values from Stitch) */
     --background: #f7f9fb;
     --foreground: #191c1e;

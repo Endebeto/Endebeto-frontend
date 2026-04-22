@@ -9,6 +9,7 @@ import Navbar from "@/components/Navbar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { hostApplicationsService } from "@/services/hostApplications.service";
 import { toast } from "sonner";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 /* ─── types ──────────────────────────────────────────── */
 type AppStatus = "draft" | "submitted" | "pending" | "approved" | "rejected";
@@ -72,8 +73,7 @@ export default function HostApplicationStatus() {
       navigate("/host/apply");
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to reset application.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Failed to reset application."));
     },
   });
 

@@ -254,6 +254,10 @@ export interface AdminUser {
   suspensionReason?: string | null;
   suspendedAt?: string | null;
   suspendedBy?: { _id: string; name?: string; email?: string } | null;
+  hostListingSuspended?: boolean;
+  hostListingSuspendedReason?: string | null;
+  hostListingSuspendedAt?: string | null;
+  hostListingSuspendedBy?: { _id: string; name?: string; email?: string } | null;
 }
 
 /* ─── Withdrawals ────────────────────────────────────────── */
@@ -429,6 +433,25 @@ export const adminService = {
         notifications: { userEmailed: boolean; emailConfigured: boolean };
       };
     }>(`/users/${id}/reinstate`),
+
+  suspendHostListings: (id: string, reason?: string) =>
+    api.patch<{
+      status: string;
+      data: {
+        data: AdminUser;
+        notifications: { userEmailed: boolean; emailConfigured: boolean };
+      };
+    }>(`/users/${id}/suspend-host-listings`, { reason }),
+
+  reinstateHostListings: (id: string) =>
+    api.patch<{
+      status: string;
+      data: {
+        data: AdminUser;
+        notifications: { userEmailed: boolean; emailConfigured: boolean };
+      };
+    }>(`/users/${id}/reinstate-host-listings`),
+
   deleteUser: (id: string) => api.delete(`/users/${id}`),
 
   /* Withdrawals / Payouts */

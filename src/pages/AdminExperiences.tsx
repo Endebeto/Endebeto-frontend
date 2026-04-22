@@ -14,6 +14,7 @@ import {
   type AdminBookingStatus,
   type AdminExperienceBookingStats,
 } from "@/services/admin.service";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 type ExpStatus = "pending" | "approved" | "rejected" | "draft";
 type TabKey = "live" | "expired" | "suspended" | "draft";
@@ -780,8 +781,7 @@ export default function AdminExperiences() {
       setSelected(null);
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Could not suspend.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Could not suspend."));
     },
   });
 
@@ -804,8 +804,7 @@ export default function AdminExperiences() {
       setSelected(null);
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Could not reinstate.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Could not reinstate."));
     },
   });
 

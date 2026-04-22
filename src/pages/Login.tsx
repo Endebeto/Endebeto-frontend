@@ -4,6 +4,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import heroCoffee from "@/assets/hero-coffee.jpg";
 import { useAuth } from "@/context/AuthContext";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 const Login = () => {
   const { login, isAuthenticated } = useAuth();
@@ -39,10 +40,7 @@ const Login = () => {
       toast.success("Welcome back!");
       navigate("/");
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Invalid email or password.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Invalid email or password."));
     } finally {
       setSubmitting(false);
     }

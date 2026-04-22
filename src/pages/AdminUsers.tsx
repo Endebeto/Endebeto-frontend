@@ -4,13 +4,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Users, CheckCircle, MoreVertical,
   ChevronLeft, ChevronRight, Leaf, Mail,
-  X, Ban, Trash2, Loader2, AlertCircle, ShieldOff, RotateCcw,
+  X, Ban, Trash2, Loader2, AlertCircle, ShieldOff, RotateCcw, Layers, LockKeyhole, Unlock,
 } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { UserAvatar } from "@/components/UserAvatar";
 import { adminService, type AdminUser } from "@/services/admin.service";
 import { useAuth } from "@/context/AuthContext";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 type StatusFilter = "all" | "active" | "suspended";
 
@@ -124,15 +125,19 @@ function ConfirmDialog({
 /* ─── action menu ───────────────────────────────────────── */
 function ActionMenu({
   user, canSuspend, onSuspend, onDelete, onClose,
+  canManageHostListings, onSuspendHostListings, onReinstateHostListings,
 }: {
   user: AdminUser;
   canSuspend: boolean;
   onSuspend: (u: AdminUser) => void;
   onDelete: (u: AdminUser) => void;
   onClose: () => void;
+  canManageHostListings: boolean;
+  onSuspendHostListings: (u: AdminUser) => void;
+  onReinstateHostListings: (u: AdminUser) => void;
 }) {
   return (
-    <div className="absolute right-4 top-full mt-1 z-50 w-44 bg-white dark:bg-[#2d3133] rounded-xl shadow-xl border border-outline-variant/20 py-1 overflow-hidden">
+    <div className="absolute right-4 top-full mt-1 z-50 w-52 bg-white dark:bg-[#2d3133] rounded-xl shadow-xl border border-outline-variant/20 py-1 overflow-hidden">
       {canSuspend ? (
         <button
           onClick={() => { onSuspend(user); onClose(); }}
@@ -148,6 +153,23 @@ function ActionMenu({
         >
           <Ban className="h-3.5 w-3.5" /> Suspend User
         </div>
+      )}
+      {canManageHostListings && user.hostStatus === "approved" && (
+        user.hostListingSuspended ? (
+          <button
+            onClick={() => { onReinstateHostListings(user); onClose(); }}
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
+          >
+            <Unlock className="h-3.5 w-3.5" /> Reinstate host listings
+          </button>
+        ) : (
+          <button
+            onClick={() => { onSuspendHostListings(user); onClose(); }}
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-xs font-semibold text-amber-800 dark:text-amber-300/90 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors"
+          >
+            <LockKeyhole className="h-3.5 w-3.5" /> Suspend host listings
+          </button>
+        )
       )}
       <div className="my-1 border-t border-outline-variant/10" />
       <button
@@ -223,6 +245,69 @@ function SuspendUserDialog({
   );
 }
 
+/* ─── suspend host listings (reason) ─────────────────────── */
+function SuspendHostListingsDialog({
+  user, onClose, onConfirm, loading,
+}: {
+  user: AdminUser;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  loading?: boolean;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const [reason, setReason] = useState("");
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-[#2d3133] rounded-2xl w-full max-w-md p-6 shadow-2xl pointer-events-auto">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+            <Layers className="h-5 w-5 text-amber-700 dark:text-amber-400" />
+          </div>
+          <div>
+            <h3 className="font-headline font-extrabold text-lg text-primary">Suspend host listings</h3>
+            <p className="text-xs text-on-surface-variant mt-0.5 truncate">{user.name} · {user.email}</p>
+          </div>
+        </div>
+        <p className="text-xs text-on-surface-variant mb-3">
+          The host stays signed in and can view their dashboard, but they cannot create or edit experiences until reinstated. They will be emailed if SMTP is configured.
+        </p>
+        <label className="block text-xs font-bold text-primary mb-2">
+          Note (optional, shown in email) <span className="text-outline-variant font-medium">— max 500</span>
+        </label>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value.slice(0, 500))}
+          rows={3}
+          placeholder="e.g. Policy review; please contact support for details."
+          className="w-full bg-white dark:bg-zinc-800 border border-outline-variant/40 dark:border-zinc-600 rounded-xl px-4 py-3 text-sm text-on-surface dark:text-white outline-none focus:ring-2 focus:ring-primary/20 resize-none mb-1"
+        />
+        <p className="text-[10px] text-on-surface-variant text-right mb-5">{reason.length}/500</p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="px-4 py-2 rounded-xl text-sm font-bold text-on-surface-variant hover:bg-surface-container transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm(reason.trim())}
+            disabled={loading}
+            className="px-5 py-2 rounded-xl text-sm font-bold text-white bg-amber-700 flex items-center gap-1.5 disabled:opacity-60"
+          >
+            {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Suspend listings
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 /* ─── user detail drawer ─────────────────────────────────── */
 function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void }) {
   const [mounted, setMounted] = useState(false);
@@ -263,6 +348,11 @@ function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void })
                 Suspended
               </span>
             )}
+            {user.hostStatus === "approved" && user.hostListingSuspended && (
+              <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                Listings on hold
+              </span>
+            )}
           </div>
         </div>
         <div className="px-6 py-5 space-y-4">
@@ -277,6 +367,27 @@ function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void })
             </div>
           ))}
         </div>
+
+        {user.hostStatus === "approved" && user.hostListingSuspended && (
+          <div className="px-6 pb-4">
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 space-y-2">
+              <p className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
+                <LockKeyhole className="h-3.5 w-3.5" /> Host listing suspension
+              </p>
+              {user.hostListingSuspendedReason && (
+                <p className="text-sm text-amber-950 dark:text-amber-100 leading-relaxed">
+                  {user.hostListingSuspendedReason}
+                </p>
+              )}
+              <p className="text-[11px] text-amber-900/80 dark:text-amber-200/80">
+                {user.hostListingSuspendedAt
+                  ? new Date(user.hostListingSuspendedAt).toLocaleString()
+                  : "—"}
+                {user.hostListingSuspendedBy?.name && ` · by ${user.hostListingSuspendedBy.name}`}
+              </p>
+            </div>
+          </div>
+        )}
 
         {user.active === false && (
           <div className="px-6 pb-6">
@@ -326,6 +437,8 @@ export default function AdminUsers() {
   const [drawerUser, setDrawerUser] = useState<AdminUser | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<AdminUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const [hostListingSuspendTarget, setHostListingSuspendTarget] = useState<AdminUser | null>(null);
+  const [hostListingReinstateTarget, setHostListingReinstateTarget] = useState<AdminUser | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-users", page, search, statusFilter],
@@ -357,10 +470,7 @@ export default function AdminUsers() {
       setSuspendTarget(null);
     },
     onError: (err: unknown) => {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "Failed to suspend user";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Failed to suspend user"));
     },
   });
 
@@ -380,10 +490,7 @@ export default function AdminUsers() {
       setSuspendTarget(null);
     },
     onError: (err: unknown) => {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "Failed to reinstate user";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Failed to reinstate user"));
     },
   });
 
@@ -396,6 +503,43 @@ export default function AdminUsers() {
       setDeleteTarget(null);
     },
     onError: () => toast.error("Failed to delete user"),
+  });
+
+  const suspendHostListingsMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      adminService.suspendHostListings(id, reason),
+    onSuccess: (res) => {
+      const { emailConfigured, userEmailed } = res.data.data.notifications;
+      if (emailConfigured && userEmailed) {
+        toast.success("Host listing access suspended. User notified by email.");
+      } else if (emailConfigured) {
+        toast.success("Host listing access suspended. Email may not have been delivered.");
+      } else {
+        toast.success("Host listing access suspended. Email notifications skipped — SMTP not configured.");
+      }
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      setHostListingSuspendTarget(null);
+    },
+    onError: (err: unknown) => {
+      toast.error(getFriendlyErrorMessage(err, "Failed to suspend host listings"));
+    },
+  });
+
+  const reinstateHostListingsMutation = useMutation({
+    mutationFn: (id: string) => adminService.reinstateHostListings(id),
+    onSuccess: (res) => {
+      const { emailConfigured, userEmailed } = res.data.data.notifications;
+      if (emailConfigured && userEmailed) {
+        toast.success("Host listings reinstated. User notified by email.");
+      } else {
+        toast.success("Host listings reinstated.");
+      }
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      setHostListingReinstateTarget(null);
+    },
+    onError: (err: unknown) => {
+      toast.error(getFriendlyErrorMessage(err, "Failed to reinstate host listings"));
+    },
   });
 
   return (
@@ -505,6 +649,9 @@ export default function AdminUsers() {
                                   {user.active === false && (
                                     <span className="text-[9px] text-red-500 font-bold uppercase">Suspended</span>
                                   )}
+                                  {user.hostStatus === "approved" && user.hostListingSuspended && (
+                                    <span className="text-[9px] text-amber-700 font-bold uppercase ml-1">Listings on hold</span>
+                                  )}
                                 </div>
                               </div>
                             </td>
@@ -561,8 +708,21 @@ export default function AdminUsers() {
                                     user.role !== "admin" &&
                                     user._id !== currentUser?._id
                                   }
+                                  canManageHostListings={
+                                    user.hostStatus === "approved" &&
+                                    user.role !== "admin" &&
+                                    user._id !== currentUser?._id
+                                  }
                                   onSuspend={(u) => { setDrawerUser(null); setSuspendTarget(u); }}
                                   onDelete={(u) => { setDrawerUser(null); setDeleteTarget(u); }}
+                                  onSuspendHostListings={(u) => {
+                                    setDrawerUser(null);
+                                    setHostListingSuspendTarget(u);
+                                  }}
+                                  onReinstateHostListings={(u) => {
+                                    setDrawerUser(null);
+                                    setHostListingReinstateTarget(u);
+                                  }}
                                   onClose={() => setOpenMenu(null)}
                                 />
                               )}
@@ -631,7 +791,7 @@ export default function AdminUsers() {
       {openMenu && <div className="fixed inset-0 z-40" onClick={() => setOpenMenu(null)} />}
 
       {/* Drawer — hidden when a confirm dialog is open */}
-      {drawerUser && !suspendTarget && !deleteTarget && (
+      {drawerUser && !suspendTarget && !deleteTarget && !hostListingSuspendTarget && !hostListingReinstateTarget && (
         <UserDrawer user={drawerUser} onClose={() => setDrawerUser(null)} />
       )}
 
@@ -671,6 +831,32 @@ export default function AdminUsers() {
           loading={deleteMutation.isPending}
           onConfirm={() => deleteMutation.mutate(deleteTarget._id)}
           onClose={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {hostListingSuspendTarget && (
+        <SuspendHostListingsDialog
+          user={hostListingSuspendTarget}
+          loading={suspendHostListingsMutation.isPending}
+          onClose={() => setHostListingSuspendTarget(null)}
+          onConfirm={(reason) =>
+            suspendHostListingsMutation.mutate({
+              id: hostListingSuspendTarget._id,
+              reason: reason || undefined,
+            })
+          }
+        />
+      )}
+
+      {hostListingReinstateTarget && (
+        <ConfirmDialog
+          title="Reinstate host listings"
+          message={`Allow ${hostListingReinstateTarget.name} to create and edit experiences again? They will be notified by email if SMTP is configured.`}
+          confirmLabel="Reinstate"
+          confirmClass="bg-emerald-600"
+          loading={reinstateHostListingsMutation.isPending}
+          onConfirm={() => reinstateHostListingsMutation.mutate(hostListingReinstateTarget._id)}
+          onClose={() => setHostListingReinstateTarget(null)}
         />
       )}
 

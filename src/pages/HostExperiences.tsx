@@ -4,13 +4,14 @@ import {
   Plus, MapPin, Users, Timer, Star, MoreVertical,
   CheckCircle2, Clock, XCircle, Pencil, Calendar,
   Ban, Eye, Search, SlidersHorizontal, Loader2,
-  RefreshCw, AlertCircle,
+  RefreshCw, AlertCircle, MegaphoneOff,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import HostLayout from "@/components/HostLayout";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { experiencesService, type Experience } from "@/services/experiences.service";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 /* ─── helpers ────────────────────────────────────────── */
 const isExpired = (exp: Experience) => {
@@ -65,8 +66,7 @@ function RescheduleModal({ exp, onClose }: { exp: Experience; onClose: () => voi
       onClose();
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Failed to reschedule.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Failed to reschedule."));
     },
   });
 
@@ -115,10 +115,12 @@ function ActionMenu({
   exp,
   onReschedule,
   onStop,
+  hostListingLocked,
 }: {
   exp: Experience;
   onReschedule: (exp: Experience) => void;
   onStop: (exp: Experience) => void;
+  hostListingLocked: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const id = exp._id ?? exp.id;
@@ -143,21 +145,47 @@ function ActionMenu({
                 <Eye className="h-3.5 w-3.5 text-on-surface-variant" /> View Listing
               </Link>
             )}
-            <Link to={`/host/experiences/${id}/edit`}
-              className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors">
-              <Pencil className="h-3.5 w-3.5 text-on-surface-variant" /> Edit
-            </Link>
+            {hostListingLocked ? (
+              <div
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface-variant/50 dark:text-zinc-500 cursor-not-allowed"
+                title="Editing is temporarily disabled for your account."
+              >
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </div>
+            ) : (
+              <Link to={`/host/experiences/${id}/edit`}
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors">
+                <Pencil className="h-3.5 w-3.5 text-on-surface-variant" /> Edit
+              </Link>
+            )}
             {exp.status === "approved" && !expired && (
-              <button onClick={() => { onReschedule(exp); setOpen(false); }}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors">
+              <button
+                type="button"
+                disabled={hostListingLocked}
+                onClick={() => {
+                  if (hostListingLocked) return;
+                  onReschedule(exp);
+                  setOpen(false);
+                }}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                title={hostListingLocked ? "Scheduling changes are disabled for your account." : undefined}
+              >
                 <Calendar className="h-3.5 w-3.5 text-on-surface-variant" /> Set Next Date
               </button>
             )}
             {canStop && (
               <>
                 <div className="my-1 border-t border-outline-variant/20 dark:border-zinc-700" />
-                <button onClick={() => { onStop(exp); setOpen(false); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-error hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                <button
+                  type="button"
+                  disabled={hostListingLocked}
+                  onClick={() => {
+                    if (hostListingLocked) return;
+                    onStop(exp);
+                    setOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-error hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
                   <Ban className="h-3.5 w-3.5" /> Stop
                 </button>
               </>
@@ -220,10 +248,12 @@ function ExpCard({
   exp,
   onReschedule,
   onStop,
+  hostListingLocked,
 }: {
   exp: Experience;
   onReschedule: (e: Experience) => void;
   onStop: (e: Experience) => void;
+  hostListingLocked: boolean;
 }) {
   const isSuspended = exp.status === "approved" && exp.suspended;
   const expired = exp.status === "approved" && !exp.suspended && isExpired(exp);
@@ -255,7 +285,12 @@ function ExpCard({
           <Icon className="h-3 w-3" />{badgeLabel}
         </span>
         <div className="absolute top-2.5 right-2.5">
-          <ActionMenu exp={exp} onReschedule={onReschedule} onStop={onStop} />
+          <ActionMenu
+            exp={exp}
+            onReschedule={onReschedule}
+            onStop={onStop}
+            hostListingLocked={hostListingLocked}
+          />
         </div>
       </div>
 
@@ -306,8 +341,13 @@ function ExpCard({
         {exp.status === "approved" && (
           <div className="pt-3 border-t border-outline-variant/10 dark:border-zinc-700">
             {expired ? (
-              <button onClick={() => onReschedule(exp)}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-700/40 text-amber-700 dark:text-amber-300 text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
+              <button
+                type="button"
+                disabled={hostListingLocked}
+                onClick={() => !hostListingLocked && onReschedule(exp)}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-700/40 text-amber-700 dark:text-amber-300 text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                title={hostListingLocked ? "Scheduling is disabled for your account." : undefined}
+              >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Reschedule — {exp.nextOccurrenceAt ? "past date" : "no date set"}
               </button>
@@ -326,10 +366,14 @@ function ExpCard({
             <p className="text-xs text-red-600 dark:text-red-400 leading-relaxed line-clamp-2">
               {(exp as Experience & { rejectionReason?: string }).rejectionReason ?? "Rejected by editorial team."}
             </p>
-            <Link to={`/host/experiences/${id}/edit`}
-              className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary dark:text-green-400 hover:underline">
-              <Pencil className="h-3 w-3" /> Edit &amp; Resubmit
-            </Link>
+            {hostListingLocked ? (
+              <p className="mt-2 text-xs text-on-surface-variant">Editing is temporarily disabled. Contact support if you need help.</p>
+            ) : (
+              <Link to={`/host/experiences/${id}/edit`}
+                className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary dark:text-green-400 hover:underline">
+                <Pencil className="h-3 w-3" /> Edit &amp; Resubmit
+              </Link>
+            )}
           </div>
         )}
 
@@ -347,6 +391,8 @@ function ExpCard({
 export default function HostExperiences() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const listingLocked =
+    user?.hostStatus === "approved" && user?.hostListingSuspended === true;
 
   const [search, setSearch]           = useState("");
   const [tab, setTab]                 = useState<TabFilter>("all");
@@ -368,10 +414,7 @@ export default function HostExperiences() {
       setStopExp(null);
     },
     onError: (err: unknown) => {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to stop experience.";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(err, "Failed to stop experience."));
     },
   });
 
@@ -418,16 +461,39 @@ export default function HostExperiences() {
 
       <main className="p-10 max-w-[1440px]">
 
+        {listingLocked && (
+          <div className="mb-8 flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl">
+            <div className="w-9 h-9 rounded-xl bg-amber-200/80 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
+              <MegaphoneOff className="h-4 w-4 text-amber-900 dark:text-amber-200" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-amber-950 dark:text-amber-100">Listing changes are limited</p>
+              <p className="text-xs text-amber-900/80 dark:text-amber-200/90 mt-1 leading-relaxed">
+                You can still view the public page of your live experiences, but you cannot create, edit, reschedule, or stop a listing until this is lifted.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ── Header ──────────────────────────────────── */}
         <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-headline font-extrabold text-primary dark:text-green-400 tracking-tight">My Experiences</h1>
             <p className="text-on-surface-variant dark:text-zinc-400 mt-1">Manage and monitor all your hosted experiences.</p>
           </div>
-          <Link to="/host/experiences/create"
-            className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-semibold px-6 py-3 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-sm">
-            <Plus className="h-4 w-4" /> New Experience
-          </Link>
+          {listingLocked ? (
+            <div
+              className="inline-flex items-center gap-2 bg-primary/40 text-white/90 font-semibold px-6 py-3 rounded-xl text-sm cursor-not-allowed"
+              title="You cannot create new experiences while listing management is limited."
+            >
+              <Plus className="h-4 w-4" /> New Experience
+            </div>
+          ) : (
+            <Link to="/host/experiences/create"
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-semibold px-6 py-3 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-sm">
+              <Plus className="h-4 w-4" /> New Experience
+            </Link>
+          )}
         </div>
 
         {/* ── Stats strip ─────────────────────────────── */}
@@ -502,10 +568,14 @@ export default function HostExperiences() {
               {search ? "Try a different search term" : `You have no ${tab === "all" ? "" : tab} experiences yet.`}
             </p>
             {!search && (
-              <Link to="/host/experiences/create"
-                className="inline-flex items-center gap-2 bg-primary text-white font-semibold px-6 py-2.5 rounded-xl text-sm hover:bg-primary/90 transition-colors">
-                <Plus className="h-4 w-4" /> Create Your First Experience
-              </Link>
+              listingLocked ? (
+                <p className="text-xs text-on-surface-variant dark:text-zinc-500">New experiences can&apos;t be created while listing changes are limited.</p>
+              ) : (
+                <Link to="/host/experiences/create"
+                  className="inline-flex items-center gap-2 bg-primary text-white font-semibold px-6 py-2.5 rounded-xl text-sm hover:bg-primary/90 transition-colors">
+                  <Plus className="h-4 w-4" /> Create Your First Experience
+                </Link>
+              )
             )}
           </div>
         ) : (
@@ -516,6 +586,7 @@ export default function HostExperiences() {
                 exp={exp}
                 onReschedule={setReschedule}
                 onStop={setStopExp}
+                hostListingLocked={listingLocked}
               />
             ))}
           </div>

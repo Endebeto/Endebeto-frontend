@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import heroCoffee from "@/assets/hero-coffee.jpg";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 
 /* ── password strength ──────────────────────────────── */
 function getStrength(pw: string): { score: number; label: string; color: string } {
@@ -46,10 +47,7 @@ export default function ResetPassword() {
       await authService.resetPassword(token, { password, passwordConfirm: confirm });
       setDone(true);
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Reset link is invalid or has expired.";
-      setError(msg);
+      setError(getFriendlyErrorMessage(err, "Reset link is invalid or has expired."));
     } finally {
       setSubmitting(false);
     }
