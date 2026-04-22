@@ -290,7 +290,9 @@ function TopExperiencesCard() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-top-experiences", by],
     queryFn: () =>
-      adminService.getTopExperiences({ limit: 5, by }).then((r) => r.data.data),
+      adminService
+        .getTopExperiences({ limit: 5, by })
+        .then((r) => (Array.isArray(r.data.data) ? r.data.data : [])),
     staleTime: 60_000,
     placeholderData: (prev) => prev,
   });
@@ -413,7 +415,9 @@ function TopHostsCard() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-top-hosts"],
     queryFn: () =>
-      adminService.getTopHosts({ limit: 5 }).then((r) => r.data.data),
+      adminService
+        .getTopHosts({ limit: 5 })
+        .then((r) => (Array.isArray(r.data.data) ? r.data.data : [])),
     staleTime: 60_000,
     placeholderData: (prev) => prev,
   });
@@ -505,25 +509,25 @@ export default function AdminDashboard() {
     placeholderData: (prev) => prev,
   });
 
-  const activityRows = useMemo(
-    () =>
-      chartsData?.labels.map((label, i) => ({
-        month: label,
-        signups: chartsData.newUsers[i] ?? 0,
-        bookings: chartsData.bookings[i] ?? 0,
-      })) ?? [],
-    [chartsData],
-  );
+  const activityRows = useMemo(() => {
+    const labels = chartsData?.labels;
+    if (!Array.isArray(labels) || !labels.length) return [];
+    return labels.map((label, i) => ({
+      month: label,
+      signups: chartsData?.newUsers?.[i] ?? 0,
+      bookings: chartsData?.bookings?.[i] ?? 0,
+    }));
+  }, [chartsData]);
 
-  const revenueRows = useMemo(
-    () =>
-      chartsData?.labels.map((label, i) => ({
-        month: label,
-        revenue: (chartsData.revenueCents[i] ?? 0) / 100,
-        fees: (chartsData.feesCents[i] ?? 0) / 100,
-      })) ?? [],
-    [chartsData],
-  );
+  const revenueRows = useMemo(() => {
+    const labels = chartsData?.labels;
+    if (!Array.isArray(labels) || !labels.length) return [];
+    return labels.map((label, i) => ({
+      month: label,
+      revenue: (chartsData?.revenueCents?.[i] ?? 0) / 100,
+      fees: (chartsData?.feesCents?.[i] ?? 0) / 100,
+    }));
+  }, [chartsData]);
 
   const stats: PlatformStats = statsData ?? EMPTY_STATS;
 
