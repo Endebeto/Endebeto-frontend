@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { UserAvatar } from "@/components/UserAvatar";
 import { experiencesService, type Review } from "@/services/experiences.service";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import { useAuth } from "@/context/AuthContext";
@@ -602,7 +603,6 @@ const ExperienceDetail = () => {
 
   const occurrenceDate = fmtDate(exp.nextOccurrenceAt);
   const occurrenceTime = fmtTime(exp.nextOccurrenceAt);
-  const hostInitial    = exp.host?.name?.charAt(0)?.toUpperCase() ?? "H";
 
   return (
     <div className="min-h-screen bg-background">
@@ -722,9 +722,12 @@ const ExperienceDetail = () => {
             {/* Host row */}
             <div className="flex items-center justify-between py-4 mt-3 border-t border-b border-outline-variant/15 dark:border-zinc-800">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center font-headline font-bold text-on-secondary-container text-sm shrink-0 ring-2 ring-white dark:ring-zinc-900">
-                  {hostInitial}
-                </div>
+                <UserAvatar
+                  name={exp.host?.name}
+                  photo={exp.host?.photo}
+                  className="w-10 h-10 rounded-full bg-secondary-container shrink-0 ring-2 ring-white dark:ring-zinc-900"
+                  initialsClassName="text-on-secondary-container text-sm"
+                />
                 <div>
                   <p className="text-[10px] text-on-surface-variant dark:text-zinc-500 uppercase tracking-wider">Hosted by</p>
                   <p className="font-headline font-bold text-sm text-on-surface dark:text-white">{exp.host?.name}</p>
@@ -1019,9 +1022,12 @@ const ExperienceDetail = () => {
             {/* Host card */}
             <div className="flex items-center justify-between p-4 bg-surface-container-low rounded-xl">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center font-headline font-bold text-on-secondary-container text-sm shrink-0">
-                  {hostInitial}
-                </div>
+                <UserAvatar
+                  name={exp.host?.name}
+                  photo={exp.host?.photo}
+                  className="w-10 h-10 rounded-full bg-secondary-container shrink-0"
+                  initialsClassName="text-on-secondary-container text-sm"
+                />
                 <div>
                   <p className="text-on-surface-variant text-xs">Hosted by</p>
                   <p className="font-headline font-bold text-primary">{exp.host?.name}</p>
