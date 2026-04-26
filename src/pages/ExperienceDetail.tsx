@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   MapPin, Star, Clock, Users, Globe,
   AlertCircle, ArrowRight, ChevronLeft, ChevronRight, ExternalLink, X,
-  Share2, Link2, Heart, Loader2, Plus, Mail, Lock, MessageCircle,
+  Share2, Link2, Loader2, Plus, Mail, Lock, MessageCircle,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -523,7 +523,6 @@ const ExperienceDetail = () => {
     }
   }, [id, isAuthenticated, guests, navigate, hasUpcomingBookingHere, maxBookable]);
 
-  const [saved, setSaved]               = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   /* ─── paginated reviews ── */
@@ -631,39 +630,35 @@ const ExperienceDetail = () => {
             <img src={exp.imageCover} alt={exp.title} className="w-full h-full object-cover pointer-events-none" />
           </button>
 
-          {/* Floating nav buttons */}
+          {/* Floating nav buttons — higher on screen, high-contrast on photos */}
           <div
             className="absolute top-0 left-0 right-0 flex justify-between items-center px-4 z-20"
-            style={{ paddingTop: "var(--header-stack, 48px)" }}
+            style={{ paddingTop: "max(0.25rem, env(safe-area-inset-top, 0px) + 0.25rem)" }}
           >
             <button
+              type="button"
               onClick={() => navigate(-1)}
-              className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md"
+              className="w-10 h-10 rounded-full bg-white border border-black/10 flex items-center justify-center shadow-lg text-zinc-900"
+              aria-label="Go back"
             >
-              <ChevronLeft className="h-5 w-5 text-on-surface" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => void handleCopyPublicLink()}
-                className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md"
+                className="w-10 h-10 rounded-full bg-primary text-white border border-white/30 flex items-center justify-center shadow-lg"
                 aria-label="Copy public experience link"
               >
-                <Link2 className="h-4 w-4 text-on-surface" />
+                <Link2 className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => void handleShareExperience()}
-                className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md"
+                className="w-10 h-10 rounded-full bg-primary text-white border border-white/30 flex items-center justify-center shadow-lg"
                 aria-label="Share experience"
               >
-                <Share2 className="h-4 w-4 text-on-surface" />
-              </button>
-              <button
-                onClick={() => setSaved(s => !s)}
-                className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md"
-              >
-                <Heart className={`h-4 w-4 transition-colors ${saved ? "fill-red-500 text-red-500" : "text-on-surface"}`} />
+                <Share2 className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -698,26 +693,6 @@ const ExperienceDetail = () => {
                 <span>({exp.ratingsQuantity} reviews)</span>
               </span>
             </div>
-
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void handleCopyPublicLink()}
-                className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/30 bg-surface-container-low/80 px-3 py-1.5 text-[11px] font-bold text-primary"
-              >
-                <Link2 className="h-3.5 w-3.5" /> Copy link
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleShareExperience()}
-                className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/30 bg-surface-container-low/80 px-3 py-1.5 text-[11px] font-bold text-primary"
-              >
-                <Share2 className="h-3.5 w-3.5" /> Share
-              </button>
-            </div>
-            <p className="text-[10px] text-on-surface-variant/80 mt-2 leading-snug">
-              Only share the public experience link.
-            </p>
 
             {/* Host row */}
             <div className="flex items-center justify-between py-4 mt-3 border-t border-b border-outline-variant/15 dark:border-zinc-800">
