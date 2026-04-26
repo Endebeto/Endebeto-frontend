@@ -246,7 +246,7 @@ export interface AdminUser {
   isVerified?: boolean;
   /** @deprecated use authProvider */
   provider?: string;
-  /** Backend field: local | google | facebook */
+  /** Backend field: local | google | facebook (legacy) */
   authProvider?: string;
   googleId?: string;
   facebookId?: string;

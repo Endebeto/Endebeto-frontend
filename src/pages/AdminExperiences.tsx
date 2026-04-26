@@ -42,6 +42,13 @@ function fmtDuration(d: unknown) {
   return m ? `${h}h ${m}m` : `${h}h`;
 }
 
+function fmtDateSafe(iso?: string | null) {
+  if (iso == null || iso === "") return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString();
+}
+
 function locationText(exp: AdminExperience): string {
   const loc = exp.location as unknown;
   if (!loc) return "";
@@ -655,7 +662,7 @@ function DetailPanel({
               label: "Next date",
               value: exp.nextOccurrenceAt ? new Date(exp.nextOccurrenceAt).toLocaleDateString() : "Not set",
             },
-            { icon: Calendar, label: "Created", value: new Date(exp.createdAt).toLocaleDateString() },
+            { icon: Calendar, label: "Created", value: fmtDateSafe(exp.createdAt) },
           ].map((s) => (
             <div
               key={s.label}

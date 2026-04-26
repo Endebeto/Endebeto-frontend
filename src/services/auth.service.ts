@@ -37,7 +37,7 @@ export interface User {
   hostListingSuspendedBy?: { _id: string; name?: string; email?: string } | null;
   /** Categories the host was approved to offer. Populated from their host application on approval. */
   approvedCategories?: string[];
-  /** Present when returned from API; OAuth users may not use password change. */
+  /** Present when returned from API; OAuth users may not use password change. `facebook` is legacy only. */
   authProvider?: "local" | "google" | "facebook";
   /** Set when Google account is linked (same email merges on OAuth). */
   googleId?: string;

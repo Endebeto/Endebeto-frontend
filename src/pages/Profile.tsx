@@ -395,7 +395,6 @@ function ProfileContent({
   const authProvider = user?.authProvider ?? "local";
   const canChangePassword = authProvider === "local";
   const googleLinked = !!(user?.googleId) || authProvider === "google";
-  const facebookLinked = !!(user?.facebookId) || authProvider === "facebook";
 
   const { data: bookingsPreview, isLoading: bookingsLoading } = useQuery({
     queryKey: ["my-bookings-profile-preview"],
@@ -626,11 +625,12 @@ function ProfileContent({
             <h2 className="font-headline font-extrabold text-lg text-primary mb-4">Linked Accounts</h2>
             <p className="text-xs text-on-surface-variant mb-2">
               {authProvider === "google" && "You sign in with Google."}
-              {authProvider === "facebook" && "You sign in with Facebook."}
+              {authProvider === "facebook" &&
+                "Your account was linked with Facebook. Sign-in with Facebook is no longer available. Use forgot password on the login page to set an email password, or contact support."}
               {authProvider === "local" && "You sign in with email and password."}
             </p>
             <p className="text-[11px] text-on-surface-variant mb-4 leading-relaxed">
-              To <strong>link</strong> Google or Facebook, use the button below and sign in with a provider that uses the{" "}
+              To <strong>link</strong> Google, use the button below and sign in with a provider that uses the{" "}
               <strong>same email</strong> as this account. You&apos;ll return here with an updated session.
             </p>
             <div className="flex flex-wrap gap-3">
@@ -680,24 +680,6 @@ function ProfileContent({
                     />
                   </svg>
                   Connect Google
-                </a>
-              )}
-              {facebookLinked ? (
-                <div className="flex items-center gap-2.5 border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/20 px-4 py-2.5 rounded-xl text-sm font-headline font-semibold text-on-surface">
-                  <svg className="h-4 w-4 shrink-0" fill="#1877F2" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                  </svg>
-                  Facebook connected
-                </div>
-              ) : (
-                <a
-                  href={`${API_BASE}/auth/facebook`}
-                  className="inline-flex items-center gap-2.5 bg-[#1877F2] text-white px-4 py-2.5 rounded-xl text-sm font-headline font-semibold hover:opacity-90 transition-opacity"
-                >
-                  <svg className="h-4 w-4 shrink-0" fill="white" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                  </svg>
-                  Connect Facebook
                 </a>
               )}
             </div>
