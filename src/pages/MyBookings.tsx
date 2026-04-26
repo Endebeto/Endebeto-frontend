@@ -390,7 +390,7 @@ function BookingCard({ booking, userId, userRole }: { booking: Booking; userId?:
     booking.status === "upcoming"
       ? "bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
       : booking.status === "completed"
-        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-green-400"
         : booking.status === "cancelled"
           ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400"
           : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400";

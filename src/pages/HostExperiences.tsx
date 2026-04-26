@@ -30,7 +30,7 @@ type TabFilter = "all" | ExpStatus;
 
 /* ─── status config ──────────────────────────────────── */
 const statusCfg: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
-  approved: { label: "Live",    icon: CheckCircle2, cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800" },
+  approved: { label: "Live",    icon: CheckCircle2, cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-green-400 dark:border-emerald-800" },
   pending:  { label: "Pending", icon: Clock,        cls: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800" },
   rejected: { label: "Rejected",icon: XCircle,      cls: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800" },
   draft:    { label: "Draft",   icon: Clock,        cls: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700" },
@@ -500,7 +500,7 @@ export default function HostExperiences() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { label: "Total",  value: counts.all,      color: "text-primary dark:text-green-400",       c1: "rgba(0,82,52,0.12)",   c2: "rgba(0,82,52,0.07)" },
-            { label: "Live on site", value: counts.livePublic, color: "text-emerald-600 dark:text-emerald-400", c1: "rgba(5,150,105,0.15)", c2: "rgba(5,150,105,0.08)" },
+            { label: "Live on site", value: counts.livePublic, color: "text-emerald-600 dark:text-green-400", c1: "rgba(5,150,105,0.15)", c2: "rgba(5,150,105,0.08)" },
             { label: "Suspended", value: counts.suspended, color: "text-amber-700 dark:text-amber-400", c1: "rgba(180,83,9,0.12)", c2: "rgba(180,83,9,0.06)" },
             { label: "Drafts", value: counts.draft,    color: "text-zinc-500 dark:text-zinc-400",       c1: "rgba(100,116,139,0.12)", c2: "rgba(100,116,139,0.07)" },
           ].map((s) => (

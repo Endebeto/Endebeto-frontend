@@ -208,7 +208,7 @@ export default function Profile() {
                       to="/host-dashboard"
                       className="flex items-center gap-3 w-full px-4 py-4 transition-colors hover:bg-surface-container-low dark:hover:bg-zinc-700 border-t border-outline-variant/10 dark:border-zinc-700"
                     >
-                      <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-green-400 shrink-0">
                         <Compass className="h-4 w-4" />
                       </div>
                       <span className="flex-1 font-headline font-semibold text-sm text-on-surface dark:text-white">
@@ -940,7 +940,7 @@ function ProfileContent({
                   b.status === "upcoming"
                     ? "bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
                     : b.status === "completed"
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-green-400"
                       : b.status === "cancelled"
                         ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
                         : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400";

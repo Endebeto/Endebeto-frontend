@@ -124,7 +124,8 @@ export interface HostApplicationMedia {
   nationalIdFront?: string;
   nationalIdBack?: string;
   personalPhoto?: string;
-  environmentPhotos?: string[];
+  /** Hosting / environment photos (backend field name) */
+  hostingEnvironmentPhotos?: string[];
 }
 
 export interface AdminHostApplication {
@@ -135,19 +136,24 @@ export interface AdminHostApplication {
     email: string;
     photo?: string;
   };
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "draft" | "submitted";
   createdAt: string;
   updatedAt: string;
+  submittedAt?: string;
   media?: HostApplicationMedia;
   personalInfo?: {
-    bio?: string;
-    languages?: string[];
-    region?: string;
-    yearsOfExperience?: number;
+    fullName?: string;
+    email?: string;
+    phoneNumber?: string;
+    cityRegion?: string;
+    fullAddress?: string;
+    languagesSpoken?: string[];
+    aboutYou?: string;
   };
   experienceDetails?: {
     experienceTypes?: string[];
-    description?: string;
+    specialties?: string[];
+    previousExperience?: string;
   };
   rejectionReason?: string;
 }

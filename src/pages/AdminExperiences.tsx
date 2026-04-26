@@ -63,7 +63,7 @@ const statusBadge: Record<ExpStatus, string> = {
   pending:
     "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
   approved:
-    "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
+    "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-green-400 dark:border-emerald-800",
   rejected: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
   draft: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-600",
 };
@@ -150,9 +150,9 @@ const BOOKING_FILTERS: { key: "all" | AdminBookingStatus; label: string }[] = [
 
 const BOOKING_STATUS_BADGE: Record<AdminBookingStatus, string> = {
   upcoming:
-    "bg-primary/10 text-primary dark:bg-primary/20 dark:text-green-300 border-primary/20",
+    "bg-primary/10 text-primary dark:bg-primary/20 dark:text-green-400 border-primary/20",
   completed:
-    "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800",
+    "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-green-400 dark:border-emerald-800",
   cancelled:
     "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
   expired:
@@ -193,7 +193,7 @@ function HostCard({ exp }: { exp: AdminExperience }) {
             className="w-12 h-12 rounded-full object-cover border border-outline-variant/30 dark:border-zinc-700"
           />
         ) : (
-          <div className="w-12 h-12 rounded-full bg-primary/15 dark:bg-primary/30 text-primary dark:text-green-300 text-sm font-bold flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-primary/15 dark:bg-primary/30 text-primary dark:text-green-400 text-sm font-bold flex items-center justify-center">
             {hostInitials(host.name ?? "")}
           </div>
         )}
@@ -206,7 +206,7 @@ function HostCard({ exp }: { exp: AdminExperience }) {
               <span
                 className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                   host.hostStatus === "approved"
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-green-400 dark:border-emerald-800"
                     : host.hostStatus === "pending"
                       ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800"
                       : "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600"
@@ -389,7 +389,7 @@ function BookingsSection({ expId }: { expId: string }) {
               }}
               className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
                 active
-                  ? "bg-primary/10 dark:bg-primary/20 border-primary/30 dark:border-green-400/40 text-primary dark:text-green-300"
+                  ? "bg-primary/10 dark:bg-primary/20 border-primary/30 dark:border-green-400/40 text-primary dark:text-green-400"
                   : "border-outline-variant/30 dark:border-zinc-600 text-on-surface-variant dark:text-zinc-400 hover:text-on-surface dark:hover:text-white"
               }`}
             >
@@ -738,7 +738,7 @@ function DetailPanel({
                 type="button"
                 disabled={reinstatePending}
                 onClick={onReinstate}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-600 text-emerald-700 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-600 text-emerald-700 dark:text-green-400 text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-50"
               >
                 {reinstatePending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
                 Reinstate listing

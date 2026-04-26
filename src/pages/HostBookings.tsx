@@ -24,7 +24,7 @@ const AVATAR_COLORS = [
 ];
 
 const STATUS_CFG: Record<string, { label: string; cls: string }> = {
-  upcoming:  { label: "Upcoming",  cls: "bg-secondary-container text-on-secondary-fixed-variant dark:bg-emerald-900/40 dark:text-emerald-300" },
+  upcoming:  { label: "Upcoming",  cls: "bg-secondary-container text-on-secondary-fixed-variant dark:bg-emerald-900/40 dark:text-green-400" },
   completed: { label: "Completed", cls: "bg-surface-container-high text-on-surface-variant dark:bg-zinc-700 dark:text-zinc-300" },
   expired:   { label: "Expired",   cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" },
   cancelled: { label: "Cancelled", cls: "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" },
@@ -203,7 +203,7 @@ export default function HostBookings() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
           {[
             { label: "Total Bookings",  value: counts.all,       color: "text-primary dark:text-green-400" },
-            { label: "Upcoming",        value: counts.upcoming,  color: "text-emerald-600 dark:text-emerald-400" },
+            { label: "Upcoming",        value: counts.upcoming,  color: "text-emerald-600 dark:text-green-400" },
             { label: "Completed",       value: counts.completed, color: "text-on-surface dark:text-zinc-300" },
             { label: "Cancelled",       value: counts.cancelled, color: "text-red-600 dark:text-red-400" },
           ].map(({ label, value, color }) => (

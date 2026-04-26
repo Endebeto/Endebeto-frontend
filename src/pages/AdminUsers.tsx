@@ -155,7 +155,7 @@ function ActionMenu({
         user.hostListingSuspended ? (
           <button
             onClick={() => { onReinstateHostListings(user); onClose(); }}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-xs font-semibold text-emerald-700 dark:text-green-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
           >
             <Unlock className="h-3.5 w-3.5" /> Reinstate host listings
           </button>

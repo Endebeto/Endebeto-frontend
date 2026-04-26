@@ -639,7 +639,7 @@ export default function HostEditExperience() {
                 </p>
                 <div className="mt-4 space-y-1.5">
                   {["Description", "Photos"].map((f) => (
-                    <div key={f} className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+                    <div key={f} className="flex items-center gap-2 text-xs text-emerald-600 dark:text-green-400">
                       <CheckCircle2 className="h-3.5 w-3.5" /> {f} — editable
                     </div>
                   ))}

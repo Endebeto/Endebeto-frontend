@@ -86,7 +86,7 @@ export default function HostLayout({
               className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${
                 isActive
                   ? "text-primary dark:text-green-400 font-bold border-r-4 border-primary/70 dark:border-green-400/70 bg-emerald-50/60 dark:bg-emerald-900/20 translate-x-1"
-                  : "text-on-surface-variant dark:text-zinc-400 hover:text-primary dark:hover:text-green-300 hover:bg-surface-container-low dark:hover:bg-zinc-800 hover:translate-x-0.5"
+                  : "text-on-surface-variant dark:text-zinc-400 hover:text-primary dark:hover:text-green-400 hover:bg-surface-container-low dark:hover:bg-zinc-800 hover:translate-x-0.5"
               }`}
             >
               <item.icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? "text-primary dark:text-green-400" : ""}`} />
@@ -100,7 +100,7 @@ export default function HostLayout({
       <div className="p-4 mt-auto space-y-0.5 border-t border-outline-variant/15 dark:border-zinc-800">
         <Link
           to="/profile"
-          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-on-surface-variant dark:text-zinc-400 hover:text-primary dark:hover:text-green-300 hover:bg-surface-container-low dark:hover:bg-zinc-800 transition-colors"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-on-surface-variant dark:text-zinc-400 hover:text-primary dark:hover:text-green-400 hover:bg-surface-container-low dark:hover:bg-zinc-800 transition-colors"
         >
           <Settings className="h-[18px] w-[18px] shrink-0" />
           Settings

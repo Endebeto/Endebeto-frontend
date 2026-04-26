@@ -226,7 +226,7 @@ export default function HostApplicationStatus() {
                 isPending  ? "bg-primary/10 dark:bg-primary/20" :
                              "bg-surface-container dark:bg-zinc-800"
               }`}>
-                {isApproved ? <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" /> :
+                {isApproved ? <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-green-400" /> :
                  isRejected ? <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" /> :
                  isPending  ? <Loader2 className="h-6 w-6 text-primary dark:text-green-400 animate-spin" /> :
                               <FileText className="h-6 w-6 text-on-surface-variant" />}

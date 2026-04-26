@@ -364,8 +364,27 @@ export default function AdminHostApplications() {
                 initialsClassName="text-4xl text-on-secondary-container font-black"
                 imgClassName="w-full h-full object-cover"
               />
-              <h3 className="font-headline font-extrabold text-xl text-primary">{selected.user?.name}</h3>
+              <h3 className="font-headline font-extrabold text-xl text-primary text-center">
+                {selected.personalInfo?.fullName?.trim() || selected.user?.name}
+              </h3>
+              {selected.personalInfo?.fullName?.trim() &&
+                selected.user?.name &&
+                selected.personalInfo.fullName.trim() !== selected.user.name && (
+                <p className="text-[10px] text-on-surface-variant mt-0.5 text-center">
+                  Account name: {selected.user.name}
+                </p>
+              )}
               <p className="text-xs text-on-surface-variant mt-1">{selected.user?.email}</p>
+              {selected.personalInfo?.email &&
+                selected.user?.email &&
+                selected.personalInfo.email.toLowerCase() !== selected.user.email.toLowerCase() && (
+                <p className="text-[10px] text-on-surface-variant">Form email: {selected.personalInfo.email}</p>
+              )}
+              {selected.submittedAt && (
+                <p className="text-[10px] text-on-surface-variant mt-1">
+                  Submitted {new Date(selected.submittedAt).toLocaleString()}
+                </p>
+              )}
               <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">
                 {selected.personalInfo?.cityRegion && (
                   <span className="text-on-tertiary-fixed-variant bg-tertiary-fixed px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide">
@@ -377,17 +396,39 @@ export default function AdminHostApplications() {
 
             {/* Detail body */}
             <div className="px-6 pb-8 space-y-6">
+              {/* Contact & address (full parity with host apply form step 1) */}
+              <div>
+                <p className="text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant mb-3">Contact & location</p>
+                <div className="bg-surface-container-low dark:bg-zinc-800/40 rounded-xl p-4 space-y-3 text-sm text-on-surface">
+                  {selected.personalInfo?.phoneNumber ? (
+                    <div>
+                      <p className="text-[10px] text-on-surface-variant font-medium mb-0.5">Phone</p>
+                      <p className="font-semibold tabular-nums">{selected.personalInfo.phoneNumber}</p>
+                    </div>
+                  ) : null}
+                  {selected.personalInfo?.fullAddress?.trim() ? (
+                    <div>
+                      <p className="text-[10px] text-on-surface-variant font-medium mb-0.5">Full address</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{selected.personalInfo.fullAddress.trim()}</p>
+                    </div>
+                  ) : null}
+                  {!selected.personalInfo?.phoneNumber && !selected.personalInfo?.fullAddress?.trim() && (
+                    <p className="text-xs text-on-surface-variant">No phone or address on file.</p>
+                  )}
+                </div>
+              </div>
+
               {/* Background */}
               <div>
                 <p className="text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant mb-3">Background</p>
                 <div className="bg-surface-container-low rounded-xl p-4 space-y-4">
                   {selected.personalInfo?.aboutYou && (
                     <div>
-                      <p className="text-[10px] text-on-surface-variant font-medium mb-1">Bio</p>
+                      <p className="text-[10px] text-on-surface-variant font-medium mb-1">About you</p>
                       <p className="text-sm leading-relaxed text-on-surface">{selected.personalInfo.aboutYou}</p>
                     </div>
                   )}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {(selected.personalInfo?.languagesSpoken?.length ?? 0) > 0 && (
                       <div>
                         <p className="text-[10px] text-on-surface-variant font-medium mb-1">Languages</p>
@@ -409,7 +450,7 @@ export default function AdminHostApplications() {
                   </div>
                   {selected.experienceDetails?.experienceTypes && selected.experienceDetails.experienceTypes.length > 0 && (
                     <div>
-                      <p className="text-[10px] text-on-surface-variant font-medium mb-1">Experience Types</p>
+                      <p className="text-[10px] text-on-surface-variant font-medium mb-1">Experience types</p>
                       <div className="flex flex-wrap gap-1">
                         {selected.experienceDetails.experienceTypes.map((t) => (
                           <span key={t} className="text-[10px] font-bold bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-full">
@@ -419,34 +460,38 @@ export default function AdminHostApplications() {
                       </div>
                     </div>
                   )}
-                  {selected.personalInfo?.previousExperience ?? selected.experienceDetails?.previousExperience ? (
+                  {selected.experienceDetails?.previousExperience?.trim() ? (
                     <div>
-                      <p className="text-[10px] text-on-surface-variant font-medium mb-1">Previous Experience</p>
-                      <p className="text-sm text-on-surface">{selected.experienceDetails?.previousExperience}</p>
+                      <p className="text-[10px] text-on-surface-variant font-medium mb-1">Previous experience</p>
+                      <p className="text-sm text-on-surface whitespace-pre-wrap">{selected.experienceDetails.previousExperience}</p>
                     </div>
                   ) : null}
                 </div>
               </div>
 
-              {/* ID verification */}
+              {/* ID verification + portrait (matches form step 3) */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant">Identification</p>
+                  <p className="text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant">Identification & portrait</p>
                   <ShieldCheck className="h-4 w-4 text-emerald-600" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <PhotoViewer url={selected.media?.nationalIdFront} label="Front Side" />
-                  <PhotoViewer url={selected.media?.nationalIdBack}  label="Back Side"  />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <PhotoViewer url={selected.media?.personalPhoto} label="Profile portrait" />
+                  <PhotoViewer url={selected.media?.nationalIdFront} label="ID — front" />
+                  <PhotoViewer url={selected.media?.nationalIdBack} label="ID — back" />
                 </div>
               </div>
 
-              {/* Hosting environment */}
+              {/* Hosting environment — show every photo submitted */}
               {(selected.media?.hostingEnvironmentPhotos?.length ?? 0) > 0 && (
                 <div>
-                  <p className="text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant mb-3">Hosting Environment</p>
+                  <p className="text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant mb-1">Hosting environment</p>
+                  <p className="text-[10px] text-on-surface-variant mb-3">
+                    {selected.media!.hostingEnvironmentPhotos!.length} photo{selected.media!.hostingEnvironmentPhotos!.length === 1 ? "" : "s"}
+                  </p>
                   <div className="grid grid-cols-2 gap-3">
-                    {selected.media!.hostingEnvironmentPhotos!.slice(0, 4).map((url, i) => (
-                      <PhotoViewer key={i} url={url} label={`Photo ${i + 1}`} />
+                    {selected.media!.hostingEnvironmentPhotos!.map((url, i) => (
+                      <PhotoViewer key={`${url}-${i}`} url={url} label={`Environment ${i + 1}`} />
                     ))}
                   </div>
                 </div>

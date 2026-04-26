@@ -42,7 +42,7 @@ export function DeltaBadge({
   if (prev === 0) {
     return (
       <span
-        className={`inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 ${className}`}
+        className={`inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-green-400 ${className}`}
       >
         <ArrowUpRight className="h-3 w-3" /> New{suffix ? ` ${suffix}` : ""}
       </span>
@@ -60,7 +60,7 @@ export function DeltaBadge({
   const colour = isFlat
     ? "text-on-surface-variant"
     : isGood
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-emerald-600 dark:text-green-400"
       : "text-rose-600 dark:text-rose-400";
 
   const Icon = isFlat ? Minus : isUp ? ArrowUpRight : ArrowDownRight;

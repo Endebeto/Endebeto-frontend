@@ -108,8 +108,8 @@ html {
     --primary: #064e3b;
     --primary-foreground: #ffffff;
     --primary-container: #064e3b;
-    /* Headings/links on canvas: crisp sea-glass, aligned with #064e3b */
-    --on-primary-container: #9fe8d5;
+    /* On-canvas green text: matches Tailwind green-400 (same as host pages dark:text-green-400) */
+    --on-primary-container: #4ade80;
     --secondary: #404040;
     --secondary-foreground: #fafafa;
     --secondary-container: #262626;
@@ -321,7 +321,7 @@ html {
     -8px -8px 32px rgba(255, 255, 255, 0.03);
 }
 
-/* Dark: #064e3b is for fills; use mint on-primary-container for text-primary / text-primary-container on canvas */
+/* Dark: #064e3b is for fills; on-primary-container = green-400 for text-primary (host page accent) */
 @layer utilities {
   .dark .text-primary {
     color: var(--on-primary-container);

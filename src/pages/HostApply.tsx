@@ -126,7 +126,7 @@ function ImageUploadBox({ label, sublabel, slot, onPick, onRemove, square = fals
       {sublabel && <p className="text-[11px] text-on-surface-variant dark:text-zinc-400 mb-2">{sublabel}</p>}
 
       {previewUrl ? (
-        <div className={`relative rounded-xl overflow-hidden border-2 border-primary/40 dark:border-green-500/40 ${aspectCls}`}>
+        <div className={`relative rounded-xl overflow-hidden border-2 border-primary/40 dark:border-green-400/40 ${aspectCls}`}>
           <img src={previewUrl} alt="" className="w-full h-full object-cover" />
           {/* Uploaded badge */}
           <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 bg-emerald-600/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
@@ -138,7 +138,7 @@ function ImageUploadBox({ label, sublabel, slot, onPick, onRemove, square = fals
           </button>
         </div>
       ) : uploading ? (
-        <div className={`w-full rounded-xl border-2 border-primary/40 dark:border-green-500/40 bg-primary/[0.03] dark:bg-primary/10 flex flex-col items-center justify-center gap-2 text-primary dark:text-green-400 ${aspectCls}`}>
+        <div className={`w-full rounded-xl border-2 border-primary/40 dark:border-green-400/40 bg-primary/[0.03] dark:bg-primary/10 flex flex-col items-center justify-center gap-2 text-primary dark:text-green-400 ${aspectCls}`}>
           <Loader2 className="h-5 w-5 animate-spin" />
           <span className="text-[11px] font-semibold">Uploading…</span>
         </div>
@@ -477,8 +477,8 @@ export default function HostApply() {
 
         {/* Declaration */}
         <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800/40 rounded-xl">
-          <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-          <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
+          <Check className="h-4 w-4 text-emerald-600 dark:text-green-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-emerald-700 dark:text-green-400 leading-relaxed">
             By submitting you confirm that all information is accurate and you agree to our <span className="font-semibold">Host Terms & Conditions</span>.
           </p>
         </div>
@@ -613,7 +613,7 @@ export default function HostApply() {
     <div className="space-y-7">
       <div className="flex items-start gap-3 p-4 bg-primary/8 dark:bg-primary/15 border border-primary/20 dark:border-primary/30 rounded-xl">
         <AlertCircle className="h-4 w-4 text-primary dark:text-green-400 shrink-0 mt-0.5" />
-        <p className="text-xs text-primary/80 dark:text-green-300 leading-relaxed">
+        <p className="text-xs text-primary/80 dark:text-green-400 leading-relaxed">
           Each file is uploaded immediately when you select it — no waiting at submission. Documents are encrypted and only used for identity verification.
         </p>
       </div>
@@ -721,7 +721,7 @@ export default function HostApply() {
                     {done ? <Check className="h-3.5 w-3.5" /> : i + 1}
                   </div>
                   <span className={`text-xs font-semibold hidden sm:block whitespace-nowrap ${
-                    active ? "text-on-surface dark:text-white" : done ? "text-primary/70 dark:text-green-500/70" : "text-on-surface-variant dark:text-zinc-500"
+                    active ? "text-on-surface dark:text-white" : done ? "text-primary/70 dark:text-green-400/70" : "text-on-surface-variant dark:text-zinc-500"
                   }`}>
                     {s.short}
                   </span>

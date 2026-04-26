@@ -20,7 +20,7 @@ const fmtDate = (iso?: string) => {
 };
 
 const statusStyle: Record<string, string> = {
-  upcoming:  "bg-secondary-container text-on-secondary-fixed-variant dark:bg-emerald-900/40 dark:text-emerald-300",
+  upcoming:  "bg-secondary-container text-on-secondary-fixed-variant dark:bg-emerald-900/40 dark:text-green-400",
   completed: "bg-surface-container-high text-on-surface-variant dark:bg-zinc-700 dark:text-zinc-300",
   expired:   "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
   cancelled: "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400",
@@ -193,7 +193,7 @@ export default function HostDashboard() {
                     <h3 className="text-base md:text-2xl font-headline font-bold text-primary dark:text-green-400 leading-tight">
                       {etb(availableBalanceCents)} <span className="text-[10px] md:text-sm font-normal text-on-surface-variant dark:text-zinc-400">ETB</span>
                     </h3>
-                    <p className="text-[9px] md:text-xs text-primary-container dark:text-green-500 mt-1 flex items-center gap-0.5 font-semibold">
+                    <p className="text-[9px] md:text-xs text-primary-container dark:text-green-400 mt-1 flex items-center gap-0.5 font-semibold">
                       <TrendingUp className="h-2.5 w-2.5 md:h-3 md:w-3 shrink-0" />
                       <span className="truncate">ETB {etb(totalEarnedCents)} net earned</span>
                     </p>

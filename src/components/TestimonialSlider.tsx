@@ -73,7 +73,7 @@ function TestimonialCard({
 
       <div className="flex items-center gap-3">
         {t.initials ? (
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 font-headline text-xs font-bold text-primary dark:bg-primary/30 dark:text-green-300 md:h-11 md:w-11">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 font-headline text-xs font-bold text-primary dark:bg-primary/30 dark:text-green-400 md:h-11 md:w-11">
             {t.initials}
           </div>
         ) : (
