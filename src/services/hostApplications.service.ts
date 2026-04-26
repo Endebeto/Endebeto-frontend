@@ -27,7 +27,6 @@ export interface HostApplication {
     nationalIdFront?: string;
     nationalIdBack?: string;
     personalPhoto?: string;
-    hostingEnvironmentPhotos?: string[];
   };
   rejectionReason?: string;
   submittedAt?: string;
@@ -40,13 +39,13 @@ export interface ApplicationResponse {
   data: { application: HostApplication };
 }
 
-export type SingleFileField = "nationalIdFront" | "nationalIdBack" | "personalPhoto" | "hostingEnvironmentPhotos";
+export type SingleFileField = "nationalIdFront" | "nationalIdBack" | "personalPhoto";
 
 export interface UploadSingleFileResponse {
   status: string;
   message: string;
   data: {
-    savedField: Partial<Record<SingleFileField, string | string[]>>;
+    savedField: Partial<Record<SingleFileField, string>>;
     media: HostApplication["media"];
   };
 }
@@ -71,11 +70,7 @@ export const hostApplicationsService = {
     });
   },
 
-  /** Remove a hosting environment photo that was already uploaded. */
-  removeEnvPhoto: (url: string) =>
-    api.delete<{ status: string }>("/host-applications/env-photo", { data: { url } }),
-
-  /** Step 3b: finalize submission (all files must already be saved via uploadSingleFile) */
+  /** Step 3: finalize submission (all files must already be saved via uploadSingleFile) */
   submit: () =>
     api.post<ApplicationResponse>("/host-applications/submit"),
 

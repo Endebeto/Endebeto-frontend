@@ -20,7 +20,6 @@ interface Step3 {
   nationalIdFront:  SlotState;
   nationalIdBack:   SlotState;
   personalPhoto:    SlotState;
-  envPhotos: SlotState[]; // each entry = one env photo slot
 }
 
 /* ─── options ────────────────────────────────────────── */
@@ -180,7 +179,7 @@ export default function HostApply() {
   const [step2, setStep2] = useState<Step2>({ experienceTypes: [], specialties: [], previousExperience: "" });
   const IDLE: SlotState = { status: "idle" };
   const [step3, setStep3] = useState<Step3>({
-    nationalIdFront: IDLE, nationalIdBack: IDLE, personalPhoto: IDLE, envPhotos: [],
+    nationalIdFront: IDLE, nationalIdBack: IDLE, personalPhoto: IDLE,
   });
 
   const step1Valid = step1.fullName.trim() && step1.phoneNumber.trim() && step1.cityRegion.trim() && step1.languagesSpoken.length > 0 && step1.aboutYou.trim().length >= 30;
@@ -188,20 +187,16 @@ export default function HostApply() {
   const step3Valid =
     step3.nationalIdFront.status === "done" &&
     step3.nationalIdBack.status  === "done" &&
-    step3.personalPhoto.status   === "done" &&
-    step3.envPhotos.some(s => s.status === "done");
+    step3.personalPhoto.status   === "done";
   const step3Uploading =
     step3.nationalIdFront.status === "uploading" ||
     step3.nationalIdBack.status  === "uploading" ||
-    step3.personalPhoto.status   === "uploading" ||
-    step3.envPhotos.some(s => s.status === "uploading");
+    step3.personalPhoto.status   === "uploading";
   const step4Valid = step1Valid && step2Valid && step3Valid; // all sections complete
   const canAdvance = [step1Valid, step2Valid, step3Valid, step4Valid][currentStep];
 
   const toggleLang = (lang: string) =>
     setStep1((p) => ({ ...p, languagesSpoken: p.languagesSpoken.includes(lang) ? p.languagesSpoken.filter((l) => l !== lang) : [...p.languagesSpoken, lang] }));
-
-  const envPhotoRef = useRef<HTMLInputElement>(null);
 
   /* ── helper: upload a single file slot ── */
   type SingleSlotKey = "nationalIdFront" | "nationalIdBack" | "personalPhoto";
@@ -218,38 +213,6 @@ export default function HostApply() {
       setStep3(p => ({ ...p, [field]: { status: "error", msg } }));
       toast.error(`${field}: ${msg}`);
     }
-  };
-
-  const uploadEnvPhoto = async (file: File) => {
-    const idx = step3.envPhotos.length;
-    setStep3(p => ({ ...p, envPhotos: [...p.envPhotos, { status: "uploading" }] }));
-    try {
-      const res = await hostApplicationsService.uploadSingleFile("hostingEnvironmentPhotos", file);
-      const urls = res.data.data.media?.hostingEnvironmentPhotos ?? [];
-      const url = urls[urls.length - 1];
-      if (!url) throw new Error("URL not returned");
-      setStep3(p => {
-        const envPhotos = [...p.envPhotos];
-        envPhotos[idx] = { status: "done", url };
-        return { ...p, envPhotos };
-      });
-    } catch (err: unknown) {
-      const msg = getFriendlyErrorMessage(err, "Upload failed");
-      setStep3(p => {
-        const envPhotos = [...p.envPhotos];
-        envPhotos[idx] = { status: "error", msg };
-        return { ...p, envPhotos };
-      });
-      toast.error(`Hosting photo: ${msg}`);
-    }
-  };
-
-  const removeEnvPhoto = async (i: number) => {
-    const slot = step3.envPhotos[i];
-    if (slot.status === "done") {
-      try { await hostApplicationsService.removeEnvPhoto(slot.url); } catch { /* best-effort */ }
-    }
-    setStep3(p => ({ ...p, envPhotos: p.envPhotos.filter((_, idx) => idx !== i) }));
   };
 
   /* ── on mount: check for existing application ── */
@@ -294,7 +257,6 @@ export default function HostApply() {
             nationalIdFront: m.nationalIdFront ? { status: "done", url: m.nationalIdFront } : p.nationalIdFront,
             nationalIdBack:  m.nationalIdBack  ? { status: "done", url: m.nationalIdBack  } : p.nationalIdBack,
             personalPhoto:   m.personalPhoto   ? { status: "done", url: m.personalPhoto   } : p.personalPhoto,
-            envPhotos: (m.hostingEnvironmentPhotos ?? []).map(url => ({ status: "done" as const, url })),
           }));
         }
       } catch {
@@ -352,7 +314,6 @@ export default function HostApply() {
 
   /* ── renderStep4: review summary ── */
   const renderStep4 = () => {
-    const doneEnvPhotos = step3.envPhotos.filter(s => s.status === "done") as { status: "done"; url: string }[];
     const doneSingle = (s: SlotState) => s.status === "done" ? s : null;
 
     const Section = ({ title, step, children }: { title: string; step: number; children: React.ReactNode }) => (
@@ -458,21 +419,6 @@ export default function HostApply() {
               </div>
             ))}
           </div>
-
-          {doneEnvPhotos.length > 0 && (
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant dark:text-zinc-500 mb-1.5">
-                Hosting Environment ({doneEnvPhotos.length} photo{doneEnvPhotos.length > 1 ? "s" : ""})
-              </p>
-              <div className="grid grid-cols-4 gap-2">
-                {doneEnvPhotos.map((s, i) => (
-                  <div key={i} className="rounded-lg overflow-hidden aspect-[4/3] border border-primary/30 dark:border-green-500/30">
-                    <img src={s.url} alt="" className="w-full h-full object-cover" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </Section>
 
         {/* Declaration */}
@@ -639,48 +585,6 @@ export default function HostApply() {
             onPick={(f) => uploadSlot("personalPhoto", f)}
             onRemove={() => setStep3(p => ({ ...p, personalPhoto: IDLE }))} />
         </div>
-      </div>
-
-      <div>
-        <label className={labelCls}>
-          Hosting Environment Photos
-          <span className="text-error normal-case ml-1">*</span>
-          <span className="font-normal normal-case text-on-surface-variant dark:text-zinc-500 ml-1">(1–4 photos)</span>
-        </label>
-        <p className="text-xs text-on-surface-variant dark:text-zinc-400 mb-4">
-          Photos of the space or location where you'll host. Help guests get excited!
-        </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {step3.envPhotos.map((slot, i) => (
-            <ImageUploadBox key={i} slot={slot}
-              onPick={(f) => {
-                setStep3(p => { const envPhotos = [...p.envPhotos]; envPhotos[i] = { status: "uploading" }; return { ...p, envPhotos }; });
-                (async () => {
-                  try {
-                    const res = await hostApplicationsService.uploadSingleFile("hostingEnvironmentPhotos", f);
-                    const urls = res.data.data.media?.hostingEnvironmentPhotos ?? [];
-                    const url = urls[urls.length - 1];
-                    if (!url) throw new Error("URL not returned");
-                    setStep3(p => { const envPhotos = [...p.envPhotos]; envPhotos[i] = { status: "done", url }; return { ...p, envPhotos }; });
-                  } catch (err: unknown) {
-                    const msg = getFriendlyErrorMessage(err, "Upload failed");
-                    setStep3(p => { const envPhotos = [...p.envPhotos]; envPhotos[i] = { status: "error", msg }; return { ...p, envPhotos }; });
-                    toast.error(`Hosting photo: ${msg}`);
-                  }
-                })();
-              }}
-              onRemove={() => removeEnvPhoto(i)} />
-          ))}
-          {step3.envPhotos.length < 4 && (
-            <button type="button" onClick={() => envPhotoRef.current?.click()}
-              className="aspect-[4/3] rounded-xl border-2 border-dashed border-outline-variant/40 dark:border-zinc-600 flex flex-col items-center justify-center gap-1.5 text-on-surface-variant dark:text-zinc-500 hover:border-primary/50 hover:bg-primary/[0.03] dark:hover:bg-primary/10 transition-all">
-              <Upload className="h-5 w-5 opacity-40" />
-              <span className="text-[11px] font-semibold">Add photo</span>
-            </button>
-          )}
-        </div>
-        <input ref={envPhotoRef} type="file" accept="image/*" className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) { uploadEnvPhoto(f); e.target.value = ""; } }} />
       </div>
     </div>
   );

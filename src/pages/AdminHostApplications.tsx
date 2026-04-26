@@ -482,21 +482,6 @@ export default function AdminHostApplications() {
                 </div>
               </div>
 
-              {/* Hosting environment — show every photo submitted */}
-              {(selected.media?.hostingEnvironmentPhotos?.length ?? 0) > 0 && (
-                <div>
-                  <p className="text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant mb-1">Hosting environment</p>
-                  <p className="text-[10px] text-on-surface-variant mb-3">
-                    {selected.media!.hostingEnvironmentPhotos!.length} photo{selected.media!.hostingEnvironmentPhotos!.length === 1 ? "" : "s"}
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {selected.media!.hostingEnvironmentPhotos!.map((url, i) => (
-                      <PhotoViewer key={`${url}-${i}`} url={url} label={`Environment ${i + 1}`} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Rejection reason */}
               {selected.status === "rejected" && selected.rejectionReason && (
                 <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-800/20">

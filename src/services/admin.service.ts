@@ -124,8 +124,6 @@ export interface HostApplicationMedia {
   nationalIdFront?: string;
   nationalIdBack?: string;
   personalPhoto?: string;
-  /** Hosting / environment photos (backend field name) */
-  hostingEnvironmentPhotos?: string[];
 }
 
 export interface AdminHostApplication {
