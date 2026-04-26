@@ -444,7 +444,6 @@ export default function HostExperiences() {
   return (
     <HostLayout
       hostName={user?.name ?? "Host"}
-      hostInitials={(user?.name ?? "H").slice(0, 2).toUpperCase()}
       hostTitle="Host"
     >
       {rescheduleExp && (

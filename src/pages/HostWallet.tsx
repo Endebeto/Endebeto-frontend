@@ -543,7 +543,6 @@ export default function HostWallet() {
   return (
     <HostLayout
       hostName={user?.name ?? "Host"}
-      hostInitials={(user?.name ?? "H").slice(0, 2).toUpperCase()}
       hostTitle="Host"
     >
       {showWithdraw && (

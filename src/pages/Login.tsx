@@ -50,7 +50,14 @@ const Login = () => {
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* ── Side image (left on desktop) ── */}
       <div className="hidden lg:block relative min-h-0">
-        <img src={authSideImage} alt="Ethiopian coffee ceremony and culture" className="h-full min-h-screen w-full object-cover" />
+        <img
+          src={authSideImage}
+          alt="Ethiopian coffee ceremony and culture"
+          className="h-full min-h-screen w-full object-cover"
+          fetchPriority="high"
+          loading="eager"
+          decoding="async"
+        />
         <div className="absolute inset-0 bg-primary/50" />
         <div className="absolute bottom-12 left-10 right-10">
           <p className="font-headline font-bold text-xl text-white leading-snug">

@@ -73,10 +73,68 @@ export interface ExperienceFilters {
   limit?: number;
   sort?: string;
   location?: string;
+  /** Substring, case-insensitive search on `location` (public catalog) */
+  q?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  /** When true, exclude sold-out experiences (server applies booking counts + pagination) */
   "price[gte]"?: number;
   "price[lte]"?: number;
   "ratingsAverage[gte]"?: number;
   fields?: string;
+}
+
+export interface CatalogPriceBoundsResponse {
+  status: string;
+  data: { data: { minPrice: number; maxPrice: number } };
+}
+
+/** Public browse sort options → GET /experiences `sort` param */
+export const EXPERIENCE_BROWSE_SORT: Record<string, string> = {
+  "Newest First": "-createdAt",
+  "Soonest occurrence": "nextOccurrenceAt",
+  "Highest Rating": "-ratingsAverage",
+  "Price: Low to High": "price",
+  "Price: High to Low": "-price",
+};
+
+export function buildExperiencesBrowseParams(input: {
+  page: number;
+  limit: number;
+  sortBy: string;
+  locationQ: string;
+  minPrice: number;
+  maxPriceFilter: number;
+  catalogMaxPrice: number;
+  minRating: number;
+  dateFrom: string;
+  dateTo: string;
+}): ExperienceFilters {
+  const sort = EXPERIENCE_BROWSE_SORT[input.sortBy] ?? "-createdAt";
+  const params: ExperienceFilters = {
+    page: input.page,
+    limit: input.limit,
+    sort,
+  };
+  if (input.locationQ.trim()) {
+    params.q = input.locationQ.trim();
+  }
+  if (input.minPrice > 0) {
+    params["price[gte]"] = input.minPrice;
+  }
+  if (input.maxPriceFilter > 0 && input.maxPriceFilter < input.catalogMaxPrice) {
+    params["price[lte]"] = input.maxPriceFilter;
+  }
+  if (input.minRating > 0) {
+    params["ratingsAverage[gte]"] = input.minRating;
+  }
+  if (input.dateFrom) {
+    params.dateFrom = input.dateFrom;
+  }
+  if (input.dateTo) {
+    params.dateTo = input.dateTo;
+  }
+  return params;
 }
 
 export const experiencesService = {
@@ -88,6 +146,9 @@ export const experiencesService = {
 
   getSummary: () =>
     api.get<ExperienceListResponse>("/experiences/summary"),
+
+  getCatalogPriceBounds: () =>
+    api.get<CatalogPriceBoundsResponse>("/experiences/catalog-price-bounds"),
 
   getStats: () =>
     api.get("/experiences/experience-stats"),

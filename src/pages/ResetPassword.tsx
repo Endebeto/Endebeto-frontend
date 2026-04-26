@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import heroCoffee from "@/assets/hero-coffee.jpg";
 import { getFriendlyErrorMessage } from "@/lib/errors";
+import { authService } from "@/services/auth.service";
 
 /* ── password strength ──────────────────────────────── */
 function getStrength(pw: string): { score: number; label: string; color: string } {
@@ -43,7 +44,6 @@ export default function ResetPassword() {
     setError("");
     setSubmitting(true);
     try {
-      const { authService } = await import("@/services/auth.service");
       await authService.resetPassword(token, { password, passwordConfirm: confirm });
       setDone(true);
     } catch (err: unknown) {

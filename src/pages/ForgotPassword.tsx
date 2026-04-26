@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 import heroCoffee from "@/assets/hero-coffee.jpg";
+import { authService } from "@/services/auth.service";
 
 export default function ForgotPassword() {
   const [email, setEmail]       = useState("");
@@ -13,7 +14,6 @@ export default function ForgotPassword() {
     if (!email.trim()) return;
     setSubmitting(true);
     try {
-      const { authService } = await import("@/services/auth.service");
       await authService.forgotPassword(email.trim());
       setSent(true);
     } catch {
@@ -129,6 +129,9 @@ export default function ForgotPassword() {
           src={heroCoffee}
           alt="Ethiopian landscape"
           className="absolute inset-0 w-full h-full object-cover"
+          fetchPriority="high"
+          loading="eager"
+          decoding="async"
         />
         <div className="absolute inset-0 bg-primary/50" />
         <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">

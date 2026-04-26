@@ -1,36 +1,51 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
-import Index from "./pages/Index";
-import Experiences from "./pages/Experiences";
-import ExperienceDetail from "./pages/ExperienceDetail";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminHostApplications from "./pages/AdminHostApplications";
-import AdminUsers from "./pages/AdminUsers";
-import AdminPayouts from "./pages/AdminPayouts";
-import AdminExperiences from "./pages/AdminExperiences";
-import AdminReviews from "./pages/AdminReviews";
-import HostDashboard from "./pages/HostDashboard";
-import HostWallet from "./pages/HostWallet";
-import HostCreateExperience from "./pages/HostCreateExperience";
-import HostEditExperience from "./pages/HostEditExperience";
-import HostExperiences from "./pages/HostExperiences";
-import HostBookings from "./pages/HostBookings";
-import Profile from "./pages/Profile";
-import MyBookings from "./pages/MyBookings";
-import BecomeHost from "./pages/BecomeHost";
-import HostApply from "./pages/HostApply";
-import HostApplicationStatus from "./pages/HostApplicationStatus";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import VerifyEmail from "./pages/VerifyEmail";
-import OAuthSuccess from "./pages/OAuthSuccess";
-import NotFound from "./pages/NotFound";
+
+const Index = lazy(() => import("./pages/Index"));
+const Experiences = lazy(() => import("./pages/Experiences"));
+const ExperienceDetail = lazy(() => import("./pages/ExperienceDetail"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminHostApplications = lazy(() => import("./pages/AdminHostApplications"));
+const AdminUsers = lazy(() => import("./pages/AdminUsers"));
+const AdminPayouts = lazy(() => import("./pages/AdminPayouts"));
+const AdminExperiences = lazy(() => import("./pages/AdminExperiences"));
+const AdminReviews = lazy(() => import("./pages/AdminReviews"));
+const HostDashboard = lazy(() => import("./pages/HostDashboard"));
+const HostWallet = lazy(() => import("./pages/HostWallet"));
+const HostCreateExperience = lazy(() => import("./pages/HostCreateExperience"));
+const HostEditExperience = lazy(() => import("./pages/HostEditExperience"));
+const HostExperiences = lazy(() => import("./pages/HostExperiences"));
+const HostBookings = lazy(() => import("./pages/HostBookings"));
+const Profile = lazy(() => import("./pages/Profile"));
+const MyBookings = lazy(() => import("./pages/MyBookings"));
+const BecomeHost = lazy(() => import("./pages/BecomeHost"));
+const HostApply = lazy(() => import("./pages/HostApply"));
+const HostApplicationStatus = lazy(() => import("./pages/HostApplicationStatus"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const OAuthSuccess = lazy(() => import("./pages/OAuthSuccess"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+/** Shown while a lazy route chunk loads (first visit to that page). */
+function RouteFallback() {
+  return (
+    <div
+      className="flex min-h-screen w-full items-center justify-center bg-background"
+      role="status"
+      aria-label="Loading page"
+    >
+      <div className="h-9 w-9 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  );
+}
 
 function ProtectedRoute({
   children,
@@ -107,7 +122,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <Suspense fallback={<RouteFallback />}>
+            <AppRoutes />
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

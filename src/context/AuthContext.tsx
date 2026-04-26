@@ -47,8 +47,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Only hit GET /users/me when we might have a session: with httpOnly cookies the
+  // client cannot read them, but a guest has no `user` in localStorage so we skip
+  // the probe and avoid a 401 on every public page load. OAuthSuccess and other
+  // callers still invoke `refreshUser()` explicitly (no stored user yet, but cookie set).
   useEffect(() => {
-    refreshUser();
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem("user");
+    } catch {
+      /* private / disabled storage */
+    }
+    if (!stored) {
+      setLoading(false);
+      return;
+    }
+    void refreshUser();
   }, [refreshUser]);
 
   const login = async (email: string, password: string) => {

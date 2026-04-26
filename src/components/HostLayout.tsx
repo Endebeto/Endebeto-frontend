@@ -5,6 +5,7 @@ import {
   Settings, LogOut, Bell, HelpCircle, Menu, X,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { UserAvatar } from "@/components/UserAvatar";
 
 const navLinks = [
   { icon: LayoutDashboard, label: "Dashboard",         href: "/host-dashboard" },
@@ -17,28 +18,18 @@ const navLinks = [
 interface HostLayoutProps {
   children: ReactNode;
   hostName?: string;
-  hostInitials?: string;
   hostTitle?: string;
-}
-
-/** Compute two-letter initials from a full name (first + last word). */
-function computeInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "HO";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export default function HostLayout({
   children,
   hostName = "Selamawit T.",
-  hostInitials,
   hostTitle = "Superhost",
 }: HostLayoutProps) {
   const { pathname } = useLocation();
-  const displayInitials = hostInitials || computeInitials(hostName);
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const displayName = user?.name || hostName;
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
@@ -177,12 +168,16 @@ export default function HostLayout({
             {/* User chip */}
             <div className="flex items-center gap-2 pl-3 md:pl-5 border-l border-outline-variant/30 dark:border-zinc-700">
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-bold text-on-surface dark:text-white leading-none">{hostName}</p>
+                <p className="text-xs font-bold text-on-surface dark:text-white leading-none">{displayName}</p>
                 <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 mt-0.5">{hostTitle}</p>
               </div>
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-headline font-bold text-white text-[11px] shadow-sm shrink-0">
-                {displayInitials}
-              </div>
+              <UserAvatar
+                name={displayName}
+                photo={user?.photo}
+                className="w-8 h-8 rounded-full bg-primary shadow-sm ring-0 shrink-0"
+                initialsClassName="text-white text-[11px]"
+                imgClassName="w-full h-full object-cover"
+              />
             </div>
           </div>
         </header>

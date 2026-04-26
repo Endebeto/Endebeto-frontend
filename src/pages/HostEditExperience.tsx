@@ -240,7 +240,7 @@ export default function HostEditExperience() {
   /* ── loading state ── */
   if (loading) {
     return (
-      <HostLayout hostName={user?.name ?? "Host"} hostInitials={(user?.name ?? "H").slice(0, 2).toUpperCase()} hostTitle="Host">
+      <HostLayout hostName={user?.name ?? "Host"} hostTitle="Host">
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 className="h-8 w-8 animate-spin text-primary dark:text-green-400" />
         </div>
@@ -251,7 +251,7 @@ export default function HostEditExperience() {
   if (!experience) return null;
 
   return (
-    <HostLayout hostName={user?.name ?? "Host"} hostInitials={(user?.name ?? "H").slice(0, 2).toUpperCase()} hostTitle="Host">
+    <HostLayout hostName={user?.name ?? "Host"} hostTitle="Host">
       {success && (
         <SuccessModal
           onDashboard={() => navigate("/host-dashboard")}

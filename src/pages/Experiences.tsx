@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   MapPin,
   ChevronLeft,
@@ -9,14 +9,24 @@ import {
   X,
   Calendar,
   ListFilter,
+  Ticket,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { experiencesService, type Experience } from "@/services/experiences.service";
+import {
+  buildExperiencesBrowseParams,
+  experiencesService,
+  type Experience,
+} from "@/services/experiences.service";
 import { cn } from "@/lib/utils";
+import {
+  experienceUrlStringEquals,
+  parseExperiencesUrlSearch,
+  serializeExperiencesUrl,
+} from "@/lib/experiencesBrowseUrl";
 
 /* ─── constants ─────────────────────────────────────────── */
 
@@ -28,23 +38,7 @@ const SORT_OPTIONS = [
   "Price: High to Low",
 ];
 
-/** Experience `nextOccurrenceAt` must fall on or after dateFrom and on or before dateTo (local calendar days). */
-function occurrenceInDateRange(nextOccurrenceAt: string | undefined, dateFrom: string, dateTo: string): boolean {
-  if (!nextOccurrenceAt) return false;
-  const occ = new Date(nextOccurrenceAt).getTime();
-  if (Number.isNaN(occ)) return false;
-  if (dateFrom) {
-    const start = new Date(`${dateFrom}T00:00:00`);
-    if (occ < start.getTime()) return false;
-  }
-  if (dateTo) {
-    const end = new Date(`${dateTo}T23:59:59.999`);
-    if (occ > end.getTime()) return false;
-  }
-  return true;
-}
-
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
 
 /* ─── card ──────────────────────────────────────────────── */
 
@@ -63,28 +57,40 @@ function ExperienceBrowseCard({ exp }: { exp: Experience }) {
   return (
     <Link
       to={`/experiences/${exp._id}`}
-      className={`group cursor-pointer block ${soldOut ? "opacity-70" : ""}`}
+      className="group block cursor-pointer"
     >
-      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden mb-2.5 shadow-sm group-hover:shadow-lg transition-all duration-500">
+      <div className="relative aspect-[3/4] overflow-hidden rounded-2xl mb-2.5 shadow-sm transition-all duration-500 group-hover:shadow-lg">
         <img
           src={exp.imageCover}
           alt={exp.title}
-          className={`w-full h-full object-cover transition-transform duration-700 ${
-            soldOut ? "grayscale-[30%]" : "group-hover:scale-105"
-          }`}
+          className={cn(
+            "h-full w-full object-cover transition-transform duration-700",
+            soldOut
+              ? "scale-100 grayscale-[50%] brightness-[0.92]"
+              : "group-hover:scale-105",
+          )}
         />
 
-        {/* Sold Out overlay */}
+        {/* Subtle film when sold (reference: dimmed, not a heavy veil) */}
+        {soldOut ? (
+          <div className="pointer-events-none absolute inset-0 bg-slate-900/15" aria-hidden />
+        ) : null}
+
+        {/* SOLD OUT — top-right pill (icon + label), dark semitransparent bar */}
         {soldOut && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-lg">
-              Sold Out
+          <div
+            className="absolute right-2.5 top-2.5 z-20 flex items-center gap-1 rounded-full bg-slate-900/85 py-1 pl-1.5 pr-2.5 text-white shadow-md backdrop-blur-[2px] sm:right-3 sm:top-3"
+            title="Sold out"
+          >
+            <Ticket className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" strokeWidth={2.5} />
+            <span className="font-headline text-[8px] font-bold uppercase leading-none tracking-widest sm:text-[9px]">
+              Sold out
             </span>
           </div>
         )}
 
-        {/* Top-left badge (Top Rated / Popular / few spots left) */}
-        {(badge || fewLeft) && (
+        {/* Top-left badge (Top Rated / Popular / few spots left) — hidden when sold out */}
+        {!soldOut && (badge || fewLeft) && (
           <div className="absolute top-3 left-3">
             {badge && (
               <span className="bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
@@ -171,6 +177,12 @@ function SkeletonCard() {
 /* ─── page ──────────────────────────────────────────────── */
 
 const Experiences = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlSyncReady = useRef(false);
+  const ignoreUrlParse = useRef(0);
+  const skipSearchParamsEffectOnce = useRef(true);
+  const [urlHydrationDone, setUrlHydrationDone] = useState(false);
+
   const [sortBy, setSortBy]       = useState("Newest First");
   const [sortOpen, setSortOpen]   = useState(false);
   const [locationQ, setLocationQ] = useState("");
@@ -179,8 +191,6 @@ const Experiences = () => {
   const [minRating, setMinRating] = useState(0);
   const [dateFrom, setDateFrom]   = useState("");
   const [dateTo, setDateTo]       = useState("");
-  /** When true, experiences with no remaining spots (isSoldOut) are hidden. */
-  const [hideSoldOut, setHideSoldOut] = useState(true);
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
   /** Bottom sheet on small screens, right drawer on md+. */
@@ -205,72 +215,162 @@ const Experiences = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  /* fetch all experiences (scheduled, up to 200) */
-  const { data: queryData, isLoading } = useQuery({
-    queryKey: ["experiences"],
-    queryFn: () => experiencesService.getAll({ limit: 200 }),
+  /** Hydrate filter state from the URL (shareable / back-forward). */
+  const applyUrlToState = useCallback((p: URLSearchParams) => {
+    const s = parseExperiencesUrlSearch(p, 10_000);
+    setPage(s.page);
+    setSortBy(s.sortBy);
+    setLocationQ(s.locationQ);
+    setMinPrice(s.minPrice);
+    if (s.maxPrice > 0) {
+      setMaxPriceFilter(s.maxPrice);
+    } else {
+      setMaxPriceFilter(0);
+    }
+    setMinRating(s.minRating);
+    setDateFrom(s.dateFrom);
+    setDateTo(s.dateTo);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (urlSyncReady.current) return;
+    applyUrlToState(new URLSearchParams(window.location.search));
+    urlSyncReady.current = true;
+    setUrlHydrationDone(true);
+  }, [applyUrlToState]);
+
+  useEffect(() => {
+    if (!urlSyncReady.current) return;
+    if (ignoreUrlParse.current > 0) {
+      ignoreUrlParse.current -= 1;
+      return;
+    }
+    if (skipSearchParamsEffectOnce.current) {
+      skipSearchParamsEffectOnce.current = false;
+      return;
+    }
+    applyUrlToState(new URLSearchParams(searchParams));
+  }, [searchParams, applyUrlToState]);
+
+  const { data: priceBoundsRes } = useQuery({
+    queryKey: ["experiences", "catalog-price-bounds"],
+    queryFn: () => experiencesService.getCatalogPriceBounds(),
+    staleTime: 5 * 60_000,
   });
 
-  const allExperiences = queryData?.data.data.data ?? [];
+  const catalogMaxPrice = priceBoundsRes?.data?.data?.data?.maxPrice ?? 10_000;
+  const CATALOG_MAX = catalogMaxPrice > 0 ? catalogMaxPrice : 10_000;
 
-  /* derive MAX_PRICE from fetched data (fallback 10000) */
-  const MAX_PRICE = useMemo(
-    () => (allExperiences.length > 0 ? Math.max(...allExperiences.map((e) => e.price)) : 10000),
-    [allExperiences]
+  /* initialise max price filter from server bounds */
+  useEffect(() => {
+    if (CATALOG_MAX > 0 && maxPriceFilter === 0) {
+      setMaxPriceFilter(CATALOG_MAX);
+    }
+  }, [CATALOG_MAX, maxPriceFilter]);
+
+  /* Keep the address bar in sync (shareable links) without fighting router updates. */
+  useEffect(() => {
+    if (!urlSyncReady.current) return;
+    const next = serializeExperiencesUrl(
+      {
+        page,
+        sortBy,
+        locationQ,
+        minPrice,
+        maxPrice: maxPriceFilter,
+        minRating,
+        dateFrom,
+        dateTo,
+      },
+      CATALOG_MAX,
+    );
+    if (experienceUrlStringEquals(next, new URLSearchParams(searchParams)))
+      return;
+    ignoreUrlParse.current += 1;
+    setSearchParams(next, { replace: true });
+  }, [
+    page,
+    sortBy,
+    locationQ,
+    minPrice,
+    maxPriceFilter,
+    minRating,
+    dateFrom,
+    dateTo,
+    CATALOG_MAX,
+    setSearchParams,
+    searchParams,
+  ]);
+
+  const listParams = useMemo(
+    () =>
+      buildExperiencesBrowseParams({
+        page,
+        limit: PAGE_SIZE,
+        sortBy,
+        locationQ,
+        minPrice,
+        maxPriceFilter,
+        catalogMaxPrice: CATALOG_MAX,
+        minRating,
+        dateFrom,
+        dateTo,
+      }),
+    [
+      page,
+      sortBy,
+      locationQ,
+      minPrice,
+      maxPriceFilter,
+      CATALOG_MAX,
+      minRating,
+      dateFrom,
+      dateTo,
+    ],
   );
 
-  /* initialise maxPriceFilter once data arrives */
-  useEffect(() => {
-    if (allExperiences.length > 0 && maxPriceFilter === 0) {
-      setMaxPriceFilter(MAX_PRICE);
-    }
-  }, [MAX_PRICE, allExperiences.length, maxPriceFilter]);
+  const { data: listRes, isLoading, isPlaceholderData } = useQuery({
+    queryKey: ["experiences", "browse", listParams] as const,
+    queryFn: () => experiencesService.getAll(listParams),
+    placeholderData: keepPreviousData,
+    enabled: urlHydrationDone,
+  });
+
+  const listBody = listRes?.data;
+  const totalCount = listBody?.results ?? 0;
+  const pageItems = listBody?.data?.data ?? [];
 
   /* active filter flags */
   const locationActive = locationQ.trim() !== "";
-  const priceActive    = minPrice > 0 || (maxPriceFilter > 0 && maxPriceFilter < MAX_PRICE);
-  const ratingActive   = minRating > 0;
-  const dateActive     = dateFrom !== "" || dateTo !== "";
+  const priceActive = minPrice > 0 || (maxPriceFilter > 0 && maxPriceFilter < CATALOG_MAX);
+  const ratingActive = minRating > 0;
+  const dateActive = dateFrom !== "" || dateTo !== "";
+  const anyActive = locationActive || priceActive || ratingActive || dateActive;
+  const showSummaryBar = anyActive;
+  const narrowFiltersCount = [locationActive, priceActive, ratingActive, dateActive].filter(Boolean).length;
 
-  const clearAll = () => {
+  const clearAll = useCallback(() => {
     setLocationQ("");
     setMinPrice(0);
-    setMaxPriceFilter(MAX_PRICE);
+    setMaxPriceFilter(CATALOG_MAX);
     setMinRating(0);
     setDateFrom("");
     setDateTo("");
-    setHideSoldOut(false);
     setPage(1);
-  };
-  const anyActive = locationActive || priceActive || ratingActive || dateActive;
-  const showSummaryBar = anyActive || hideSoldOut;
-  const narrowFiltersCount = [locationActive, priceActive, ratingActive, dateActive].filter(Boolean).length;
+  }, [CATALOG_MAX]);
 
-  /* filter + sort */
-  const filtered = allExperiences
-    .filter((e) => {
-      if (hideSoldOut && e.isSoldOut === true) return false;
-      if (locationActive && !e.location.toLowerCase().includes(locationQ.toLowerCase())) return false;
-      if (e.price < minPrice) return false;
-      if (maxPriceFilter > 0 && e.price > maxPriceFilter) return false;
-      if (e.ratingsAverage < minRating) return false;
-      if (dateActive && !occurrenceInDateRange(e.nextOccurrenceAt, dateFrom, dateTo)) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === "Highest Rating")     return b.ratingsAverage - a.ratingsAverage;
-      if (sortBy === "Price: Low to High") return a.price - b.price;
-      if (sortBy === "Price: High to Low") return b.price - a.price;
-      if (sortBy === "Soonest occurrence") {
-        const ta = a.nextOccurrenceAt ? new Date(a.nextOccurrenceAt).getTime() : Number.POSITIVE_INFINITY;
-        const tb = b.nextOccurrenceAt ? new Date(b.nextOccurrenceAt).getTime() : Number.POSITIVE_INFINITY;
-        return ta - tb;
-      }
-      return 0;
-    });
-
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const pageItems  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
+  useEffect(() => {
+    if (totalCount <= 0) return;
+    if (page > 1) {
+      const maxPage = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+      if (page > maxPage) setPage(maxPage);
+    }
+  }, [page, totalCount]);
+  const showListSkeletons =
+    !urlHydrationDone || (isLoading && !isPlaceholderData);
+  const noMatches = !showListSkeletons && totalCount === 0;
+  const unfilteredEmpty = noMatches && !anyActive;
 
   const pageNumbers = (): (number | "...")[] => {
     if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -353,21 +453,6 @@ const Experiences = () => {
 
           {showSummaryBar ? (
             <div className="mt-4 flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
-              {hideSoldOut ? (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-[10px] text-primary">
-                  Available only
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHideSoldOut(false);
-                      setPage(1);
-                    }}
-                    aria-label="Show sold out experiences"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </span>
-              ) : null}
               {locationActive ? (
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-[10px] text-primary">
                   📍 {locationQ}
@@ -383,7 +468,7 @@ const Experiences = () => {
                     type="button"
                     onClick={() => {
                       setMinPrice(0);
-                      setMaxPriceFilter(MAX_PRICE);
+                      setMaxPriceFilter(CATALOG_MAX);
                     }}
                   >
                     <X className="h-2.5 w-2.5" />
@@ -413,7 +498,7 @@ const Experiences = () => {
                 </span>
               ) : null}
               <span className="ml-1 shrink-0 self-center text-[10px] text-on-surface-variant">
-                {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+                {totalCount} result{totalCount !== 1 ? "s" : ""}
               </span>
             </div>
           ) : null}
@@ -473,7 +558,7 @@ const Experiences = () => {
                     <input
                       type="number"
                       min={minPrice}
-                      max={MAX_PRICE}
+                      max={CATALOG_MAX}
                       value={maxPriceFilter}
                       onChange={(e) => {
                         setMaxPriceFilter(Number(e.target.value));
@@ -545,26 +630,6 @@ const Experiences = () => {
               </div>
               <div>
                 <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                  Availability
-                </p>
-                <label className="flex cursor-pointer items-center gap-3 text-sm text-on-surface">
-                  <input
-                    type="checkbox"
-                    className="rounded border-outline-variant"
-                    checked={hideSoldOut}
-                    onChange={(e) => {
-                      setHideSoldOut(e.target.checked);
-                      setPage(1);
-                    }}
-                  />
-                  Hide sold out
-                </label>
-                <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">
-                  Hides experiences where all guest spots are already booked.
-                </p>
-              </div>
-              <div>
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
                   Sort
                 </p>
                 <div className="flex flex-col gap-1">
@@ -597,7 +662,7 @@ const Experiences = () => {
                 className="min-w-0 flex-1 font-headline font-bold"
                 onClick={() => setFiltersOpen(false)}
               >
-                Show {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+                Show {totalCount} result{totalCount !== 1 ? "s" : ""}
               </Button>
             </div>
           </SheetContent>
@@ -605,24 +670,19 @@ const Experiences = () => {
 
         {/* ── Card grid ── */}
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-          {isLoading
+          {showListSkeletons
             ? Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)
             : pageItems.map((exp) => <ExperienceBrowseCard key={exp._id} exp={exp} />)}
         </div>
 
         {/* Empty state */}
-        {!isLoading && filtered.length === 0 && (
+        {noMatches && (
           <div className="py-20 text-center">
             <p className="text-on-surface-variant text-sm mb-3">
-              {allExperiences.length === 0
+              {unfilteredEmpty
                 ? "No experiences are currently scheduled. Check back soon!"
                 : "No experiences match your filters."}
             </p>
-            {allExperiences.length > 0 && hideSoldOut && !anyActive && (
-              <p className="text-on-surface-variant text-xs mb-2 max-w-sm mx-auto">
-                Everything visible is currently sold out. Turn off &quot;Hide sold out&quot; under Availability to see those listings.
-              </p>
-            )}
             {showSummaryBar && (
               <button onClick={clearAll} className="text-xs font-bold text-primary hover:underline">
                 Clear filters

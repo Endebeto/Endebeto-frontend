@@ -111,7 +111,6 @@ export default function HostDashboard() {
   return (
     <HostLayout
       hostName={user?.name ?? "Host"}
-      hostInitials={(user?.name ?? "H").slice(0, 2).toUpperCase()}
       hostTitle="Host"
     >
       <main className="p-4 md:p-10 max-w-[1440px]">

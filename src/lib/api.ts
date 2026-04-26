@@ -25,10 +25,14 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     // Log only to our dev-only logger — production builds silence it.
-    logger.error("[api]", error?.config?.url, error?.response?.status);
+    const status = error.response?.status;
+    const url = error.config?.url ?? "";
+    const isSessionProbe401 = status === 401 && url.includes("/users/me");
+    if (!isSessionProbe401) {
+      logger.error("[api]", url, status);
+    }
 
-    if (error.response?.status === 401) {
-      const url = error.config?.url ?? "";
+    if (status === 401) {
       // Wrong current password returns 401 — don't force logout on Profile
       if (url.includes("/users/updateMyPassword")) {
         return Promise.reject(decorateError(error));

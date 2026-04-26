@@ -26,6 +26,8 @@ const DestinationCard = ({
           src={image}
           alt={title}
           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          loading="lazy"
+          decoding="async"
         />
 
         {/* Location pin button — top right */}

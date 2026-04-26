@@ -184,6 +184,14 @@ const Index = () => {
     return () => clearInterval(timer);
   }, []);
 
+  /** Warm the next slide so auto-advance doesn’t wait on the network. */
+  useEffect(() => {
+    const next = (current + 1) % heroSlides.length;
+    const url = heroSlides[next].image;
+    const im = new Image();
+    im.src = url;
+  }, [current]);
+
   // scroll reveal refs
   const howRef = useScrollReveal<HTMLDivElement>(0.1);
   const whyLeft = useScrollReveal<HTMLDivElement>(0.15);
@@ -199,22 +207,20 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* ── Hero Slider ── */}
+      {/* ── Hero: single active image (avoids loading/decoding 4 full-bleed photos on every visit) ── */}
       <section className="relative overflow-hidden">
-        {heroSlides.map((slide, i) => (
-          <div
-            key={i}
-            className={`absolute inset-0 transition-opacity duration-1000 ${
-              i === current ? "opacity-100" : "opacity-0 pointer-events-none"
-            }`}
-          >
-            <img
-              src={slide.image}
-              alt={slide.title}
-              className="h-full w-full object-cover object-[center_30%] md:object-center"
-            />
-          </div>
-        ))}
+        <div className="absolute inset-0 bg-slate-900" aria-hidden />
+        <div className="absolute inset-0">
+          <img
+            src={heroSlides[current].image}
+            alt={heroSlides[current].title}
+            className="h-full w-full object-cover object-[center_30%] md:object-center transition-opacity duration-1000"
+            fetchPriority="high"
+            loading="eager"
+            decoding="async"
+            sizes="100vw"
+          />
+        </div>
 
         {/* Dark overlay */}
         <div className="absolute inset-0 bg-black/55" />
@@ -313,6 +319,8 @@ const Index = () => {
                     src="/imgs/why-you-choose-us-4.jpg"
                     alt="Ethiopian highlands landscape"
                     className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
                 <div className="h-64 rounded-2xl overflow-hidden shadow-lg">
@@ -320,6 +328,8 @@ const Index = () => {
                     src="/imgs/why-you-choose-us-3.jpg"
                     alt="Ethiopian heritage and scenery"
                     className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
               </div>
@@ -329,6 +339,8 @@ const Index = () => {
                     src="/imgs/why-you-choose-us.jpg"
                     alt="Traditional dance and culture"
                     className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
                 <div className="h-48 rounded-2xl overflow-hidden shadow-lg">
@@ -336,6 +348,8 @@ const Index = () => {
                     src="/imgs/why-you-choose-us-2.jpg"
                     alt="Ethiopian travel destination"
                     className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
               </div>
@@ -526,6 +540,9 @@ const Index = () => {
                 src={ctaBg}
                 alt=""
                 className="w-full h-full object-cover opacity-40"
+                loading="lazy"
+                decoding="async"
+                fetchPriority="low"
               />
               <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary/60 to-black/70" />
             </div>
