@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import heroHighlands from "@/assets/hero-highlands.jpg";
+import authSideImage from "@/assets/hero-highlands.jpg";
 import { useAuth } from "@/context/AuthContext";
 import { getStoredRef } from "@/lib/referral";
 import { getFriendlyErrorMessage } from "@/lib/errors";
@@ -60,8 +60,18 @@ const Signup = () => {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
+      {/* ── Side image (left on desktop) ── */}
+      <div className="hidden lg:block relative min-h-0">
+        <img src={authSideImage} alt="Ethiopian highlands landscape" className="h-full min-h-screen w-full object-cover" />
+        <div className="absolute inset-0 bg-primary/50" />
+        <div className="absolute bottom-12 left-10 right-10">
+          <p className="font-headline font-bold text-xl text-white leading-snug">
+            "Every journey begins with a single step into the unknown."
+          </p>
+        </div>
+      </div>
 
-      {/* ── Form ── */}
+      {/* ── Form (right on desktop) ── */}
       <div className="flex flex-col justify-center px-8 py-12 lg:px-16 bg-background">
         <Link to="/" className="font-headline text-xl font-black tracking-tighter text-primary">
           Endebeto
@@ -210,18 +220,6 @@ const Signup = () => {
               Sign in
             </Link>
           </p>
-        </div>
-      </div>
-
-      {/* ── Side image ── */}
-      <div className="hidden lg:block relative">
-        <img src={heroHighlands} alt="Ethiopian highlands" className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-primary/50" />
-        <div className="absolute bottom-12 left-10 right-10">
-          <p className="font-headline font-bold text-xl text-white leading-snug">
-            "Every journey begins with a single step into the unknown."
-          </p>
-          <p className="mt-3 text-sm text-white/70">— Ethiopian Proverb</p>
         </div>
       </div>
     </div>

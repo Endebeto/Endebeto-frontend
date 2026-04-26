@@ -1,348 +1,426 @@
 import { Link } from "react-router-dom";
 import {
-  ArrowRight, Star, TrendingUp, Shield, Users, Clock, Globe,
-  CheckCircle2, Camera, Banknote, HeartHandshake,
+  ArrowRight,
+  TrendingUp,
+  CheckCircle2,
+  Landmark,
+  UsersRound,
+  Wallet,
+  PenLine,
+  DoorOpen,
+  Quote,
+  PlayCircle,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-import TestimonialSlider from "@/components/TestimonialSlider";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-/* ─── static data ─────────────────────────────────── */
 const benefits = [
   {
-    icon: Banknote,
-    title: "Earn on Your Terms",
-    desc: "Set your own price, schedule, and capacity. Our transparent payout system deposits earnings straight to your bank — no hidden fees.",
-    color: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+    icon: Landmark,
+    title: "Legacy building",
+    desc: "Ensure your family's history and architectural treasures are maintained through sustainable cultural tourism.",
+    offset: false,
   },
   {
-    icon: Globe,
-    title: "Reach Global Travelers",
-    desc: "Your experience gets listed in front of thousands of curated travelers actively seeking authentic Ethiopian culture and adventures.",
-    color: "bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+    icon: UsersRound,
+    title: "Global connection",
+    desc: "Connect with discerning travelers who seek depth, respect, and authentic cultural exchange over standard luxury.",
+    offset: true,
   },
   {
-    icon: Shield,
-    title: "Host with Confidence",
-    desc: "Every booking is backed by our booking protection policy, secure payments via Chapa, and dedicated host support.",
-    color: "bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
-  },
-  {
-    icon: HeartHandshake,
-    title: "Join a Community",
-    desc: "Connect with fellow hosts, share insights, and get tips from Endebeto's growing host community across Ethiopia.",
-    color: "bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
+    icon: Wallet,
+    title: "Financial autonomy",
+    desc: "Turn your heritage into a sustainable income stream, allowing for the restoration and upkeep of your ancestral property.",
+    offset: false,
   },
 ];
 
-const steps = [
+const chapters = [
   {
-    number: "01",
-    title: "Create Your Profile",
-    desc: "Tell us about yourself — your background, languages, and the kind of experiences you love sharing.",
+    kicker: "Chapter one",
+    title: "The calling",
+    body: "Document your story. List your space by detailing its history, its architectural soul, and the cultural experiences you can offer, from coffee ceremonies to mountain treks.",
+    hint: "Create your heritage listing",
+    hintIcon: PenLine,
+    image: "/imgs/chapter1-host.jpg",
+    imageAlt: "Ethiopian coffee roasting",
+    imageOnRight: true,
   },
   {
-    number: "02",
-    title: "Describe Your Experience",
-    desc: "Add photos, write a compelling description, set your price and availability. We'll guide you every step.",
+    kicker: "Chapter two",
+    title: "The gathering",
+    body: "Welcome guests not as tourists, but as students of your culture. Share the warmth of Ethiopian hospitality and let your home become a bridge between worlds.",
+    hint: "Welcome your first guests",
+    hintIcon: DoorOpen,
+    image: "/imgs/chapter2-host.jpg",
+    imageAlt: "Ethiopian hospitality",
+    imageOnRight: false,
   },
   {
-    number: "03",
-    title: "Get Approved & Earn",
-    desc: "Our team reviews your listing for quality and authenticity. Once approved, start welcoming guests and earning.",
-  },
-];
-
-const testimonials = [
-  {
-    name: "Selamawit T.",
-    sub: "Lalibela, Amhara",
-    quote: "I started hosting coffee ceremonies two years ago. Now it's my main income — and I've met incredible people from all over the world.",
-    initials: "ST",
-    rating: 5,
-  },
-  {
-    name: "Dawit M.",
-    sub: "Addis Ababa",
-    quote: "Endebeto gave me the platform to turn my passion for Ethiopian history into a real business. The application process was smooth and the support team is always there.",
-    initials: "DM",
-    rating: 5,
-  },
-  {
-    name: "Tigist H.",
-    sub: "Gondar, Amhara",
-    quote: "What I love most is the freedom. I set my schedule, my prices, and I get to share the culture I'm proud of with visitors who truly appreciate it.",
-    initials: "TH",
-    rating: 5,
-  },
-  {
-    name: "Biruk A.",
-    sub: "Awash, Afar",
-    quote: "Within three months of joining Endebeto I was fully booked every weekend. The platform handles payments so I can focus entirely on my guests.",
-    initials: "BA",
-    rating: 5,
+    kicker: "Chapter three",
+    title: "The legacy",
+    body: "Receive secure payments that support your community and your heritage. Every stay contributes to the preservation of the culture you represent.",
+    hint: "Build your sustainable legacy",
+    hintIcon: Wallet,
+    image: "/imgs/chapter3-host.jpg",
+    imageAlt: "Traditional clothes",
+    imageOnRight: true,
   },
 ];
 
-/* ─── component ───────────────────────────────────── */
+/* ─── page ─────────────────────────────────────────── */
 export default function BecomeHost() {
-  const { ref: revealRef } = useScrollReveal();
+  const benefitsReveal = useScrollReveal<HTMLDivElement>(0.12);
+  const journeyReveal = useScrollReveal<HTMLDivElement>(0.1);
+  const earningsReveal = useScrollReveal<HTMLDivElement>(0.12);
+  const quoteReveal = useScrollReveal<HTMLDivElement>(0.12);
+  const finalReveal = useScrollReveal<HTMLDivElement>(0.12);
 
   return (
-    <div className="min-h-screen bg-surface dark:bg-zinc-950 font-body">
+    <div className="min-h-screen bg-background font-body">
       <Navbar />
 
-      {/* ── Hero ─────────────────────────────────────── */}
-      <section className="relative min-h-[92vh] flex items-center overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/imgs/lalibela-church.jpg')" }}
-        />
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary/50 to-black/80" />
-        <div className="absolute inset-0 shadow-[inset_0_0_120px_rgba(0,0,0,0.6)]" />
-
-        {/* decorative circles */}
-        <div className="absolute top-20 right-20 w-80 h-80 rounded-full opacity-10 border-[40px] border-white hidden lg:block" />
-        <div className="absolute bottom-20 right-40 w-48 h-48 rounded-full opacity-10 border-[24px] border-white hidden lg:block" />
-
-        <div className="relative max-w-7xl mx-auto px-6 py-20 md:py-32 grid lg:grid-cols-2 gap-12 items-center">
-          {/* left copy */}
-          <div>
-            <span className="inline-flex items-center gap-2 bg-white/15 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-6 backdrop-blur-sm">
-              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-              Become an Endebeto Host
-            </span>
-            <h1 className="font-headline font-extrabold text-4xl md:text-5xl lg:text-6xl text-white leading-tight mb-6">
-              Share Ethiopia's Magic.<br />
-              <span className="text-amber-300">Earn Doing It.</span>
-            </h1>
-            <p className="text-white/80 text-lg leading-relaxed mb-10 max-w-lg">
-              Turn your local knowledge, culture, and passion into a thriving experience business. Join hundreds of Ethiopian hosts already welcoming guests from around the world.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <Link
-                to="/host/apply"
-                className="inline-flex items-center gap-2 bg-white text-primary font-semibold px-8 py-3.5 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
-              >
-                Apply Now — It's Free
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a
-                href="#how-it-works"
-                className="inline-flex items-center gap-2 bg-white/15 text-white font-medium px-8 py-3.5 rounded-xl backdrop-blur-sm hover:bg-white/25 transition-all duration-200"
-              >
-                Learn More
-              </a>
-            </div>
-          </div>
-
-          {/* right stats card */}
-          <div className="hidden lg:flex justify-end">
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 w-80 shadow-2xl">
-              <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-6">Host Highlights</p>
-              {[
-                { label: "Average monthly earnings", value: "ETB 18,400" },
-                { label: "Active hosts on platform", value: "340+" },
-                { label: "Countries guests travel from", value: "52" },
-                { label: "Average host rating", value: "4.8 ★" },
-              ].map((item) => (
-                <div key={item.label} className="flex justify-between items-center py-3 border-b border-white/10 last:border-0">
-                  <span className="text-white/70 text-sm">{item.label}</span>
-                  <span className="text-white font-bold text-sm">{item.value}</span>
-                </div>
-              ))}
-              <Link
-                to="/host/apply"
-                className="mt-6 flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-300 text-primary font-bold text-sm px-6 py-3 rounded-xl transition-colors w-full"
-              >
-                Start Your Application
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Benefits ──────────────────────────────────── */}
-      <section ref={revealRef} className="py-24 bg-white dark:bg-zinc-900">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16 reveal-item">
-            <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Why Host With Us</p>
-            <h2 className="font-headline font-extrabold text-3xl md:text-4xl text-on-surface dark:text-white">
-              Everything you need to succeed
-            </h2>
-            <p className="text-on-surface-variant dark:text-zinc-400 mt-3 max-w-xl mx-auto">
-              We've built the tools, trust, and community so you can focus on what matters — creating unforgettable experiences.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {benefits.map((b, i) => (
-              <div
-                key={b.title}
-                className="reveal-item bg-surface dark:bg-zinc-800 rounded-2xl p-6 border border-outline-variant/30 dark:border-zinc-700 hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
-                style={{ transitionDelay: `${i * 80}ms` }}
-              >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${b.color}`}>
-                  <b.icon className="h-5 w-5" />
-                </div>
-                <h3 className="font-headline font-bold text-base text-on-surface dark:text-white mb-2">{b.title}</h3>
-                <p className="text-on-surface-variant dark:text-zinc-400 text-sm leading-relaxed">{b.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── How It Works ──────────────────────────────── */}
-      <section id="how-it-works" ref={revealRef} className="py-24 bg-surface dark:bg-zinc-950">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-16 reveal-item">
-            <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">The Process</p>
-            <h2 className="font-headline font-extrabold text-3xl md:text-4xl text-on-surface dark:text-white">
-              Up and running in 3 steps
-            </h2>
-          </div>
-
-          <div className="relative">
-            {/* connector line */}
-            <div className="hidden md:block absolute top-10 left-[calc(16.67%+1.5rem)] right-[calc(16.67%+1.5rem)] h-0.5 bg-outline-variant/40 dark:bg-zinc-700" />
-
-            <div className="grid md:grid-cols-3 gap-10">
-              {steps.map((s, i) => (
-                <div
-                  key={s.number}
-                  className="reveal-item text-center relative"
-                  style={{ transitionDelay: `${i * 120}ms` }}
+      <main className="become-host-parchment pt-[var(--header-stack)]">
+        {/* ── Hero: curated gallery ───────────────────── */}
+        <section className="mx-auto max-w-[1280px] px-6 pb-16 pt-0 md:px-12 md:pb-24 md:pt-0 lg:px-16">
+          <div className="grid grid-cols-12 items-center gap-8 lg:gap-10 pt-0">
+            <div className="z-10 col-span-12 lg:col-span-5">
+              <span className="mb-6 block font-headline text-sm font-semibold uppercase tracking-[0.2em] text-accent">
+                Become a curator
+              </span>
+              <h1 className="mb-8 font-headline text-4xl font-bold leading-[1.1] tracking-tight text-primary md:text-5xl lg:text-6xl">
+                Host a story,
+                <br />
+                preserve a{" "}
+                <span className="italic text-primary-container dark:text-primary">
+                  legacy
+                </span>
+                .
+              </h1>
+              <p className="mb-12 max-w-md text-lg leading-relaxed text-muted-foreground">
+                Open your doors to the world and become a guardian of
+                Ethiopia&apos;s timeless traditions. Your home is more than a
+                stay, it&apos;s a chapter of history waiting to be shared.
+              </p>
+              <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
+                <Button
+                  asChild
+                  className="h-auto rounded-2xl bg-primary-container px-10 py-5 font-headline text-base font-semibold text-white shadow-lg transition-all hover:brightness-110"
                 >
-                  <div className="w-20 h-20 rounded-full bg-primary text-white font-headline font-extrabold text-2xl flex items-center justify-center mx-auto mb-6 shadow-lg relative z-10">
-                    {s.number}
+                  <Link to="/host/apply">
+                    Begin your journey
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <a
+                  href="#curator-journey"
+                  className="group inline-flex cursor-pointer items-center gap-2 font-headline text-sm font-semibold text-primary"
+                >
+                  <PlayCircle className="h-6 w-6 transition-transform group-hover:translate-x-0.5" />
+                  Watch the story
+                </a>
+              </div>
+            </div>
+
+            <div className="relative col-span-12 lg:col-span-7">
+              <div className="grid grid-cols-2 items-end gap-6">
+                <div className="space-y-6">
+                  <div className="h-[280px] overflow-hidden rounded-2xl sm:h-[340px] lg:h-[400px] become-host-asymmetric-shadow">
+                    <img
+                      src="/imgs/host-hero1.jpg"
+                      alt="Axum ancient city"
+                      className="h-full w-full object-cover"
+                    />
                   </div>
-                  <h3 className="font-headline font-bold text-lg text-on-surface dark:text-white mb-3">{s.title}</h3>
-                  <p className="text-on-surface-variant dark:text-zinc-400 text-sm leading-relaxed">{s.desc}</p>
+                  <div className="rounded-2xl bg-primary-container p-6 text-white md:p-8">
+                    <h3 className="mb-2 font-headline text-3xl font-bold text-primary-foreground md:text-4xl">
+                      3.2k+
+                    </h3>
+                    <p className="font-headline text-sm font-semibold uppercase tracking-wide text-on-primary-container">
+                      Heritage hosts sharing stories across the highlands.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-6 pt-8 lg:pt-12">
+                  <div className="h-[360px] overflow-hidden rounded-2xl sm:h-[420px] lg:h-[500px] become-host-asymmetric-shadow">
+                    <img
+                      src="/imgs/host-hero2.jpg"
+                      alt="Basket weaving in Ethiopia"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="h-[200px] overflow-hidden rounded-2xl sm:h-[220px] lg:h-[250px] become-host-asymmetric-shadow">
+                    <img
+                      src="/imgs/host-hero3.jpg"
+                      alt="Harar old city"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Benefits: cultural guardianship ───────────── */}
+        <section className="overflow-hidden bg-surface-container py-16 dark:bg-zinc-900/50 md:py-20">
+          <div className="mx-auto max-w-[1280px] px-6 md:px-12 lg:px-16">
+            <div
+              ref={benefitsReveal.ref}
+              className={cn(
+                "mb-12 flex flex-col items-end justify-between gap-8 md:mb-14 md:flex-row",
+                "reveal",
+                benefitsReveal.isVisible && "visible",
+              )}
+            >
+              <div className="max-w-2xl">
+                <h2 className="mb-6 font-headline text-3xl font-bold leading-tight text-primary md:text-4xl lg:text-[2.5rem] lg:leading-[3rem]">
+                  Beyond hospitality:
+                  <br />
+                  cultural guardianship
+                </h2>
+                <p className="text-lg leading-relaxed text-muted-foreground">
+                  Hosting on Endebeto isn&apos;t just about space. It&apos;s
+                  about the preservation of the soul. We empower you to protect
+                  and promote the heritage that makes your offering unique.
+                </p>
+              </div>
+              <div className="hidden pb-2 md:block">
+                <span className="font-headline text-6xl font-bold text-muted-foreground/40 lg:text-7xl">
+                  01
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-10">
+              {benefits.map((b) => (
+                <div
+                  key={b.title}
+                  className={cn(
+                    "group rounded-2xl border border-outline-variant/25 bg-card p-8 transition-all hover:shadow-xl dark:border-zinc-700 dark:bg-zinc-950 md:p-10",
+                    b.offset && "md:translate-y-8",
+                  )}
+                >
+                  <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-container transition-colors group-hover:bg-primary-container group-hover:text-primary-foreground dark:bg-zinc-800">
+                    <b.icon className="h-7 w-7 text-primary group-hover:text-primary-foreground" />
+                  </div>
+                  <h3 className="mb-4 font-headline text-2xl font-semibold text-primary md:text-[1.75rem]">
+                    {b.title}
+                  </h3>
+                  <p className="leading-relaxed text-muted-foreground">
+                    {b.desc}
+                  </p>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Earnings Highlight ────────────────────────── */}
-      <section ref={revealRef} className="py-24 bg-primary">
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
-          <div className="reveal-item">
-            <p className="text-white/60 text-xs font-bold uppercase tracking-widest mb-3">Earning Potential</p>
-            <h2 className="font-headline font-extrabold text-2xl md:text-4xl text-white mb-6">
-              Hosts earn an average of<br />
-              <span className="text-amber-300">ETB 18,400 / month</span>
-            </h2>
-            <p className="text-white/70 text-base leading-relaxed mb-8">
-              Your earnings depend on your experience type, price, and availability. Hosts who list unique, high-quality experiences consistently outperform the average.
-            </p>
-            <ul className="space-y-3">
+        {/* ── Earning potential (existing product content) ─ */}
+        <section
+          ref={earningsReveal.ref}
+          className={cn(
+            "bg-primary py-16 md:py-20",
+            "reveal",
+            earningsReveal.isVisible && "visible",
+          )}
+        >
+          <div className="mx-auto grid max-w-[1280px] items-center gap-12 px-6 lg:grid-cols-2 md:px-12 lg:px-16">
+            <div className="text-primary-foreground">
+              <p className="mb-3 text-sm font-bold uppercase tracking-widest text-primary-foreground">
+                Earning potential
+              </p>
+              <h2 className="mb-6 font-headline text-2xl font-bold md:text-4xl">
+                Hosts earn an average of
+                <br />
+                <span className="text-accent">ETB 18,400 / month</span>
+              </h2>
+              <p className="mb-8 text-base leading-relaxed text-primary-foreground/90">
+                Your earnings depend on your experience type, price, and
+                availability. Hosts who list unique, high-quality experiences
+                consistently outperform the average.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  "You keep 85% of every booking",
+                  "Instant ETB payouts to any Ethiopian bank",
+                  "No monthly fees, only a small platform commission",
+                  "Earn from every guest spot, not just one booking",
+                ].map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-3 text-sm text-primary-foreground"
+                  >
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               {[
-                "You keep 85% of every booking",
-                "Instant ETB payouts to any Ethiopian bank",
-                "No monthly fees — only a small platform commission",
-                "Earn from every guest spot, not just one booking",
+                { label: "Coffee ceremony host", earning: "ETB 8,000–15,000" },
+                { label: "Cultural walk host", earning: "ETB 12,000–22,000" },
+                { label: "Adventure trek host", earning: "ETB 20,000–50,000" },
+                { label: "Cooking class host", earning: "ETB 6,000–12,000" },
               ].map((item) => (
-                <li key={item} className="flex items-start gap-3 text-white/85 text-sm">
-                  <CheckCircle2 className="h-4 w-4 text-amber-300 mt-0.5 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="reveal-item grid grid-cols-2 gap-4">
-            {[
-              { label: "Coffee Ceremony Host", earning: "ETB 8,000–15,000" },
-              { label: "Cultural Walk Host", earning: "ETB 12,000–22,000" },
-              { label: "Adventure Trek Host", earning: "ETB 20,000–50,000" },
-              { label: "Cooking Class Host", earning: "ETB 6,000–12,000" },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="bg-white/10 border border-white/15 rounded-2xl p-5 backdrop-blur-sm hover:bg-white/15 transition-colors"
-              >
-                <TrendingUp className="h-5 w-5 text-amber-300 mb-3" />
-                <p className="text-white text-sm font-semibold mb-1">{item.label}</p>
-                <p className="text-amber-300 font-bold text-xs">{item.earning}</p>
-                <p className="text-white/50 text-[10px] mt-1">per month (est.)</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Testimonials ──────────────────────────────── */}
-      <section ref={revealRef} className="py-24 bg-white dark:bg-zinc-900">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-14 reveal-item">
-            <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Host Stories</p>
-            <h2 className="font-headline font-extrabold text-3xl md:text-4xl text-on-surface dark:text-white">
-              Hear from our hosts
-            </h2>
-          </div>
-          <TestimonialSlider testimonials={testimonials} duration={28} sectionBg="bg-white dark:bg-zinc-900" />
-        </div>
-      </section>
-
-      {/* ── Requirements ──────────────────────────────── */}
-      <section ref={revealRef} className="py-20 bg-surface dark:bg-zinc-950">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <div className="reveal-item">
-            <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Requirements</p>
-            <h2 className="font-headline font-extrabold text-3xl text-on-surface dark:text-white mb-4">
-              What you'll need to apply
-            </h2>
-            <p className="text-on-surface-variant dark:text-zinc-400 text-base mb-10">
-              Our verification process ensures quality and safety for both hosts and guests.
-            </p>
-          </div>
-          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { icon: Users, label: "Valid Ethiopian National ID" },
-              { icon: Camera, label: "Photos of your hosting space" },
-              { icon: Clock, label: "Ability to host consistently" },
-              { icon: Globe, label: "Basic English communication" },
-            ].map((r, i) => (
-              <div
-                key={r.label}
-                className="reveal-item bg-white dark:bg-zinc-800 rounded-xl p-5 text-center border border-outline-variant/30 dark:border-zinc-700"
-                style={{ transitionDelay: `${i * 80}ms` }}
-              >
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3">
-                  <r.icon className="h-4 w-4" />
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-white/25 bg-white/15 p-5 text-primary-foreground backdrop-blur-sm transition-colors hover:bg-white/20 dark:border-primary-foreground/30 dark:bg-primary-foreground/12 dark:hover:bg-primary-foreground/18"
+                >
+                  <TrendingUp className="mb-3 h-5 w-5 text-accent" />
+                  <p className="mb-1 text-sm font-semibold leading-snug text-primary-foreground">
+                    {item.label}
+                  </p>
+                  <p className="text-sm font-bold text-accent">
+                    {item.earning}
+                  </p>
+                  <p className="mt-1.5 text-xs text-primary-foreground/80 dark:text-primary-foreground/90">
+                    per month (est.)
+                  </p>
                 </div>
-                <p className="text-sm font-semibold text-on-surface dark:text-white">{r.label}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Final CTA ─────────────────────────────────── */}
-      <section className="py-24 bg-primary/5 dark:bg-zinc-900 border-t border-outline-variant/20 dark:border-zinc-800">
-        <div className="max-w-2xl mx-auto px-6 text-center">
-          <h2 className="font-headline font-extrabold text-3xl md:text-4xl text-on-surface dark:text-white mb-4">
-            Ready to start your hosting journey?
-          </h2>
-          <p className="text-on-surface-variant dark:text-zinc-400 text-base mb-8">
-            Join Ethiopia's fastest-growing experience platform. Application takes about 10 minutes.
-          </p>
-          <Link
-            to="/host/apply"
-            className="inline-flex items-center gap-2 bg-primary text-white font-semibold px-10 py-4 rounded-xl shadow-lg hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-xl transition-all duration-200 text-base"
+        {/* ── Curator's journey (3 chapters) ──────────── */}
+        <section id="curator-journey" className="py-16 md:py-20">
+          <div className="mx-auto max-w-[1280px] px-6 md:px-12 lg:px-16">
+            <div
+              ref={journeyReveal.ref}
+              className={cn(
+                "mb-16 text-center",
+                "reveal",
+                journeyReveal.isVisible && "visible",
+              )}
+            >
+              <h2 className="mb-4 font-headline text-3xl font-bold text-primary md:text-4xl lg:text-[2.5rem]">
+                The curator&apos;s journey
+              </h2>
+              <div className="mx-auto h-px w-24 bg-accent" />
+            </div>
+
+            <div className="relative space-y-16 md:space-y-24 lg:space-y-28">
+              {chapters.map((ch) => (
+                <div
+                  key={ch.title}
+                  className="flex flex-col items-center gap-12 lg:flex-row lg:gap-20"
+                >
+                  <div
+                    className={cn(
+                      "flex-1",
+                      ch.imageOnRight
+                        ? "order-2 lg:order-1"
+                        : "order-2 lg:order-2",
+                    )}
+                  >
+                    <span className="mb-4 block font-headline text-sm font-semibold uppercase tracking-[0.2em] text-accent">
+                      {ch.kicker}
+                    </span>
+                    <h3 className="mb-6 font-headline text-4xl font-bold capitalize text-primary md:text-5xl lg:text-6xl">
+                      {ch.title}
+                    </h3>
+                    <p className="mb-8 text-lg leading-relaxed text-muted-foreground">
+                      {ch.body}
+                    </p>
+                    <div className="flex items-center gap-3 font-headline font-bold text-primary-container dark:text-primary">
+                      <ch.hintIcon className="h-6 w-6 shrink-0" />
+                      <span>{ch.hint}</span>
+                    </div>
+                  </div>
+                  <div
+                    className={cn(
+                      "flex-1",
+                      ch.imageOnRight
+                        ? "order-1 lg:order-2"
+                        : "order-1 lg:order-1",
+                    )}
+                  >
+                    <div className="relative h-[320px] overflow-hidden rounded-2xl sm:h-[380px] lg:h-[450px] become-host-asymmetric-shadow">
+                      <img
+                        src={ch.image}
+                        alt={ch.imageAlt}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Featured curator quote ──────────────────── */}
+        <section className="mx-auto max-w-5xl px-6 py-16 md:px-12 md:py-20 lg:px-16">
+          <div
+            ref={quoteReveal.ref}
+            className={cn(
+              "flex flex-col items-stretch overflow-hidden rounded-2xl bg-primary-container shadow-2xl md:flex-row",
+              "reveal",
+              quoteReveal.isVisible && "visible",
+            )}
           >
-            Apply to Become a Host
-            <ArrowRight className="h-5 w-5" />
-          </Link>
-          <p className="text-on-surface-variant dark:text-zinc-500 text-xs mt-4">
-            Free to apply · No credit card required · Reviewed within 3–5 business days
-          </p>
-        </div>
-      </section>
+            <div className="min-h-[280px] w-full md:min-h-[400px] md:w-1/2">
+              <img
+                src="/imgs/dorze.jpg"
+                alt="Historic architecture in Ethiopia"
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <div className="flex w-full flex-col justify-center bg-primary-container p-10 text-primary-foreground md:w-1/2 md:p-16">
+              <Quote
+                className="mb-8 h-14 w-14 text-accent"
+                strokeWidth={1.25}
+              />
+              <blockquote className="mb-10 font-headline text-xl font-medium italic leading-relaxed md:text-2xl">
+                &ldquo;Endebeto allowed me to restore my
+                great-grandfather&apos;s house in the Dorze region. Now, I
+                don&apos;t just provide a bed. I provide a doorway into the 16th
+                century for every guest who walks through.&rdquo;
+              </blockquote>
+              <div>
+                <p className="mb-1 text-xl font-bold">Tsige Tokalo</p>
+                <p className="font-headline text-sm font-semibold uppercase tracking-widest text-on-primary-container">
+                  Master curator, Dorze
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Final invitation ────────────────────────── */}
+        <section className="border-t border-outline-variant/30 bg-surface-container py-16 dark:border-zinc-800 dark:bg-zinc-900/40 md:py-20">
+          <div
+            ref={finalReveal.ref}
+            className={cn(
+              "mx-auto max-w-4xl px-6 text-center md:px-12",
+              "reveal",
+              finalReveal.isVisible && "visible",
+            )}
+          >
+            <h2 className="mb-8 font-headline text-4xl font-bold text-primary md:text-5xl lg:text-6xl">
+              Ready to write your next chapter?
+            </h2>
+            <p className="mb-12 text-lg leading-relaxed text-muted-foreground">
+              Join a community of curators dedicated to the soul of Ethiopia.
+              Start your hosting journey today and help us preserve the heritage
+              of tomorrow.
+            </p>
+            <div className="flex flex-col justify-center gap-4 sm:flex-row sm:gap-6">
+              <Button
+                asChild
+                className="h-auto rounded-2xl bg-primary-container px-12 py-5 font-headline text-base font-semibold text-white shadow-lg transition-transform hover:scale-[1.02] hover:brightness-110"
+              >
+                <Link to="/host/apply">Apply to host</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </div>

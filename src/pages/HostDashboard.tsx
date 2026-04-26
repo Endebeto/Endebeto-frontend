@@ -357,7 +357,7 @@ export default function HostDashboard() {
                                   src={b.experience?.imageCover}
                                   alt={b.experience?.title}
                                   className="w-full h-full object-cover"
-                                  onError={(e) => { (e.target as HTMLImageElement).src = "/imgs/hero-1.jpg"; }}
+                                  onError={(e) => { (e.target as HTMLImageElement).src = "/imgs/image1.jpg"; }}
                                 />
                               </div>
                               <p className="text-xs font-bold text-primary dark:text-green-400 line-clamp-1 max-w-[140px]">

@@ -37,7 +37,8 @@ html {
 
     /* primary-container: #064e3b */
     --primary-container: #064e3b;
-    --on-primary-container: #80bea6;
+    /* Light green on emerald panels: teal-tinted, cleaner than flat mint */
+    --on-primary-container: #66cdac;
 
     /* secondary */
     --secondary: #4c6359;
@@ -49,7 +50,7 @@ html {
 
     /* tertiary: dark amber/brown */
     --tertiary-container: #623c00;
-    --on-tertiary-container: #f69f0d;
+    --on-tertiary-container: #f59e0b;
 
     /* tertiary-fixed: warm peach */
     --tertiary-fixed: #ffddb8;
@@ -58,9 +59,9 @@ html {
     --muted: #eceef0;
     --muted-foreground: #404944;
 
-    /* accent uses on-tertiary-container golden amber */
-    --accent: #f69f0d;
-    --accent-foreground: #191c1e;
+    /* Accent Amber (aligned with dark spec) */
+    --accent: #f59e0b;
+    --accent-foreground: #0a0a0a;
 
     --destructive: #ba1a1a;
     --destructive-foreground: #ffffff;
@@ -86,60 +87,64 @@ html {
     --sidebar-accent: #064e3b;
     --sidebar-accent-foreground: #ffffff;
     --sidebar-border: #064e3b;
-    --sidebar-ring: #f69f0d;
+    --sidebar-ring: #f59e0b;
 
     /* badges */
     --badge-heritage: #623c00;
     --badge-heritage-foreground: #ffddb8;
     --badge-certified: #ffddb8;
     --badge-certified-foreground: #2a1700;
-    --rating: #f69f0d;
+    --rating: #f59e0b;
   }
 
   .dark {
-    --background: #191c1e;
-    --foreground: #e0e3e5;
-    --card: #2d3133;
-    --card-foreground: #e0e3e5;
-    --popover: #2d3133;
-    --popover-foreground: #e0e3e5;
-    --primary: #95d3ba;
-    --primary-foreground: #002117;
-    --primary-container: #0b513d;
-    --on-primary-container: #b0f0d6;
-    --secondary: #b3ccc0;
-    --secondary-foreground: #091f18;
-    --secondary-container: #354b42;
-    --on-secondary-container: #cfe8dc;
-    --tertiary-container: #653e00;
-    --on-tertiary-container: #ffb95f;
+    /* Spec: Dark Surface #0a0a0a, Surface Container #1a1a1a, Primary Emerald #064e3b, Accent Amber #f59e0b */
+    --background: #0a0a0a;
+    --foreground: #fafafa;
+    --card: #1a1a1a;
+    --card-foreground: #fafafa;
+    --popover: #1a1a1a;
+    --popover-foreground: #fafafa;
+    --primary: #064e3b;
+    --primary-foreground: #ffffff;
+    --primary-container: #064e3b;
+    /* Headings/links on canvas: crisp sea-glass, aligned with #064e3b */
+    --on-primary-container: #9fe8d5;
+    --secondary: #404040;
+    --secondary-foreground: #fafafa;
+    --secondary-container: #262626;
+    --on-secondary-container: #e5e5e5;
+    --tertiary-container: #713f12;
+    --on-tertiary-container: #f59e0b;
     --tertiary-fixed: #ffddb8;
     --on-tertiary-fixed: #2a1700;
-    --muted: #2d3133;
-    --muted-foreground: #8fa39a;
-    --accent: #ffb95f;
-    --accent-foreground: #2a1700;
+    --muted: #262626;
+    --muted-foreground: #a3a3a3;
+    --accent: #f59e0b;
+    --accent-foreground: #0a0a0a;
     --destructive: #93000a;
     --destructive-foreground: #ffdad6;
-    --border: #404944;
-    --input: #404944;
-    --ring: #95d3ba;
-    --surface-container-low: #1f2325;
-    --surface-container: #252829;
-    --surface-container-lowest: #131617;
-    --sidebar-background: #191c1e;
-    --sidebar-foreground: #e0e3e5;
-    --sidebar-primary: #95d3ba;
-    --sidebar-primary-foreground: #002117;
-    --sidebar-accent: #252829;
-    --sidebar-accent-foreground: #e0e3e5;
-    --sidebar-border: #404944;
-    --sidebar-ring: #ffb95f;
-    --badge-heritage: #653e00;
-    --badge-heritage-foreground: #ffb95f;
+    --border: #262626;
+    --input: #262626;
+    --ring: #f59e0b;
+    --surface-container-low: #141414;
+    --surface-container: #1a1a1a;
+    --surface-container-lowest: #0a0a0a;
+    --on-surface-variant: #a3a3a3;
+    --outline-variant: #333333;
+    --sidebar-background: #0a0a0a;
+    --sidebar-foreground: #fafafa;
+    --sidebar-primary: #ffffff;
+    --sidebar-primary-foreground: #064e3b;
+    --sidebar-accent: #1a1a1a;
+    --sidebar-accent-foreground: #fafafa;
+    --sidebar-border: #262626;
+    --sidebar-ring: #f59e0b;
+    --badge-heritage: #713f12;
+    --badge-heritage-foreground: #fde68a;
     --badge-certified: #ffddb8;
     --badge-certified-foreground: #2a1700;
-    --rating: #ffb95f;
+    --rating: #f59e0b;
   }
 }
 
@@ -285,4 +290,43 @@ html {
 .reveal-right.visible {
   opacity: 1;
   transform: translateX(0);
+}
+
+/* Become Host (curator) marketing — texture + lifted frames */
+.become-host-parchment {
+  background-color: var(--background);
+  background-image: radial-gradient(
+    rgba(0, 53, 39, 0.065) 0.5px,
+    transparent 0.5px
+  );
+  background-size: 24px 24px;
+}
+
+.dark .become-host-parchment {
+  background-image: radial-gradient(
+    rgba(6, 78, 59, 0.22) 0.5px,
+    transparent 0.5px
+  );
+}
+
+.become-host-asymmetric-shadow {
+  box-shadow:
+    20px 20px 60px rgba(0, 53, 39, 0.06),
+    -16px -16px 48px rgba(255, 255, 255, 0.85);
+}
+
+.dark .become-host-asymmetric-shadow {
+  box-shadow:
+    20px 20px 50px rgba(0, 0, 0, 0.45),
+    -8px -8px 32px rgba(255, 255, 255, 0.03);
+}
+
+/* Dark: #064e3b is for fills; use mint on-primary-container for text-primary / text-primary-container on canvas */
+@layer utilities {
+  .dark .text-primary {
+    color: var(--on-primary-container);
+  }
+  .dark .text-primary-container {
+    color: var(--on-primary-container);
+  }
 }

@@ -279,7 +279,7 @@ function ExpCard({
           src={exp.imageCover}
           alt={exp.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          onError={(e) => { (e.target as HTMLImageElement).src = "/imgs/hero-1.jpg"; }}
+          onError={(e) => { (e.target as HTMLImageElement).src = "/imgs/image1.jpg"; }}
         />
         <span className={`absolute top-3 left-3 flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${badgeCls}`}>
           <Icon className="h-3 w-3" />{badgeLabel}

@@ -1,10 +1,22 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, ChevronLeft, ChevronRight, Star, ChevronDown, X, Calendar, CircleDot } from "lucide-react";
+import {
+  MapPin,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  ChevronDown,
+  X,
+  Calendar,
+  ListFilter,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { experiencesService, type Experience } from "@/services/experiences.service";
+import { cn } from "@/lib/utils";
 
 /* ─── constants ─────────────────────────────────────────── */
 
@@ -33,58 +45,6 @@ function occurrenceInDateRange(nextOccurrenceAt: string | undefined, dateFrom: s
 }
 
 const PAGE_SIZE = 8;
-
-/* ─── useOutsideClick ───────────────────────────────────── */
-
-function useOutsideClick(ref: React.RefObject<HTMLElement>, cb: () => void) {
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) cb();
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [ref, cb]);
-}
-
-/* ─── filter dropdown wrapper ───────────────────────────── */
-
-function FilterDropdown({
-  label,
-  icon,
-  active,
-  children,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  active: boolean;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null!);
-  useOutsideClick(ref, () => setOpen(false));
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-headline font-semibold transition-colors ${
-          active
-            ? "bg-primary text-white"
-            : "bg-surface-container text-on-surface-variant hover:bg-secondary-container hover:text-on-secondary-container"
-        }`}
-      >
-        {icon}
-        {label}
-        <ChevronDown className={`h-3 w-3 opacity-70 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full mt-1.5 bg-white dark:bg-[#2d3133] rounded-xl shadow-lg border border-outline-variant/20 p-3 min-w-[200px] z-50">
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ─── card ──────────────────────────────────────────────── */
 
@@ -221,10 +181,29 @@ const Experiences = () => {
   const [dateTo, setDateTo]       = useState("");
   /** When true, experiences with no remaining spots (isSoldOut) are hidden. */
   const [hideSoldOut, setHideSoldOut] = useState(true);
-  const [page, setPage]           = useState(1);
+  const [page, setPage] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  /** Bottom sheet on small screens, right drawer on md+. */
+  const [filterSheetSide, setFilterSheetSide] = useState<"bottom" | "right">("bottom");
 
-  const sortRef = useRef<HTMLDivElement>(null!);
-  useOutsideClick(sortRef, () => setSortOpen(false));
+  const sortRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const apply = () => setFilterSheetSide(mq.matches ? "right" : "bottom");
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (sortRef.current?.contains(t)) return;
+      setSortOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   /* fetch all experiences (scheduled, up to 200) */
   const { data: queryData, isLoading } = useQuery({
@@ -265,6 +244,7 @@ const Experiences = () => {
   };
   const anyActive = locationActive || priceActive || ratingActive || dateActive;
   const showSummaryBar = anyActive || hideSoldOut;
+  const narrowFiltersCount = [locationActive, priceActive, ratingActive, dateActive].filter(Boolean).length;
 
   /* filter + sort */
   const filtered = allExperiences
@@ -308,7 +288,7 @@ const Experiences = () => {
 
       <main className="pt-16 pb-16 px-4 max-w-7xl mx-auto">
 
-        {/* ── Editorial header ── */}
+        {/* ── Editorial header + compact controls (no sticky bar) ── */}
         <header className="mb-8 pt-6">
           <h1 className="font-headline font-extrabold text-3xl md:text-4xl lg:text-5xl text-primary tracking-tight mb-2">
             Curated <span className="text-on-tertiary-container">Heritage</span>
@@ -317,257 +297,311 @@ const Experiences = () => {
             Discover the soul of Ethiopia through authentic coffee ceremonies, ancient
             architectural tours, and highland culinary secrets.
           </p>
-        </header>
 
-        {/* ── Sticky filter bar ── */}
-        <div className="sticky top-12 z-30 mb-6">
-          <div className="bg-white/92 dark:bg-[#1f2325]/92 backdrop-blur-md rounded-xl px-3 py-2.5 shadow-sm border border-outline-variant/20">
-            <div className="flex items-center gap-2 flex-wrap justify-between">
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 w-full gap-2 border-outline-variant/40 font-headline text-xs font-semibold sm:h-9 sm:w-auto"
+              onClick={() => setFiltersOpen(true)}
+            >
+              <ListFilter className="h-4 w-4 shrink-0" />
+              Filters
+              {narrowFiltersCount > 0 ? (
+                <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
+                  {narrowFiltersCount}
+                </span>
+              ) : null}
+            </Button>
 
-              <div className="flex items-center gap-2 flex-wrap">
-
-                {/* Location filter */}
-                <FilterDropdown
-                  label="Location"
-                  icon={<MapPin className="h-3 w-3" />}
-                  active={locationActive}
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Filter by city</p>
-                  <input
-                    type="text"
-                    placeholder="e.g. Addis Ababa"
-                    value={locationQ}
-                    onChange={(e) => { setLocationQ(e.target.value); setPage(1); }}
-                    className="w-full text-xs border border-outline-variant/40 rounded-lg px-2.5 py-1.5 bg-surface-container focus:outline-none focus:ring-1 focus:ring-primary/30"
-                  />
-                  {locationQ && (
-                    <button onClick={() => setLocationQ("")} className="mt-2 text-[10px] text-on-surface-variant hover:text-primary flex items-center gap-1">
-                      <X className="h-3 w-3" /> Clear
-                    </button>
-                  )}
-                </FilterDropdown>
-
-                {/* Price filter */}
-                <FilterDropdown
-                  label="Price (ETB)"
-                  icon={<span className="text-[10px] font-bold">₿</span>}
-                  active={priceActive}
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Price range</p>
-                  <div className="flex gap-2 mb-2">
-                    <div className="flex-1">
-                      <label className="text-[10px] text-on-surface-variant">Min</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={maxPriceFilter}
-                        value={minPrice}
-                        onChange={(e) => { setMinPrice(Number(e.target.value)); setPage(1); }}
-                        className="w-full text-xs border border-outline-variant/40 rounded-lg px-2 py-1 bg-surface-container focus:outline-none focus:ring-1 focus:ring-primary/30"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-[10px] text-on-surface-variant">Max</label>
-                      <input
-                        type="number"
-                        min={minPrice}
-                        max={MAX_PRICE}
-                        value={maxPriceFilter}
-                        onChange={(e) => { setMaxPriceFilter(Number(e.target.value)); setPage(1); }}
-                        className="w-full text-xs border border-outline-variant/40 rounded-lg px-2 py-1 bg-surface-container focus:outline-none focus:ring-1 focus:ring-primary/30"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-on-surface-variant text-center">
-                    {minPrice.toLocaleString()} – {maxPriceFilter.toLocaleString()} ETB
-                  </p>
-                  {priceActive && (
-                    <button onClick={() => { setMinPrice(0); setMaxPriceFilter(MAX_PRICE); }} className="mt-2 text-[10px] text-on-surface-variant hover:text-primary flex items-center gap-1">
-                      <X className="h-3 w-3" /> Reset
-                    </button>
-                  )}
-                </FilterDropdown>
-
-                {/* Date filter (next occurrence) */}
-                <FilterDropdown
-                  label="Date"
-                  icon={<Calendar className="h-3 w-3" />}
-                  active={dateActive}
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">
-                    Next session between
-                  </p>
-                  <div className="space-y-2">
-                    <div>
-                      <label className="text-[10px] text-on-surface-variant">From</label>
-                      <input
-                        type="date"
-                        value={dateFrom}
-                        onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-                        className="w-full text-xs border border-outline-variant/40 rounded-lg px-2 py-1.5 bg-surface-container focus:outline-none focus:ring-1 focus:ring-primary/30"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-on-surface-variant">To</label>
-                      <input
-                        type="date"
-                        value={dateTo}
-                        min={dateFrom || undefined}
-                        onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-                        className="w-full text-xs border border-outline-variant/40 rounded-lg px-2 py-1.5 bg-surface-container focus:outline-none focus:ring-1 focus:ring-primary/30"
-                      />
-                    </div>
-                  </div>
-                  {dateActive && (
+            <div ref={sortRef} className="relative w-full min-w-0 sm:w-auto sm:min-w-[13rem]">
+              <button
+                type="button"
+                onClick={() => setSortOpen((o) => !o)}
+                className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-outline-variant/40 bg-surface-container px-3 text-left font-headline text-xs font-bold text-primary sm:h-9"
+              >
+                <span className="truncate">
+                  <span className="text-on-surface-variant font-semibold">Sort · </span>
+                  {sortBy}
+                </span>
+                <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${sortOpen ? "rotate-180" : ""}`} />
+              </button>
+              {sortOpen ? (
+                <div className="absolute right-0 top-full z-40 mt-1.5 max-h-64 min-w-[12rem] w-full overflow-y-auto rounded-xl border border-outline-variant/20 bg-card py-1 shadow-lg sm:w-auto">
+                  {SORT_OPTIONS.map((opt) => (
                     <button
+                      key={opt}
                       type="button"
-                      onClick={() => { setDateFrom(""); setDateTo(""); setPage(1); }}
-                      className="mt-2 text-[10px] text-on-surface-variant hover:text-primary flex items-center gap-1"
-                    >
-                      <X className="h-3 w-3" /> Clear dates
-                    </button>
-                  )}
-                </FilterDropdown>
-
-                {/* Rating filter */}
-                <FilterDropdown
-                  label="Rating"
-                  icon={<Star className="h-3 w-3" />}
-                  active={ratingActive}
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Min rating</p>
-                  <div className="flex gap-1.5">
-                    {[0, 3, 3.5, 4, 4.5].map((r) => (
-                      <button
-                        key={r}
-                        onClick={() => { setMinRating(r); setPage(1); }}
-                        className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${
-                          minRating === r
-                            ? "bg-primary text-white"
-                            : "bg-surface-container text-on-surface-variant hover:bg-secondary-container"
-                        }`}
-                      >
-                        {r === 0 ? "All" : `${r}+`}
-                      </button>
-                    ))}
-                  </div>
-                </FilterDropdown>
-
-                {/* Availability: hide fully booked (sold out) experiences */}
-                <FilterDropdown
-                  label="Availability"
-                  icon={<CircleDot className="h-3 w-3" />}
-                  active={hideSoldOut}
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">
-                    Bookable listings
-                  </p>
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-on-surface">
-                    <input
-                      type="checkbox"
-                      className="rounded border-outline-variant"
-                      checked={hideSoldOut}
-                      onChange={(e) => {
-                        setHideSoldOut(e.target.checked);
+                      onClick={() => {
+                        setSortBy(opt);
+                        setSortOpen(false);
                         setPage(1);
                       }}
-                    />
-                    Hide sold out
-                  </label>
-                  <p className="text-[10px] text-on-surface-variant mt-2 leading-relaxed">
-                    Hides experiences where all guest spots are already booked.
-                  </p>
-                </FilterDropdown>
+                      className={`block w-full px-3 py-2 text-left font-headline text-xs font-semibold transition-colors ${
+                        sortBy === opt
+                          ? "bg-primary/10 text-primary"
+                          : "text-on-surface-variant hover:bg-surface-container"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
 
-                {/* Clear all */}
-                {showSummaryBar && (
+          {showSummaryBar ? (
+            <div className="mt-4 flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
+              {hideSoldOut ? (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-[10px] text-primary">
+                  Available only
                   <button
-                    onClick={clearAll}
-                    className="flex items-center gap-1 text-[10px] font-semibold text-on-surface-variant hover:text-primary transition-colors"
+                    type="button"
+                    onClick={() => {
+                      setHideSoldOut(false);
+                      setPage(1);
+                    }}
+                    aria-label="Show sold out experiences"
                   >
-                    <X className="h-3 w-3" /> Clear all
+                    <X className="h-2.5 w-2.5" />
                   </button>
-                )}
-              </div>
-
-              {/* Sort */}
-              <div ref={sortRef} className="relative flex items-center gap-2 ml-auto">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant hidden sm:block">
-                  Sort
                 </span>
-                <button
-                  onClick={() => setSortOpen((o) => !o)}
-                  className="flex items-center gap-1 text-xs font-headline font-bold text-primary"
-                >
-                  {sortBy}
-                  <ChevronDown className={`h-3 w-3 transition-transform ${sortOpen ? "rotate-180" : ""}`} />
-                </button>
-                {sortOpen && (
-                  <div className="absolute right-0 top-full mt-1.5 bg-white dark:bg-[#2d3133] rounded-xl shadow-lg border border-outline-variant/20 py-1 min-w-[160px] z-50">
-                    {SORT_OPTIONS.map((opt) => (
-                      <button
-                        key={opt}
-                        onClick={() => { setSortBy(opt); setSortOpen(false); setPage(1); }}
-                        className={`block w-full text-left px-3 py-1.5 text-xs font-headline font-semibold transition-colors ${
-                          sortBy === opt
-                            ? "text-primary bg-primary/5"
-                            : "text-on-surface-variant hover:bg-surface-container"
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
+              ) : null}
+              {locationActive ? (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-[10px] text-primary">
+                  📍 {locationQ}
+                  <button type="button" onClick={() => setLocationQ("")}>
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ) : null}
+              {priceActive ? (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-[10px] text-primary">
+                  💰 {minPrice.toLocaleString()}–{maxPriceFilter.toLocaleString()} ETB
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMinPrice(0);
+                      setMaxPriceFilter(MAX_PRICE);
+                    }}
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ) : null}
+              {ratingActive ? (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-[10px] text-primary">
+                  ⭐ {minRating}+
+                  <button type="button" onClick={() => setMinRating(0)}>
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ) : null}
+              {dateActive ? (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-[10px] text-primary">
+                  📅 {dateFrom || "…"} → {dateTo || "…"}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDateFrom("");
+                      setDateTo("");
+                    }}
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ) : null}
+              <span className="ml-1 shrink-0 self-center text-[10px] text-on-surface-variant">
+                {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          ) : null}
+        </header>
+
+        <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <SheetContent
+            side={filterSheetSide}
+            className={cn(
+              "flex flex-col gap-0 p-0 [&>button]:z-50 [&>button]:right-4",
+              filterSheetSide === "bottom"
+                ? "max-h-[92dvh] rounded-t-2xl [&>button]:top-3"
+                : "h-full max-h-screen w-full max-w-md border-l sm:max-w-md [&>button]:top-4",
+            )}
+          >
+            <SheetHeader className="space-y-0 border-b border-outline-variant/20 px-4 pb-3 pt-4 text-left">
+              <SheetTitle className="font-headline text-lg text-primary">Filters</SheetTitle>
+              <p className="pt-1 text-xs text-muted-foreground">Refine listings, then view results.</p>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
+              <div>
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                  Location
+                </p>
+                <input
+                  type="text"
+                  placeholder="e.g. Addis Ababa"
+                  value={locationQ}
+                  onChange={(e) => {
+                    setLocationQ(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25"
+                />
+              </div>
+              <div>
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                  Price (ETB)
+                </p>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="text-xs text-on-surface-variant">Min</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={maxPriceFilter}
+                      value={minPrice}
+                      onChange={(e) => {
+                        setMinPrice(Number(e.target.value));
+                        setPage(1);
+                      }}
+                      className="mt-0.5 w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2 py-2 text-sm"
+                    />
                   </div>
-                )}
+                  <div className="flex-1">
+                    <label className="text-xs text-on-surface-variant">Max</label>
+                    <input
+                      type="number"
+                      min={minPrice}
+                      max={MAX_PRICE}
+                      value={maxPriceFilter}
+                      onChange={(e) => {
+                        setMaxPriceFilter(Number(e.target.value));
+                        setPage(1);
+                      }}
+                      className="mt-0.5 w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+                <p className="mt-2 text-center text-xs text-on-surface-variant">
+                  {minPrice.toLocaleString()} – {maxPriceFilter.toLocaleString()} ETB
+                </p>
+              </div>
+              <div>
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                  Next session between
+                </p>
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-xs text-on-surface-variant">From</label>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => {
+                        setDateFrom(e.target.value);
+                        setPage(1);
+                      }}
+                      className="mt-0.5 w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-on-surface-variant">To</label>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      min={dateFrom || undefined}
+                      onChange={(e) => {
+                        setDateTo(e.target.value);
+                        setPage(1);
+                      }}
+                      className="mt-0.5 w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                  Min rating
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {[0, 3, 3.5, 4, 4.5].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => {
+                        setMinRating(r);
+                        setPage(1);
+                      }}
+                      className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${
+                        minRating === r
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-surface-container text-on-surface-variant"
+                      }`}
+                    >
+                      {r === 0 ? "All" : `${r}+`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                  Availability
+                </p>
+                <label className="flex cursor-pointer items-center gap-3 text-sm text-on-surface">
+                  <input
+                    type="checkbox"
+                    className="rounded border-outline-variant"
+                    checked={hideSoldOut}
+                    onChange={(e) => {
+                      setHideSoldOut(e.target.checked);
+                      setPage(1);
+                    }}
+                  />
+                  Hide sold out
+                </label>
+                <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">
+                  Hides experiences where all guest spots are already booked.
+                </p>
+              </div>
+              <div>
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                  Sort
+                </p>
+                <div className="flex flex-col gap-1">
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => {
+                        setSortBy(opt);
+                        setPage(1);
+                      }}
+                      className={`rounded-lg px-3 py-2.5 text-left font-headline text-sm font-semibold transition-colors ${
+                        sortBy === opt ? "bg-primary text-primary-foreground" : "bg-surface-container text-on-surface"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-
-            {/* Active filter summary */}
-            {showSummaryBar && (
-              <div className="mt-2 pt-2 border-t border-outline-variant/20 flex flex-wrap gap-1.5">
-                {hideSoldOut && (
-                  <span className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
-                    Available only
-                    <button
-                      type="button"
-                      onClick={() => { setHideSoldOut(false); setPage(1); }}
-                      aria-label="Show sold out experiences"
-                    >
-                      <X className="h-2.5 w-2.5" />
-                    </button>
-                  </span>
-                )}
-                {locationActive && (
-                  <span className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
-                    📍 {locationQ}
-                    <button onClick={() => setLocationQ("")}><X className="h-2.5 w-2.5" /></button>
-                  </span>
-                )}
-                {priceActive && (
-                  <span className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
-                    💰 {minPrice.toLocaleString()}–{maxPriceFilter.toLocaleString()} ETB
-                    <button onClick={() => { setMinPrice(0); setMaxPriceFilter(MAX_PRICE); }}><X className="h-2.5 w-2.5" /></button>
-                  </span>
-                )}
-                {ratingActive && (
-                  <span className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
-                    ⭐ {minRating}+
-                    <button onClick={() => setMinRating(0)}><X className="h-2.5 w-2.5" /></button>
-                  </span>
-                )}
-                {dateActive && (
-                  <span className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
-                    📅 {dateFrom || "…"} → {dateTo || "…"}
-                    <button type="button" onClick={() => { setDateFrom(""); setDateTo(""); }}><X className="h-2.5 w-2.5" /></button>
-                  </span>
-                )}
-                <span className="text-[10px] text-on-surface-variant ml-1 self-center">
-                  {filtered.length} result{filtered.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
+            <div className="flex gap-2 border-t border-outline-variant/20 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              {showSummaryBar ? (
+                <Button type="button" variant="outline" className="font-headline" onClick={clearAll}>
+                  Clear all
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                className="min-w-0 flex-1 font-headline font-bold"
+                onClick={() => setFiltersOpen(false)}
+              >
+                Show {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
 
         {/* ── Card grid ── */}
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">

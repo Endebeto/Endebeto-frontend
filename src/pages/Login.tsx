@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import heroCoffee from "@/assets/hero-coffee.jpg";
+import authSideImage from "@/assets/hero-coffee.jpg";
 import { useAuth } from "@/context/AuthContext";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 
@@ -48,8 +48,18 @@ const Login = () => {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
+      {/* ── Side image (left on desktop) ── */}
+      <div className="hidden lg:block relative min-h-0">
+        <img src={authSideImage} alt="Ethiopian coffee ceremony and culture" className="h-full min-h-screen w-full object-cover" />
+        <div className="absolute inset-0 bg-primary/50" />
+        <div className="absolute bottom-12 left-10 right-10">
+          <p className="font-headline font-bold text-xl text-white leading-snug">
+            "The best way to experience Ethiopia is through its people."
+          </p>
+        </div>
+      </div>
 
-      {/* ── Form ── */}
+      {/* ── Form (right on desktop) ── */}
       <div className="flex flex-col justify-center px-8 py-12 lg:px-16 bg-background">
         <Link to="/" className="font-headline text-xl font-black tracking-tighter text-primary">
           Endebeto
@@ -158,18 +168,6 @@ const Login = () => {
               Sign up
             </Link>
           </p>
-        </div>
-      </div>
-
-      {/* ── Side image ── */}
-      <div className="hidden lg:block relative">
-        <img src={heroCoffee} alt="Ethiopian experience" className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-primary/50" />
-        <div className="absolute bottom-12 left-10 right-10">
-          <p className="font-headline font-bold text-xl text-white leading-snug">
-            "The best way to experience Ethiopia is through its people."
-          </p>
-          <p className="mt-3 text-sm text-white/70">— Endebeto Community</p>
         </div>
       </div>
     </div>

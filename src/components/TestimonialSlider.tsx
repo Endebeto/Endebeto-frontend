@@ -49,16 +49,16 @@ function TestimonialCard({
 
   return (
     <div
-      className={`shrink-0 w-[270px] rounded-2xl border p-5 shadow-sm ${cardBg}`}
+      className={`w-[min(100vw-2rem,320px)] shrink-0 rounded-2xl border p-6 shadow-sm sm:w-[300px] md:w-[320px] md:p-7 md:rounded-3xl ${cardBg}`}
     >
-      <Quote className={`h-5 w-5 mb-3 ${quoteColor}`} />
+      <Quote className={`mb-3.5 h-6 w-6 md:mb-4 md:h-7 md:w-7 ${quoteColor}`} />
 
       {/* stars */}
-      <div className="flex gap-0.5 mb-3">
+      <div className="mb-3.5 flex gap-0.5 md:mb-4">
         {Array.from({ length: 5 }).map((_, i) => (
           <Star
             key={i}
-            className={`h-3 w-3 ${
+            className={`h-3.5 w-3.5 md:h-4 md:w-4 ${
               i < rating
                 ? "fill-amber-400 text-amber-400"
                 : "text-outline-variant/20 dark:text-zinc-600"
@@ -67,23 +67,23 @@ function TestimonialCard({
         ))}
       </div>
 
-      <p className={`text-xs leading-relaxed italic mb-4 ${bodyColor}`}>
+      <p className={`mb-5 text-sm leading-relaxed italic md:mb-6 md:text-base ${bodyColor}`}>
         "{t.quote}"
       </p>
 
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-3">
         {t.initials ? (
-          <div className="w-8 h-8 rounded-full bg-primary/15 dark:bg-primary/30 flex items-center justify-center font-headline font-bold text-[10px] text-primary dark:text-green-300 shrink-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 font-headline text-xs font-bold text-primary dark:bg-primary/30 dark:text-green-300 md:h-11 md:w-11">
             {t.initials}
           </div>
         ) : (
-          <div className="w-8 h-8 rounded-full bg-surface-container dark:bg-zinc-700 shrink-0" />
+          <div className="h-10 w-10 shrink-0 rounded-full bg-surface-container dark:bg-zinc-700 md:h-11 md:w-11" />
         )}
         <div>
-          <p className={`font-headline font-bold text-xs ${nameColor}`}>
+          <p className={`font-headline text-sm font-bold md:text-base ${nameColor}`}>
             {t.name}
           </p>
-          <p className={`text-[10px] ${subColor}`}>{t.sub}</p>
+          <p className={`text-xs md:text-sm ${subColor}`}>{t.sub}</p>
         </div>
       </div>
     </div>
@@ -112,7 +112,7 @@ export default function TestimonialSlider({
         }
         .marquee-track {
           display: flex;
-          gap: 1rem;
+          gap: 1.25rem;
           width: max-content;
           animation: marquee ${duration}s linear infinite;
         }

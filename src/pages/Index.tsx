@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
@@ -25,40 +25,28 @@ import { persistRefParam } from "@/lib/referral";
 
 const heroSlides = [
   {
+    image: "/imgs/hero.jpg",
+    title: "The coffee ceremony, shared the Ethiopian way",
+    subtitle:
+      "Sit with hosts who pour from the jebena, weave conversation into every cup, and welcome you like family.",
+  },
+  {
     image: "/imgs/hero-1.jpg",
-    title: "Discover Ethiopia's Hidden Experiences",
+    title: "Golden-hour walks with keepers of the savanna",
     subtitle:
-      "Journey beyond the map. Connect with local curators and experience the soul of the highlands.",
-  },
-  {
-    image: "/imgs/lalibela-church.jpg",
-    title: "Walk Among Ancient Rock-Hewn Churches",
-    subtitle:
-      "Step inside the 900-year-old monolithic churches of Lalibela — a living UNESCO World Heritage site.",
-  },
-  {
-    image: "/imgs/danakil-depression.jpg",
-    title: "Explore Earth's Most Alien Landscape",
-    subtitle:
-      "Witness sulfur springs and salt flats of the Danakil Depression — one of the hottest places on Earth.",
+      "Follow local guides across open grasslands in Maasai lands, with heritage, beadwork, and stories carried for generations.",
   },
   {
     image: "/imgs/hero-2.jpg",
-    title: "Experience Authentic Ethiopian Culture",
+    title: "Stand inside living tradition",
     subtitle:
-      "Immerse yourself in ancient traditions — from sacred coffee ceremonies to vibrant local markets.",
-  },
-  {
-    image: "/imgs/ethiopian-highlands.jpg",
-    title: "Journey Through the Ethiopian Highlands",
-    subtitle:
-      "Breathe in the crisp mountain air as you traverse lush valleys and terraced hillsides carved by time.",
+      "Circle dances, colour, and community, with experiences that put you at the heart of the celebration, not on the sidelines.",
   },
   {
     image: "/imgs/hero-3.jpg",
-    title: "Journey Through Ancient History",
+    title: "Addis after dark. Modern Ethiopia, still unmistakably home",
     subtitle:
-      "Explore rock-hewn churches, royal castles, and breathtaking landscapes that tell Ethiopia's story.",
+      "From lit towers to garden paths, discover city stays and urban experiences that pair energy with Ethiopian warmth.",
   },
 ];
 
@@ -66,40 +54,40 @@ const howItWorks = [
   {
     icon: TrendingUp,
     title: "Discover",
-    desc: "Browse unique heritage experiences curated by local experts across Ethiopia's diverse regions.",
+    desc: "Explore bookable experiences. Each listing shows schedule, group size, and what’s included before you commit.",
   },
   {
     icon: Calendar,
     title: "Book",
-    desc: "Secure your spot instantly through our seamless booking system with verified local hosts.",
+    desc: "Pick a date, pay securely, and get confirmation from your host so your spot is locked in.",
   },
   {
     icon: Sparkles,
     title: "Experience",
-    desc: "Immerse yourself in heritage, create memories, and support local communities directly.",
+    desc: "Show up for the day you booked with culture, nature, food, or city, hosted by people who designed the experience.",
   },
 ];
 
 const whyFeatures = [
   {
     icon: Globe,
-    title: "Discover Ethiopia",
-    desc: "Explore the rich tapestry of Ethiopian cultures, from ancient traditions to modern marvels.",
+    title: "Experiences, not generic tours",
+    desc: "Every listing is a defined experience with clear duration, group size, and what you’ll do, so you book exactly what you want.",
   },
   {
     icon: Users,
-    title: "Verified Local Hosts",
-    desc: "Connect with knowledgeable hosts who bring history and culture to life for every guest.",
+    title: "Hosts who live the story",
+    desc: "Learn from locals and specialists who host small groups and share culture, craft, and place with intention.",
   },
   {
     icon: Award,
-    title: "Authentic Experiences",
-    desc: "Immerse yourself in genuine cultural exchanges and unforgettable personal adventures.",
+    title: "Built for authentic moments",
+    desc: "We spotlight heritage, food, ritual, and landscape experiences you can’t replicate from a brochure.",
   },
   {
     icon: Sparkles,
-    title: "Sustainable Travel",
-    desc: "Support local communities while preserving cultural heritage and natural beauty.",
+    title: "Simple booking, real support",
+    desc: "Check availability, reserve your spot, and message your host for fewer surprises and more time enjoying the experience.",
   },
 ];
 
@@ -113,30 +101,30 @@ const statsData = [
 const testimonials = [
   {
     quote:
-      "Lalibela was beyond words, but seeing it through the eyes of Dawit was a transformative experience. We didn't just see ruins; we lived history.",
+      "We booked a small-group church walk on Endebeto and the listing matched the day perfectly. Our host’s stories turned a sightseeing slot into a real experience.",
     name: "Sarah J.",
-    sub: "Traveler from London",
+    sub: "Booked in London",
     rating: 5,
   },
   {
     quote:
-      "The coffee ceremony in Addis felt so personal. It wasn't a tourist trap — it was an invitation into someone's home and culture. Highly recommend.",
+      "The coffee-ceremony experience page spelled out timing, group size, and what was included. Showing up felt like visiting a friend, not ticking a tour box.",
     name: "Marc L.",
-    sub: "Photographer from Paris",
+    sub: "Booked from Paris",
     rating: 5,
   },
   {
     quote:
-      "Booking was effortless. We found a guide for the Simien trek last minute and it turned out to be the highlight of our three-month trip across Africa.",
+      "Needed a trek experience last minute. Filters and instant booking made it easy. It became the best day we’d scheduled on the whole trip.",
     name: "Elena R.",
-    sub: "Journalist from Rome",
+    sub: "Booked from Rome",
     rating: 5,
   },
   {
     quote:
-      "I've traveled to 40 countries and Ethiopia stood out precisely because of the connections Endebeto made possible. Genuine, warm, and unforgettable.",
+      "Endebeto is where we found hosts offering experiences we couldn’t piece together elsewhere, with clear descriptions, fair pricing, and people who clearly care.",
     name: "Kenji T.",
-    sub: "Architect from Tokyo",
+    sub: "Booked from Tokyo",
     rating: 5,
   },
 ];
@@ -157,11 +145,11 @@ function StatItem({
   const display = useCountUp(target, 1800, start);
   return (
     <div className="text-center">
-      <p className="font-headline text-4xl font-extrabold text-primary mb-2">
+      <p className="font-headline text-4xl font-extrabold text-primary mb-2 sm:text-5xl md:text-6xl">
         {display}
         {suffix}
       </p>
-      <p className="text-on-surface-variant">{label}</p>
+      <p className="text-base text-on-surface-variant md:text-lg">{label}</p>
     </div>
   );
 }
@@ -179,7 +167,8 @@ const Index = () => {
   // featured experiences from API (fetch extra, then take top-rated with spots left for display)
   const { data: featuredData, isLoading: featuredLoading } = useQuery({
     queryKey: ["experiences-featured"],
-    queryFn: () => experiencesService.getAll({ limit: 16, sort: "-ratingsAverage" }),
+    queryFn: () =>
+      experiencesService.getAll({ limit: 16, sort: "-ratingsAverage" }),
   });
   const rawFeatured = featuredData?.data.data.data ?? [];
   const featuredExperiences = useMemo(
@@ -196,22 +185,22 @@ const Index = () => {
   }, []);
 
   // scroll reveal refs
-  const howRef = useScrollReveal(0.1);
-  const whyLeft = useScrollReveal(0.15);
-  const whyRight = useScrollReveal(0.15);
-  const statsReveal = useScrollReveal(0.3);
-  const featTitle = useScrollReveal(0.2);
-  const featCards = useScrollReveal(0.1);
-  const testiTitle = useScrollReveal(0.2);
-  const testiCards = useScrollReveal(0.1);
-  const ctaReveal = useScrollReveal(0.2);
+  const howRef = useScrollReveal<HTMLDivElement>(0.1);
+  const whyLeft = useScrollReveal<HTMLDivElement>(0.15);
+  const whyRight = useScrollReveal<HTMLDivElement>(0.15);
+  const statsReveal = useScrollReveal<HTMLDivElement>(0.3);
+  const featTitle = useScrollReveal<HTMLDivElement>(0.2);
+  const featCards = useScrollReveal<HTMLDivElement>(0.1);
+  const testiTitle = useScrollReveal<HTMLDivElement>(0.2);
+  const testiCards = useScrollReveal<HTMLDivElement>(0.1);
+  const ctaReveal = useScrollReveal<HTMLDivElement>(0.2);
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
       {/* ── Hero Slider ── */}
-      <section className="relative h-screen overflow-hidden">
+      <section className="relative overflow-hidden">
         {heroSlides.map((slide, i) => (
           <div
             key={i}
@@ -222,7 +211,7 @@ const Index = () => {
             <img
               src={slide.image}
               alt={slide.title}
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover object-[center_30%] md:object-center"
             />
           </div>
         ))}
@@ -247,19 +236,20 @@ const Index = () => {
           <circle cx="730" cy="570" r="8" fill="#f69f0d" opacity="0.8" />
         </svg>
 
-        <div className="relative h-full flex items-center z-10">
-          <div className="container">
-            <div className="max-w-2xl mx-auto text-white text-center">
-              <h1 className="font-headline text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-4 md:mb-6 leading-[1.05] tracking-tight">
+        <div className="relative z-10 flex min-h-[100svh] w-full flex-col justify-center pt-[calc(var(--header-stack)+0.75rem)] pb-8 md:min-h-[118vh] md:pb-12">
+          <div className="container w-full">
+            <div className="mx-auto max-w-2xl text-center text-white">
+              <h1 className="mb-4 font-headline text-3xl font-extrabold leading-[1.08] tracking-tight sm:text-4xl md:mb-5 md:text-5xl lg:text-6xl xl:text-7xl">
                 {heroSlides[current].title}
               </h1>
-              <p className="text-sm sm:text-lg md:text-xl mb-7 md:mb-10 text-white/80 leading-relaxed">
+              <p className="mb-6 max-w-xl text-sm leading-relaxed text-white/88 sm:mx-auto sm:text-base md:mb-8 md:text-lg">
                 {heroSlides[current].subtitle}
               </p>
               <div className="flex justify-center">
                 <Link to="/experiences">
-                  <Button className="bg-accent hover:bg-accent/90 text-accent-foreground font-headline font-bold px-6 py-2.5 rounded-xl text-sm gap-1.5 h-auto">
-                    Browse Experiences <ArrowRight className="h-4 w-4" />
+                  <Button className="h-auto gap-2 rounded-2xl bg-accent px-7 py-3.5 font-headline text-sm font-bold text-accent-foreground hover:bg-accent/90 sm:text-base md:px-9 md:py-4">
+                    Browse Experiences{" "}
+                    <ArrowRight className="h-4 w-4 md:h-5 md:w-5" />
                   </Button>
                 </Link>
               </div>
@@ -268,29 +258,28 @@ const Index = () => {
         </div>
       </section>
 
-
       {/* ── Why Choose Us ── */}
-      <section className="py-24 bg-surface-container-low relative overflow-hidden">
+      <section className="relative overflow-hidden bg-surface-container-low py-20 md:py-28">
         <div className="absolute top-0 left-0 right-0 h-16 fade-top pointer-events-none z-10" />
         <div className="absolute bottom-0 left-0 right-0 h-16 fade-bottom pointer-events-none z-10" />
         <div className="container relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
             {/* Left */}
             <div
-              ref={whyLeft.ref as React.RefObject<HTMLDivElement>}
+              ref={whyLeft.ref}
               className={`reveal-left ${whyLeft.isVisible ? "visible" : ""}`}
             >
-              <span className="inline-block px-4 py-2 bg-secondary-container text-on-secondary-container rounded-full text-xs font-headline font-bold uppercase tracking-widest mb-6">
-                Why Choose Us
+              <span className="mb-6 inline-block rounded-full bg-secondary-container px-4 py-2 font-headline text-xs font-bold uppercase tracking-widest text-on-secondary-container md:text-sm">
+                Why book experiences here
               </span>
-              <h2 className="font-headline text-2xl sm:text-4xl font-extrabold text-primary mb-6">
-                Experience the Heart of Ethiopia
+              <h2 className="mb-6 font-headline text-3xl font-extrabold leading-tight text-primary sm:text-4xl md:text-5xl lg:text-6xl">
+                A platform for real experiences, not just places
               </h2>
-              <p className="text-on-surface-variant text-lg mb-10 leading-relaxed">
-                Embark on a journey through Ethiopia's most captivating
-                destinations. From the ancient rock-hewn churches of Lalibela to
-                highland coffee plantations, every experience is crafted to be
-                authentic and meaningful.
+              <p className="mb-10 text-lg leading-relaxed text-on-surface-variant md:text-xl">
+                Endebeto connects you with bookable cultural, outdoor, and city
+                experiences led by hosts who design their own offerings. You see
+                what’s included, who it’s for, and when it runs, then reserve
+                your spot in a few steps.
               </p>
               <div
                 className={`grid grid-cols-1 sm:grid-cols-2 gap-6 reveal-stagger ${whyLeft.isVisible ? "visible" : ""}`}
@@ -301,10 +290,10 @@ const Index = () => {
                       <Icon className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-headline font-bold text-primary mb-1">
+                      <h3 className="mb-2 font-headline text-lg font-bold text-primary md:text-xl">
                         {title}
                       </h3>
-                      <p className="text-sm text-on-surface-variant leading-relaxed">
+                      <p className="text-base leading-relaxed text-on-surface-variant">
                         {desc}
                       </p>
                     </div>
@@ -313,49 +302,49 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Right — staggered image mosaic (hidden on mobile) */}
+            {/* Right: staggered image mosaic (hidden on mobile) */}
             <div
-              ref={whyRight.ref as React.RefObject<HTMLDivElement>}
+              ref={whyRight.ref}
               className={`hidden lg:grid grid-cols-2 gap-4 reveal-right ${whyRight.isVisible ? "visible" : ""}`}
             >
               <div className="space-y-4">
                 <div className="h-48 rounded-2xl overflow-hidden shadow-lg">
                   <img
-                    src="/imgs/gelada-baboon.jpg"
-                    alt="Gelada baboon in Simien Mountains"
-                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                    src="/imgs/why-you-choose-us-4.jpg"
+                    alt="Ethiopian highlands landscape"
+                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
                   />
                 </div>
                 <div className="h-64 rounded-2xl overflow-hidden shadow-lg">
                   <img
-                    src="/imgs/lalibela-church.jpg"
-                    alt="Rock-hewn church of Lalibela"
-                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                    src="/imgs/why-you-choose-us-3.jpg"
+                    alt="Ethiopian heritage and scenery"
+                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
                   />
                 </div>
               </div>
               <div className="space-y-4 pt-8">
                 <div className="h-64 rounded-2xl overflow-hidden shadow-lg">
                   <img
-                    src="/imgs/injera-food.jpg"
-                    alt="Traditional Ethiopian injera feast"
-                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                    src="/imgs/why-you-choose-us.jpg"
+                    alt="Traditional dance and culture"
+                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
                   />
                 </div>
                 <div className="h-48 rounded-2xl overflow-hidden shadow-lg">
                   <img
-                    src="/imgs/danakil-depression.jpg"
-                    alt="Danakil Depression aerial view"
-                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                    src="/imgs/why-you-choose-us-2.jpg"
+                    alt="Ethiopian travel destination"
+                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Stats row — count-up on scroll */}
+          {/* Stats row: count-up on scroll */}
           <div
-            ref={statsReveal.ref as React.RefObject<HTMLDivElement>}
+            ref={statsReveal.ref}
             className={`mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 border-outline-variant/20 pt-16 reveal-stagger ${
               statsReveal.isVisible ? "visible" : ""
             }`}
@@ -373,25 +362,26 @@ const Index = () => {
         </div>
       </section>
 
-            {/* ── How It Works ── */}
-            <section className="py-20 md:py-28 bg-primary overflow-hidden">
+      {/* ── How It Works ── */}
+      <section className="py-20 bg-primary overflow-hidden md:py-28 lg:py-32">
         <div className="container">
           <div
-            ref={howRef.ref as React.RefObject<HTMLDivElement>}
+            ref={howRef.ref}
             className={`reveal ${howRef.isVisible ? "visible" : ""}`}
           >
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-14 md:mb-20">
+            <div className="mb-14 flex flex-col gap-4 sm:mb-16 sm:flex-row sm:items-end sm:justify-between md:mb-20">
               <div>
-                <span className="inline-block text-accent font-headline font-bold text-xs uppercase tracking-[0.2em] mb-3">
+                <span className="mb-3 inline-block font-headline text-xs font-bold uppercase tracking-[0.2em] text-accent md:text-sm">
                   Simple Process
                 </span>
-                <h2 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white leading-tight">
+                <h2 className="font-headline text-3xl font-extrabold leading-tight text-white sm:text-4xl md:text-5xl lg:text-6xl">
                   How it works
                 </h2>
               </div>
-              <p className="text-white/60 max-w-xs text-sm leading-relaxed sm:text-right">
-                Three simple steps to start your authentic Ethiopian journey.
+              <p className="max-w-md text-base leading-relaxed text-white/65 sm:text-right md:text-lg">
+                Three steps from browsing to walking into your next booked
+                experience.
               </p>
             </div>
 
@@ -407,32 +397,27 @@ const Index = () => {
                   className="group relative bg-primary hover:bg-white/5 transition-colors duration-300 p-8 md:p-10 flex flex-col gap-6"
                 >
                   {/* Step number watermark */}
-                  <span className="absolute top-6 right-7 font-headline font-black text-6xl md:text-8xl text-white/[0.06] select-none leading-none pointer-events-none">
+                  <span className="pointer-events-none absolute right-7 top-6 select-none font-headline text-7xl font-black leading-none text-white/[0.06] md:text-8xl lg:text-9xl">
                     0{i + 1}
                   </span>
 
                   {/* Icon badge */}
-                  <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center shrink-0">
-                    <Icon className="h-6 w-6 text-accent" />
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent/20 md:h-16 md:w-16">
+                    <Icon className="h-7 w-7 text-accent md:h-8 md:w-8" />
                   </div>
 
                   {/* Step label */}
                   <div>
-                    <p className="text-accent font-headline font-bold text-xs uppercase tracking-widest mb-2">
+                    <p className="mb-2 font-headline text-xs font-bold uppercase tracking-widest text-accent md:text-sm">
                       Step 0{i + 1}
                     </p>
-                    <h3 className="font-headline text-xl md:text-2xl font-extrabold text-white mb-3 leading-snug">
+                    <h3 className="mb-3 font-headline text-2xl font-extrabold leading-snug text-white md:text-3xl lg:text-4xl">
                       {title}
                     </h3>
-                    <p className="text-white/60 text-sm leading-relaxed">
+                    <p className="text-base leading-relaxed text-white/65 md:text-lg">
                       {desc}
                     </p>
                   </div>
-
-                  {/* Arrow connector (desktop only, not last item) */}
-                  {i < howItWorks.length - 1 && (
-                    <ArrowRight className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30 z-10" />
-                  )}
                 </div>
               ))}
             </div>
@@ -441,48 +426,51 @@ const Index = () => {
       </section>
 
       {/* ── Featured Experiences ── */}
-      <section className="py-24 bg-background">
+      <section className="py-20 bg-background md:py-28">
         <div className="container">
           <div
-            ref={featTitle.ref as React.RefObject<HTMLDivElement>}
-            className={`text-center mb-16 reveal ${featTitle.isVisible ? "visible" : ""}`}
+            ref={featTitle.ref}
+            className={`mb-14 text-center reveal md:mb-16 ${featTitle.isVisible ? "visible" : ""}`}
           >
-            <h2 className="font-headline text-2xl sm:text-4xl font-extrabold text-primary mb-4">
-              Featured African Destinations
+            <h2 className="mb-4 font-headline text-3xl font-extrabold text-primary sm:text-4xl md:text-5xl lg:text-[2.5rem] lg:leading-tight">
+              Featured experiences
             </h2>
-            <p className="text-on-surface-variant max-w-xl mx-auto">
-              Discover the breathtaking beauty and rich cultural heritage of
-              Africa's most iconic locations.
+            <p className="mx-auto max-w-2xl text-lg leading-relaxed text-on-surface-variant md:text-xl">
+              Hand-picked bookable experiences from our community. Browse by
+              place, pace, and passion, then lock in a date that works for you.
             </p>
           </div>
           <div
-            ref={featCards.ref as React.RefObject<HTMLDivElement>}
+            ref={featCards.ref}
             className={`grid gap-5 sm:grid-cols-2 lg:grid-cols-4 reveal-stagger ${
               featCards.isVisible ? "visible" : ""
             }`}
           >
-            {featuredLoading
-              ? Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-[400px] rounded-2xl bg-surface-container animate-pulse" />
-                ))
-              : featuredExperiences.length > 0
-                ? featuredExperiences.map((exp) => (
-                    <DestinationCard
-                      key={exp._id}
-                      id={exp._id}
-                      image={exp.imageCover}
-                      location={exp.location}
-                      title={exp.title}
-                      description={exp.summary || exp.description}
-                      reviewCount={exp.ratingsQuantity}
-                    />
-                  ))
-                : (
-                    <p className="col-span-full text-center text-sm text-on-surface-variant py-8">
-                      No bookable featured experiences right now. Browse the full catalog for more.
-                    </p>
-                  )
-            }
+            {featuredLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-[400px] rounded-2xl bg-surface-container animate-pulse"
+                />
+              ))
+            ) : featuredExperiences.length > 0 ? (
+              featuredExperiences.map((exp) => (
+                <DestinationCard
+                  key={exp._id}
+                  id={exp._id}
+                  image={exp.imageCover}
+                  location={exp.location}
+                  title={exp.title}
+                  description={exp.summary || exp.description}
+                  reviewCount={exp.ratingsQuantity}
+                />
+              ))
+            ) : (
+              <p className="col-span-full py-8 text-center text-sm text-on-surface-variant">
+                No featured experiences are available to book right now. Open
+                the full catalog to see everything hosts are offering.
+              </p>
+            )}
           </div>
           <div
             className={`text-center mt-10 reveal ${featTitle.isVisible ? "visible" : ""}`}
@@ -490,29 +478,29 @@ const Index = () => {
           >
             <Link
               to="/experiences"
-              className="inline-flex items-center gap-2 text-primary font-headline font-bold hover:gap-3 transition-all"
+              className="inline-flex items-center gap-2 font-headline text-base font-bold text-primary transition-all hover:gap-3 md:text-lg"
             >
-              Explore all destinations <ArrowRight className="h-4 w-4" />
+              Browse all experiences <ArrowRight className="h-5 w-5" />
             </Link>
           </div>
         </div>
       </section>
 
       {/* ── Testimonials ── */}
-      <section className="py-24 bg-surface-container-low relative overflow-hidden">
+      <section className="relative overflow-hidden bg-surface-container-low py-20 md:py-28">
         <div className="absolute top-0 left-0 right-0 h-16 fade-top pointer-events-none z-10" />
         <div className="absolute bottom-0 left-0 right-0 h-16 fade-bottom pointer-events-none z-10" />
         <div className="container relative z-10">
           <div
-            ref={testiTitle.ref as React.RefObject<HTMLDivElement>}
+            ref={testiTitle.ref}
             className={`reveal ${testiTitle.isVisible ? "visible" : ""}`}
           >
-            <h2 className="font-headline text-2xl sm:text-4xl font-extrabold text-primary text-center mb-10 md:mb-16">
-              Stories from the Road
+            <h2 className="mb-10 text-center font-headline text-3xl font-extrabold text-primary sm:text-4xl md:mb-16 md:text-5xl lg:text-6xl">
+              What guests say about their bookings
             </h2>
           </div>
           <div
-            ref={testiCards.ref as React.RefObject<HTMLDivElement>}
+            ref={testiCards.ref}
             className={`reveal ${testiCards.isVisible ? "visible" : ""}`}
           >
             <TestimonialSlider
@@ -525,11 +513,11 @@ const Index = () => {
       </section>
 
       {/* ── Become a Host CTA ── */}
-      <section className="py-24">
+      <section className="py-20 md:py-28">
         <div className="container">
           <div
-            ref={ctaReveal.ref as React.RefObject<HTMLDivElement>}
-            className={`relative bg-primary-container rounded-3xl md:rounded-[3rem] overflow-hidden p-8 sm:p-12 md:p-20 text-center reveal ${
+            ref={ctaReveal.ref}
+            className={`relative overflow-hidden rounded-3xl bg-primary-container p-8 text-center reveal sm:p-12 md:rounded-[3rem] md:p-20 lg:p-24 ${
               ctaReveal.isVisible ? "visible" : ""
             }`}
           >
@@ -541,16 +529,16 @@ const Index = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary/60 to-black/70" />
             </div>
-            <div className="relative z-10 max-w-2xl mx-auto">
-              <h2 className="font-headline text-2xl sm:text-4xl md:text-5xl font-extrabold text-primary-foreground mb-4 md:mb-6">
+            <div className="relative z-10 mx-auto max-w-3xl">
+              <h2 className="mb-4 font-headline text-3xl font-extrabold text-primary-foreground sm:text-4xl md:mb-6 md:text-5xl lg:text-6xl">
                 Have a Story to Tell?
               </h2>
-              <p className="text-on-primary-container text-sm sm:text-lg mb-7 md:mb-10">
+              <p className="mb-7 text-base text-on-primary-container sm:text-lg md:mb-10 md:text-xl">
                 Share your heritage, guide travelers through your city, and earn
                 by hosting unique experiences on Endebeto.
               </p>
               <Link to="/become-host">
-                <Button className="bg-tertiary-fixed text-on-tertiary-fixed font-headline font-bold px-6 py-2.5 rounded-xl text-sm hover:scale-105 transition-all shadow-lg shadow-black/15 h-auto">
+                <Button className="h-auto rounded-2xl bg-tertiary-fixed px-8 py-4 font-headline text-base font-bold text-on-tertiary-fixed shadow-lg shadow-black/15 transition-all hover:scale-105 md:px-10 md:py-5 md:text-lg">
                   Become a Host
                 </Button>
               </Link>
