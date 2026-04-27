@@ -46,6 +46,8 @@ export interface Experience {
   reviews?: Review[];
   isSoldOut?: boolean;
   spotsLeft?: number | null;
+  /** From GET /experiences/mine — upcoming bookings with a future occurrence date (locks schedule changes). */
+  upcomingBookingsCount?: number;
 }
 
 // factory.getAll  → { status, results: totalCount, data: { data: T[] } }

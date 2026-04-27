@@ -414,7 +414,8 @@ function BookingsSection({ expId }: { expId: string }) {
       ) : (
         <div className="space-y-1.5">
           {bookings.map((b) => {
-            const amount = (b.price ?? 0) * (b.quantity ?? 1);
+            // API stores total paid per booking in `price`, not unit price
+            const amount = b.price ?? 0;
             const dateStr = b.experienceDate
               ? new Date(b.experienceDate).toLocaleDateString()
               : "—";

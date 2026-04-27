@@ -379,7 +379,7 @@ export default function HostDashboard() {
                             </span>
                           </td>
                           <td className="px-4 md:px-8 py-4 text-right font-bold text-primary dark:text-green-400 text-xs whitespace-nowrap">
-                            {(b.price * b.quantity).toLocaleString()} <span className="font-normal text-on-surface-variant dark:text-zinc-400">ETB</span>
+                            {(b.price ?? 0).toLocaleString()} <span className="font-normal text-on-surface-variant dark:text-zinc-400">ETB</span>
                           </td>
                         </tr>
                       ))}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1";
@@ -347,9 +347,9 @@ interface ContentProps {
   user: AuthUser | null;
   updateUser: (u: AuthUser) => void;
   showPass: boolean;
-  setShowPass: (v: boolean) => void;
+  setShowPass: Dispatch<SetStateAction<boolean>>;
   showNewPass: boolean;
-  setShowNewPass: (v: boolean) => void;
+  setShowNewPass: Dispatch<SetStateAction<boolean>>;
   deleteConfirm: boolean;
   setDeleteConfirm: (v: boolean) => void;
 }
@@ -503,7 +503,8 @@ function ProfileContent({
                 <p className="text-on-surface-variant text-xs">Update your photo and personal details.</p>
               </div>
               <span className="bg-tertiary-container text-on-tertiary-container text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full flex items-center gap-1">
-                ★ Traveler
+                <Compass className="h-3 w-3 shrink-0" aria-hidden />
+                Traveler
               </span>
             </div>
 
@@ -563,7 +564,7 @@ function ProfileContent({
                     )}
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm">📱</span>
+                    <Smartphone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" aria-hidden />
                     <input
                       type="tel"
                       value={phone}

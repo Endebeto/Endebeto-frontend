@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FileText, X, ShieldCheck, ChevronRight, ZoomIn, Loader2, AlertCircle } from "lucide-react";
+import { FileText, X, ShieldCheck, ChevronRight, ZoomIn, Loader2, AlertCircle, Check } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -348,10 +348,16 @@ export default function AdminHostApplications() {
                 </div>
               )}
               {selected.status === "approved" && (
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full">✓ Approved</span>
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full">
+                  <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                  Approved
+                </span>
               )}
               {selected.status === "rejected" && (
-                <span className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-full">✕ Rejected</span>
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-full">
+                  <X className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                  Rejected
+                </span>
               )}
             </div>
 

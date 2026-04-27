@@ -70,6 +70,37 @@ function fmtEtbFull(cents: number) {
   return etb.toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
+/** Chart series values are already ETB (API cents were divided by 100 in the row builder). */
+function fmtEtbMajorUnits(etb: number) {
+  if (!Number.isFinite(etb)) return "0";
+  return etb.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+/** Y-axis tick labels for large ETB amounts (not dollar-scale). */
+function formatEtbAxisTick(v: number) {
+  if (!Number.isFinite(v)) return "";
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1000) return `${(v / 1000).toFixed(0)}k`;
+  return v.toFixed(0);
+}
+
+/**
+ * Top of Y domain: peak (revenue or fees for current toggle) + headroom, rounded to a
+ * readable step so lines sit lower than the top edge for multi‑digit birr values.
+ */
+function computeEtbAreaYMax(
+  rows: { revenue: number; fees: number }[],
+  key: "revenue" | "fees",
+) {
+  if (!rows.length) return 10_000;
+  const peak = Math.max(0, ...rows.map((r) => Number(r[key]) || 0));
+  if (peak === 0) return 5_000;
+  const target = peak * 1.28;
+  const magnitude = 10 ** Math.floor(Math.log10(Math.max(target, 1)));
+  const step = Math.max(magnitude / 5, 500);
+  return Math.ceil(target / step) * step;
+}
+
 const EMPTY_STATS: PlatformStats = {
   totalUsers: 0,
   approvedHosts: 0,
@@ -153,7 +184,7 @@ function AreaTooltipBody({ active, payload, label }: ChartTooltipProps) {
           <li key={String(p.name)} className="flex justify-between gap-6">
             <span className="text-on-surface-variant">{p.name}</span>
             <span className="font-bold tabular-nums text-on-surface">
-              {fmtEtbFull(Number(p.value ?? 0))} ETB
+              {fmtEtbMajorUnits(Number(p.value ?? 0))} ETB
             </span>
           </li>
         ))}
@@ -512,6 +543,11 @@ export default function AdminDashboard() {
     }));
   }, [chartsData]);
 
+  const revenueAreaYMax = useMemo(
+    () => computeEtbAreaYMax(revenueRows, revenueSeries),
+    [revenueRows, revenueSeries],
+  );
+
   const stats: PlatformStats = statsData ?? EMPTY_STATS;
 
   const compareSuffix =
@@ -767,7 +803,7 @@ export default function AdminDashboard() {
                     </h2>
                   </div>
                   <p className="text-[11px] text-on-surface-variant mt-1 pl-7 leading-relaxed">
-                    Monthly {revenueSeries === "revenue" ? "gross revenue" : "platform fees"} from paid bookings over the last {months} months. All values in ETB.
+                    Monthly {revenueSeries === "revenue" ? "gross revenue (host + platform fee)" : "platform fees"} from wallet ledger entries, by payment month, over the last {months} months. Matches the same source and dates as the other line. ETB.
                   </p>
                 </div>
                 <div className="flex items-center gap-1 bg-surface-container-low rounded-lg p-0.5">
@@ -851,12 +887,9 @@ export default function AdminDashboard() {
                       />
                       <YAxis
                         tick={{ fontSize: 11 }}
-                        width={60}
-                        tickFormatter={(v: number) =>
-                          v >= 1000
-                            ? `${(v / 1000).toFixed(0)}k`
-                            : v.toFixed(0)
-                        }
+                        width={76}
+                        domain={[0, revenueAreaYMax]}
+                        tickFormatter={(v: number) => formatEtbAxisTick(v)}
                       />
                       <Tooltip
                         content={(props) => <AreaTooltipBody {...props} />}

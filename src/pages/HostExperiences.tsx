@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import {
   Plus, MapPin, Users, Timer, Star, MoreVertical,
@@ -27,6 +28,11 @@ const fmtDate = (iso?: string) => {
 /* ─── types ──────────────────────────────────────────── */
 type ExpStatus = "approved" | "pending" | "rejected" | "draft";
 type TabFilter = "all" | ExpStatus;
+
+/** Mount modals here (see index.html `#modal-root`) so they sit above #root, cards, and host chrome. */
+function getHostModalContainer(): Element {
+  return document.getElementById("modal-root") ?? document.body;
+}
 
 /* ─── status config ──────────────────────────────────── */
 const statusCfg: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
@@ -70,16 +76,21 @@ function RescheduleModal({ exp, onClose }: { exp: Experience; onClose: () => voi
     },
   });
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/15 dark:border-zinc-700 max-w-sm w-full p-6">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/55 p-4 backdrop-blur-sm isolate [pointer-events:auto]"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reschedule-modal-title"
+    >
+      <div className="relative z-10 my-auto w-full max-w-sm rounded-2xl border border-outline-variant/15 bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 max-h-[min(90vh,560px)] overflow-y-auto">
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
             <RefreshCw className="h-5 w-5 text-primary dark:text-green-400" />
           </div>
-          <div>
-            <h3 className="font-headline font-bold text-on-surface dark:text-white">Reschedule Experience</h3>
-            <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 line-clamp-1">{exp.title}</p>
+          <div className="min-w-0">
+            <h3 id="reschedule-modal-title" className="font-headline font-bold text-on-surface dark:text-white">Reschedule Experience</h3>
+            <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 line-clamp-2 break-words">{exp.title}</p>
           </div>
         </div>
 
@@ -106,7 +117,8 @@ function RescheduleModal({ exp, onClose }: { exp: Experience; onClose: () => voi
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    getHostModalContainer(),
   );
 }
 
@@ -116,11 +128,13 @@ function ActionMenu({
   onReschedule,
   onStop,
   hostListingLocked,
+  hasUpcomingBookings,
 }: {
   exp: Experience;
   onReschedule: (exp: Experience) => void;
   onStop: (exp: Experience) => void;
   hostListingLocked: boolean;
+  hasUpcomingBookings: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const id = exp._id ?? exp.id;
@@ -128,6 +142,16 @@ function ActionMenu({
   const isPubliclyVisible = exp.status === "approved" && !exp.suspended && !expired;
   // Stop is only meaningful for approved listings that are currently scheduled (live).
   const canStop = exp.status === "approved" && !!exp.nextOccurrenceAt && !expired;
+  const scheduleLocked = hostListingLocked || hasUpcomingBookings;
+  const scheduleLockTitle = hasUpcomingBookings
+    ? "You can’t change the next date while guests have upcoming bookings for this run."
+    : "Scheduling changes are disabled for your account.";
+  const stopLocked = hostListingLocked || hasUpcomingBookings;
+  const stopLockTitle = hasUpcomingBookings
+    ? "You can’t stop while guests have upcoming bookings. Let them complete or cancel first."
+    : hostListingLocked
+      ? "Stopping is temporarily disabled for your account."
+      : undefined;
 
   return (
     <div className="relative">
@@ -137,8 +161,8 @@ function ActionMenu({
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-8 z-20 w-44 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-outline-variant/20 dark:border-zinc-700 overflow-hidden py-1">
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
+          <div className="absolute right-0 top-8 z-50 w-44 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-outline-variant/20 dark:border-zinc-700 overflow-hidden py-1">
             {isPubliclyVisible && (
               <Link to={`/experiences/${id}`}
                 className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors">
@@ -161,14 +185,14 @@ function ActionMenu({
             {exp.status === "approved" && !expired && (
               <button
                 type="button"
-                disabled={hostListingLocked}
+                disabled={scheduleLocked}
                 onClick={() => {
-                  if (hostListingLocked) return;
+                  if (scheduleLocked) return;
                   onReschedule(exp);
                   setOpen(false);
                 }}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                title={hostListingLocked ? "Scheduling changes are disabled for your account." : undefined}
+                title={scheduleLocked ? scheduleLockTitle : undefined}
               >
                 <Calendar className="h-3.5 w-3.5 text-on-surface-variant" /> Set Next Date
               </button>
@@ -178,13 +202,14 @@ function ActionMenu({
                 <div className="my-1 border-t border-outline-variant/20 dark:border-zinc-700" />
                 <button
                   type="button"
-                  disabled={hostListingLocked}
+                  disabled={stopLocked}
                   onClick={() => {
-                    if (hostListingLocked) return;
+                    if (stopLocked) return;
                     onStop(exp);
                     setOpen(false);
                   }}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-error hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={stopLockTitle}
                 >
                   <Ban className="h-3.5 w-3.5" /> Stop
                 </button>
@@ -209,16 +234,20 @@ function StopModal({
   onConfirm: () => void;
   isPending: boolean;
 }) {
-  return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/15 dark:border-zinc-700 max-w-sm w-full p-6">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/55 p-4 backdrop-blur-sm isolate [pointer-events:auto]"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="relative z-10 my-auto w-full max-w-sm rounded-2xl border border-outline-variant/15 bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 max-h-[min(90vh,520px)] overflow-y-auto">
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center shrink-0">
             <Ban className="h-5 w-5 text-error dark:text-red-400" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="font-headline font-bold text-on-surface dark:text-white">Stop this experience?</h3>
-            <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 line-clamp-1">{exp.title}</p>
+            <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 line-clamp-2 break-words">{exp.title}</p>
           </div>
         </div>
 
@@ -239,7 +268,8 @@ function StopModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    getHostModalContainer(),
   );
 }
 
@@ -257,6 +287,7 @@ function ExpCard({
 }) {
   const isSuspended = exp.status === "approved" && exp.suspended;
   const expired = exp.status === "approved" && !exp.suspended && isExpired(exp);
+  const hasUpcomingBookings = (exp.upcomingBookingsCount ?? 0) > 0;
   const s = statusCfg[exp.status ?? "draft"] ?? statusCfg.draft;
   const Icon = isSuspended ? AlertCircle : expired ? Clock : s.icon;
   const id = exp._id ?? exp.id;
@@ -273,29 +304,37 @@ function ExpCard({
 
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-outline-variant/10 dark:border-zinc-700 shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
-      {/* image */}
-      <div className="relative h-44 bg-surface-container dark:bg-zinc-800 overflow-hidden">
-        <img
-          src={exp.imageCover}
-          alt={exp.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          onError={(e) => { (e.target as HTMLImageElement).src = "/imgs/image1.jpg"; }}
-        />
-        <span className={`absolute top-3 left-3 flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${badgeCls}`}>
+      {/*
+        Top block must stack above the card body, or the ⋮ menu (absolute, extends below
+        the image) is painted under the next sibling. Image alone uses overflow-hidden
+        for hover scale + rounded top — not the whole top block, or the menu is clipped
+        at the image / body line.
+      */}
+      <div className="relative z-20">
+        <div className="h-44 overflow-hidden rounded-t-2xl bg-surface-container dark:bg-zinc-800">
+          <img
+            src={exp.imageCover}
+            alt={exp.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            onError={(e) => { (e.target as HTMLImageElement).src = "/imgs/image1.jpg"; }}
+          />
+        </div>
+        <span className={`absolute top-3 left-3 z-10 flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${badgeCls}`}>
           <Icon className="h-3 w-3" />{badgeLabel}
         </span>
-        <div className="absolute top-2.5 right-2.5">
+        <div className="absolute top-2.5 right-2.5 z-30">
           <ActionMenu
             exp={exp}
             onReschedule={onReschedule}
             onStop={onStop}
             hostListingLocked={hostListingLocked}
+            hasUpcomingBookings={hasUpcomingBookings}
           />
         </div>
       </div>
 
-      {/* body */}
-      <div className="p-5">
+      {/* body — below the top block in paint order; keep z-0 so open menu stays on top */}
+      <div className="relative z-0 p-5">
         <h3 className="font-headline font-bold text-sm text-on-surface dark:text-white mb-2 leading-tight line-clamp-2">
           {exp.title}
         </h3>
@@ -343,19 +382,35 @@ function ExpCard({
             {expired ? (
               <button
                 type="button"
-                disabled={hostListingLocked}
-                onClick={() => !hostListingLocked && onReschedule(exp)}
+                disabled={hostListingLocked || hasUpcomingBookings}
+                onClick={() => {
+                  if (!hostListingLocked && !hasUpcomingBookings) onReschedule(exp);
+                }}
                 className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-700/40 text-amber-700 dark:text-amber-300 text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                title={hostListingLocked ? "Scheduling is disabled for your account." : undefined}
+                title={
+                  hasUpcomingBookings
+                    ? "You can’t set a new date while guests have upcoming bookings for this run."
+                    : hostListingLocked
+                      ? "Scheduling is disabled for your account."
+                      : undefined
+                }
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Reschedule — {exp.nextOccurrenceAt ? "past date" : "no date set"}
               </button>
             ) : (
-              <p className="text-xs text-on-surface-variant dark:text-zinc-400 flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                Next: <strong className="text-on-surface dark:text-white ml-1">{fmtDate(exp.nextOccurrenceAt)}</strong>
-              </p>
+              <div>
+                <p className="text-xs text-on-surface-variant dark:text-zinc-400 flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  Next: <strong className="text-on-surface dark:text-white ml-1">{fmtDate(exp.nextOccurrenceAt)}</strong>
+                </p>
+                {hasUpcomingBookings && (
+                  <p className="text-[10px] text-amber-800 dark:text-amber-300 mt-1.5 leading-snug">
+                    {exp.upcomingBookingsCount} upcoming guest booking
+                    {(exp.upcomingBookingsCount ?? 0) > 1 ? "s" : ""} — the next date is locked. Contact support if you need an exception.
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}

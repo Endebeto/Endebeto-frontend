@@ -104,7 +104,7 @@ function GuestRow({ booking, idx }: { booking: Booking; idx: number }) {
 
       {/* Amount */}
       <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-primary dark:text-green-400">
-        ETB {((booking.price ?? 0) * (booking.quantity ?? 1)).toLocaleString()}
+        ETB {(booking.price ?? 0).toLocaleString()}
       </td>
 
       {/* Status */}

@@ -10,6 +10,8 @@ import {
   Calendar,
   ListFilter,
   Ticket,
+  Banknote,
+  Loader2,
 } from "lucide-react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
@@ -329,7 +331,7 @@ const Experiences = () => {
     ],
   );
 
-  const { data: listRes, isLoading, isPlaceholderData } = useQuery({
+  const { data: listRes, isLoading, isFetching, isPlaceholderData } = useQuery({
     queryKey: ["experiences", "browse", listParams] as const,
     queryFn: () => experiencesService.getAll(listParams),
     placeholderData: keepPreviousData,
@@ -455,7 +457,8 @@ const Experiences = () => {
             <div className="mt-4 flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
               {locationActive ? (
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-[10px] text-primary">
-                  📍 {locationQ}
+                  <MapPin className="h-2.5 w-2.5 shrink-0 opacity-90" aria-hidden />
+                  {locationQ}
                   <button type="button" onClick={() => setLocationQ("")}>
                     <X className="h-2.5 w-2.5" />
                   </button>
@@ -463,7 +466,8 @@ const Experiences = () => {
               ) : null}
               {priceActive ? (
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-[10px] text-primary">
-                  💰 {minPrice.toLocaleString()}–{maxPriceFilter.toLocaleString()} ETB
+                  <Banknote className="h-2.5 w-2.5 shrink-0 opacity-90" aria-hidden />
+                  {minPrice.toLocaleString()}–{maxPriceFilter.toLocaleString()} ETB
                   <button
                     type="button"
                     onClick={() => {
@@ -477,7 +481,8 @@ const Experiences = () => {
               ) : null}
               {ratingActive ? (
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-[10px] text-primary">
-                  ⭐ {minRating}+
+                  <Star className="h-2.5 w-2.5 shrink-0 opacity-90" aria-hidden />
+                  {minRating}+
                   <button type="button" onClick={() => setMinRating(0)}>
                     <X className="h-2.5 w-2.5" />
                   </button>
@@ -485,7 +490,8 @@ const Experiences = () => {
               ) : null}
               {dateActive ? (
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-[10px] text-primary">
-                  📅 {dateFrom || "…"} → {dateTo || "…"}
+                  <Calendar className="h-2.5 w-2.5 shrink-0 opacity-90" aria-hidden />
+                  {dateFrom || "…"} – {dateTo || "…"}
                   <button
                     type="button"
                     onClick={() => {
@@ -659,10 +665,19 @@ const Experiences = () => {
               ) : null}
               <Button
                 type="button"
-                className="min-w-0 flex-1 font-headline font-bold"
+                className="min-w-0 flex-1 font-headline font-bold inline-flex items-center justify-center gap-2"
                 onClick={() => setFiltersOpen(false)}
               >
-                Show {totalCount} result{totalCount !== 1 ? "s" : ""}
+                {isFetching ? (
+                  <>
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                    <span>Loading results…</span>
+                  </>
+                ) : (
+                  <>
+                    Show {totalCount} result{totalCount !== 1 ? "s" : ""}
+                  </>
+                )}
               </Button>
             </div>
           </SheetContent>

@@ -515,8 +515,15 @@ export default function HostApply() {
           value={step1.aboutYou} onChange={(e) => setStep1((p) => ({ ...p, aboutYou: e.target.value }))}
           className={`${inputCls} resize-none`} />
         <div className="flex justify-between mt-1.5">
-          <p className={`text-[11px] ${step1.aboutYou.length >= 30 ? "text-primary dark:text-green-400" : "text-on-surface-variant dark:text-zinc-500"}`}>
-            {step1.aboutYou.length >= 30 ? "✓ Minimum reached" : `${30 - step1.aboutYou.length} more characters needed`}
+          <p className={`flex items-center gap-1 text-[11px] ${step1.aboutYou.length >= 30 ? "text-primary dark:text-green-400" : "text-on-surface-variant dark:text-zinc-500"}`}>
+            {step1.aboutYou.length >= 30 ? (
+              <>
+                <Check className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                <span>Minimum reached</span>
+              </>
+            ) : (
+              <span>{30 - step1.aboutYou.length} more characters needed</span>
+            )}
           </p>
           <p className="text-[11px] text-on-surface-variant dark:text-zinc-500">{step1.aboutYou.length} chars</p>
         </div>

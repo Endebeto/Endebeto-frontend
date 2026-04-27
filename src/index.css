@@ -160,6 +160,16 @@ html {
   }
 }
 
+/* Sibling to #root — ensures portaled modals (HostExperiences, etc.) stack above app content */
+#modal-root {
+  position: relative;
+  z-index: 9999;
+  pointer-events: none;
+}
+#modal-root > * {
+  pointer-events: auto;
+}
+
 /* Utility classes for design tokens not in Tailwind config */
 .bg-surface-container-low {
   background-color: var(--surface-container-low);
