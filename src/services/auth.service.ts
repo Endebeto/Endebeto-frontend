@@ -42,6 +42,22 @@ export interface User {
   /** Set when Google account is linked (same email merges on OAuth). */
   googleId?: string;
   facebookId?: string;
+  /** Persisted payout profile (filled on first withdrawal); bank must be one of CBE / BOA / Awash */
+  hostPayoutBankName?: string;
+  cbeAccountName?: string;
+  cbeAccountNumber?: string;
+  hostApplicationData?: {
+    fullName?: string;
+    phoneNumber?: string;
+    cityRegion?: string;
+    fullAddress?: string;
+    languagesSpoken?: string[];
+    aboutYou?: string;
+    mediaUrls?: string[];
+    faydaId?: string;
+    faydaVerified?: boolean;
+    faydaVerificationDate?: string;
+  };
 }
 
 export const authService = {

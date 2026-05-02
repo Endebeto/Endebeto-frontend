@@ -274,6 +274,8 @@ export interface AdminWithdrawal {
     photo?: string;
     cbeAccountName?: string;
     cbeAccountNumber?: string;
+    /** Last payout bank chosen by host (same field name as Mongo) */
+    hostPayoutBankName?: string;
   };
   amountCents: number;
   amountETB?: number;

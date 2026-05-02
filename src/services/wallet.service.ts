@@ -26,7 +26,6 @@ export interface EarningRow {
     status: string;
     quantity: number;
     experience: { title: string; imageCover?: string } | null;
-    guest: { name: string; photo?: string } | null;
   } | null;
 }
 

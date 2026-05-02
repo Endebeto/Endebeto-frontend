@@ -1,8 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Banknote, Wallet, ArrowDownToLine, FileText,
-  ShieldCheck, Filter, Download,
+  Wallet, ArrowDownToLine, FileText,
   ChevronLeft, ChevronRight, X, AlertCircle,
   TrendingUp, Info, Loader2, ChevronDown, UserCheck, Clock, ArrowUpFromLine,
   TrendingDown, CheckCircle2, Search,
@@ -30,51 +29,46 @@ const statusCfg: Record<string, { label: string; cls: string }> = {
   canceled:         { label: "Cancelled",cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" },
 };
 
-/* ─── Ethiopian banks ────────────────────────────────── */
-const ETHIOPIAN_BANKS = [
-  "Abay Bank",
-  "Ahadu Bank",
-  "Awash Bank",
-  "Bank of Abyssinia (BOA)",
-  "Berhan Bank",
-  "Birhan Bank",
-  "Bunna International Bank",
+/* ─── Withdrawal banks (backend-enforced list) ──────── */
+const PAYOUT_BANKS = [
   "Commercial Bank of Ethiopia (CBE)",
-  "Cooperative Bank of Oromia (CBO)",
-  "Dashen Bank",
-  "Debub Global Bank",
-  "Enat Bank",
-  "Global Bank Ethiopia",
-  "Hibret Bank",
-  "Lion International Bank",
-  "Nib International Bank",
-  "Oromia Bank",
-  "Tsehay Bank",
-  "United Bank",
-  "Wegagen Bank",
-  "ZamZam Bank",
-];
+  "Bank of Abyssinia (BOA)",
+  "Awash Bank",
+] as const;
 
 /* ─── withdraw modal ─────────────────────────────────── */
 function WithdrawModal({
   availableETB,
-  hostName,
+  accountHolderLegalName,
+  savedBankName,
+  savedAccountName,
+  savedAccountNumber,
   onClose,
-  onSuccess,
+  onWithdrawComplete,
 }: {
   availableETB: number;
-  hostName: string;
+  accountHolderLegalName: string;
+  savedBankName?: string;
+  savedAccountName?: string;
+  savedAccountNumber?: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onWithdrawComplete: () => Promise<void>;
 }) {
+  const presetHolder =
+    accountHolderLegalName.trim() ||
+    savedAccountName?.trim() ||
+    "";
+
   const [form, setForm] = useState({
-    amountETB: "", bankName: "", accountName: hostName, accountNumber: "",
+    amountETB: "",
+    bankName: savedBankName ?? "",
+    accountName: presetHolder,
+    accountNumber: (savedAccountNumber ?? "").replace(/\D/g, ""),
   });
   const [touched, setTouched] = useState({
     amountETB: false, bankName: false, accountName: false, accountNumber: false,
   });
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const clientRequestIdRef = useRef(
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
@@ -94,11 +88,12 @@ function WithdrawModal({
   const noAccNum    = form.accountNumber.trim().length < 8;
   const nonNumericAccNum = form.accountNumber.trim() !== "" && !/^\d+$/.test(form.accountNumber.trim());
 
-  /* Account holder name must match registered name (case-insensitive trim) */
   const normalise = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+  const legalRef = accountHolderLegalName.trim();
   const nameMismatch =
+    legalRef !== "" &&
     form.accountName.trim() !== "" &&
-    normalise(form.accountName) !== normalise(hostName);
+    normalise(form.accountName) !== normalise(legalRef);
 
   const valid =
     !noAmount && !tooLow && !tooHigh && !overBalance &&
@@ -106,7 +101,6 @@ function WithdrawModal({
     !noAccName && !nameMismatch &&
     !noAccNum && !nonNumericAccNum;
 
-  /* Show field error only if touched or submit was attempted */
   const show = (field: keyof typeof touched) => touched[field] || submitAttempted;
 
   const mutation = useMutation({
@@ -118,14 +112,15 @@ function WithdrawModal({
         accountNumber: form.accountNumber.trim(),
         clientRequestId: clientRequestIdRef.current,
       }),
-    onSuccess: () => {
-      setSubmitted(true);
-      onSuccess();
+    onSuccess: async () => {
+      toast.success("Withdrawal submitted. Funds moved to payout pending.", { duration: 5000 });
+      await onWithdrawComplete();
+      onClose();
     },
     onError: (err: unknown) => {
       toast.error(
         getFriendlyErrorMessage(err, "Failed to submit withdrawal request. Please try again."),
-        { duration: 6000 },
+        { duration: 6000, className: "border-red-500 [&_[data-title]]:text-red-700 dark:[&_[data-title]]:text-red-300" },
       );
     },
   });
@@ -133,7 +128,10 @@ function WithdrawModal({
   const handleSubmit = () => {
     setSubmitAttempted(true);
     if (!valid) {
-      toast.error("Please fix the errors in the form before submitting.", { duration: 4000 });
+      toast.error("Please fix the errors in the form before submitting.", {
+        duration: 4000,
+        className: "border-red-500 [&_[data-title]]:text-red-700 dark:[&_[data-title]]:text-red-300",
+      });
       return;
     }
     mutation.mutate();
@@ -143,24 +141,6 @@ function WithdrawModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/20 dark:border-zinc-700 w-full max-w-md max-h-[90vh] flex flex-col">
 
-        {submitted ? (
-          <div className="p-8 text-center">
-            <div className="w-14 h-14 rounded-full bg-secondary-container/50 dark:bg-emerald-900/40 flex items-center justify-center mx-auto mb-4">
-              <ShieldCheck className="h-7 w-7 text-primary dark:text-green-400" />
-            </div>
-            <h3 className="font-headline font-extrabold text-lg text-primary dark:text-green-400 mb-2">Withdrawal Submitted</h3>
-            <p className="text-sm text-on-surface-variant dark:text-zinc-400 leading-relaxed mb-2">
-              Your withdrawal of <strong className="text-on-surface dark:text-white">ETB {amount.toLocaleString("en-ET", { minimumFractionDigits: 2 })}</strong> has been submitted to <strong className="text-on-surface dark:text-white">{form.bankName}</strong>.
-            </p>
-            <p className="text-xs text-on-surface-variant dark:text-zinc-500 mb-6">
-              The amount has been deducted from your available balance and is now in pending payout. Funds are typically processed within 3–5 business days.
-            </p>
-            <button onClick={onClose} className="w-full py-3 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors">
-              Done
-            </button>
-          </div>
-        ) : (
-          <>
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-outline-variant/10 dark:border-zinc-700 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -231,7 +211,7 @@ function WithdrawModal({
                     }`}
                   >
                     <option value="">Select your bank…</option>
-                    {ETHIOPIAN_BANKS.map((b) => (
+                    {PAYOUT_BANKS.map((b) => (
                       <option key={b} value={b}>{b}</option>
                     ))}
                   </select>
@@ -263,13 +243,21 @@ function WithdrawModal({
                   <p className="text-xs text-error mt-1 flex items-center gap-1"><AlertCircle className="h-3 w-3" />Account holder name is required</p>
                 )}
                 {show("accountName") && !noAccName && nameMismatch && (
-                  <p className="text-xs text-error mt-1 flex items-center gap-1"><AlertCircle className="h-3 w-3" />Name must match your registered host name: <strong className="ml-1">{hostName}</strong></p>
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1"><AlertCircle className="h-3 w-3" />Must match your host application legal name: <strong className="ml-1">{legalRef}</strong></p>
                 )}
                 {/* Guidance notice */}
                 <div className="flex items-start gap-2 mt-2 p-2.5 bg-secondary-container/20 dark:bg-emerald-900/20 rounded-lg border border-secondary-container/40 dark:border-emerald-800/30">
                   <UserCheck className="h-3.5 w-3.5 text-primary dark:text-green-400 shrink-0 mt-0.5" />
                   <p className="text-[11px] text-primary dark:text-green-400 leading-relaxed font-medium">
-                    Your bank account holder name must exactly match your registered host name: <strong>{hostName}</strong>
+                    {legalRef ? (
+                      <>
+                        Pre-filled from your approved host application. The account holder name must match: <strong>{legalRef}</strong>. You can save bank details for next time by submitting a withdrawal.
+                      </>
+                    ) : (
+                      <>
+                        The account holder name should match your <strong>approved host application full name</strong> (your profile display name may differ). If this box did not fill automatically, refresh the page or open your dashboard once so your application data can sync.
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -304,7 +292,9 @@ function WithdrawModal({
               <div className="flex items-start gap-2.5 p-3 bg-surface-container-low dark:bg-zinc-800 rounded-xl">
                 <Info className="h-4 w-4 text-on-surface-variant dark:text-zinc-400 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-on-surface-variant dark:text-zinc-400 leading-relaxed">
-                  The requested amount is <strong>immediately deducted</strong> from your available balance and moved to pending payout. Endebeto's 15% platform fee has already been applied to your balance.
+                  The requested amount is <strong>immediately deducted</strong> from your available balance and moved to pending payout. Endebeto's 15% platform fee has already been applied to your balance.{' '}
+                  <strong className="text-on-surface dark:text-zinc-300">You can submit one new payout request every 7 days</strong>
+                  {' '}(retrying the same in-flight request keeps the same reference and does not open a new weekly slot).
                 </p>
               </div>
             </div>
@@ -330,8 +320,6 @@ function WithdrawModal({
                 )}
               </button>
             </div>
-          </>
-        )}
       </div>
     </div>
   );
@@ -393,8 +381,6 @@ function TxRow({ w }: { w: WithdrawalRequest }) {
 /* ─── earning row ────────────────────────────────────── */
 function EarningRowComponent({ row }: { row: EarningRow }) {
   const isHeld     = row.status === "held";
-  const initials   = (name?: string) =>
-    (name ?? "?").split(" ").filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase();
 
   return (
     <tr className="hover:bg-surface-container-low/30 dark:hover:bg-zinc-800/30 transition-colors">
@@ -404,7 +390,7 @@ function EarningRowComponent({ row }: { row: EarningRow }) {
       </td>
 
       {/* Experience */}
-      <td className="px-4 py-5">
+      <td className="px-4 py-5 min-w-[220px] max-w-md">
         <div className="flex items-center gap-2.5 min-w-0">
           {row.booking?.experience?.imageCover ? (
             <img
@@ -416,25 +402,8 @@ function EarningRowComponent({ row }: { row: EarningRow }) {
           ) : (
             <div className="w-8 h-8 rounded-lg bg-surface-container dark:bg-zinc-700 shrink-0" />
           )}
-          <span className="text-xs font-semibold text-on-surface dark:text-white truncate max-w-[160px]">
+          <span className="text-xs font-semibold text-on-surface dark:text-white line-clamp-2">
             {row.booking?.experience?.title ?? "—"}
-          </span>
-        </div>
-      </td>
-
-      {/* Guest */}
-      <td className="px-4 py-5">
-        <div className="flex items-center gap-2">
-          {row.booking?.guest?.photo ? (
-            <img src={row.booking.guest.photo} alt={row.booking.guest.name}
-              className="w-7 h-7 rounded-full object-cover shrink-0" />
-          ) : (
-            <div className="w-7 h-7 rounded-full bg-secondary-container dark:bg-emerald-900/50 flex items-center justify-center text-[9px] font-bold text-primary dark:text-green-400 shrink-0">
-              {initials(row.booking?.guest?.name)}
-            </div>
-          )}
-          <span className="text-xs text-on-surface-variant dark:text-zinc-400 truncate max-w-[100px]">
-            {row.booking?.guest?.name ?? "—"}
           </span>
         </div>
       </td>
@@ -472,10 +441,11 @@ function EarningRowComponent({ row }: { row: EarningRow }) {
 
 /* ─── main component ─────────────────────────────────── */
 export default function HostWallet() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const queryClient = useQueryClient();
 
   const [search, setSearch]       = useState("");
+  const [withdrawModalKey, setWithdrawModalKey] = useState(0);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [activeTab, setActiveTab] = useState<"earnings" | "withdrawals">("earnings");
   const [earningsPage, setEarningsPage] = useState(1);
@@ -540,6 +510,8 @@ export default function HostWallet() {
     void queryClient.invalidateQueries({ queryKey: ["my-earnings"] });
   };
 
+  const legalHostName = (user?.hostApplicationData?.fullName ?? "").trim();
+
   return (
     <HostLayout
       hostName={user?.name ?? "Host"}
@@ -547,10 +519,17 @@ export default function HostWallet() {
     >
       {showWithdraw && (
         <WithdrawModal
+          key={withdrawModalKey}
           availableETB={availableETB}
-          hostName={user?.name ?? ""}
+          accountHolderLegalName={legalHostName}
+          savedBankName={user?.hostPayoutBankName}
+          savedAccountName={user?.cbeAccountName}
+          savedAccountNumber={user?.cbeAccountNumber}
           onClose={() => setShowWithdraw(false)}
-          onSuccess={() => { setShowWithdraw(false); invalidateAll(); }}
+          onWithdrawComplete={async () => {
+            await refreshUser();
+            invalidateAll();
+          }}
         />
       )}
 
@@ -601,7 +580,10 @@ export default function HostWallet() {
 
             <div className="relative z-10 flex flex-wrap items-center gap-3 mt-8">
               <button
-                onClick={() => setShowWithdraw(true)}
+                onClick={() => {
+                  setWithdrawModalKey((k) => k + 1);
+                  setShowWithdraw(true);
+                }}
                 disabled={availableETB < 10}
                 className="px-7 py-3 bg-[#ffddb8] text-[#2a1700] font-bold rounded-xl hover:opacity-90 active:scale-95 transition-all flex items-center gap-2 text-sm shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
               >
@@ -613,6 +595,9 @@ export default function HostWallet() {
                 View Statement
               </button>
             </div>
+            <p className="relative z-10 text-white/50 text-[10px] mt-3 max-w-md leading-snug">
+              You can start a new payout request at most <span className="text-white/70 font-semibold">once every 7 days</span>.
+            </p>
           </div>
 
           {/* Held Earnings (not yet withdrawable) */}
@@ -708,12 +693,11 @@ export default function HostWallet() {
           {activeTab === "earnings" && (
             <>
               <div className="overflow-x-auto scrollbar-hide">
-                <table className="w-full text-left min-w-[680px]">
+                <table className="w-full text-left min-w-[640px]">
                   <thead>
                     <tr className="bg-surface-container-low dark:bg-zinc-800 text-on-surface-variant dark:text-zinc-400 text-[10px] uppercase tracking-widest font-bold">
                       <th className="px-8 py-4">Date</th>
-                      <th className="px-4 py-4">Experience</th>
-                      <th className="px-4 py-4">Guest</th>
+                      <th className="px-4 py-4 min-w-[200px]">Experience</th>
                       <th className="px-4 py-4">Gross</th>
                       <th className="px-4 py-4">Fee (15%)</th>
                       <th className="px-4 py-4">You Receive</th>
@@ -722,11 +706,11 @@ export default function HostWallet() {
                   </thead>
                   <tbody className="divide-y divide-outline-variant/10 dark:divide-zinc-800">
                     {earningsLoading ? (
-                      <tr><td colSpan={7} className="px-8 py-12 text-center">
+                      <tr><td colSpan={6} className="px-8 py-12 text-center">
                         <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-green-400 mx-auto" />
                       </td></tr>
                     ) : earnings.length === 0 ? (
-                      <tr><td colSpan={7} className="px-8 py-12 text-center text-sm text-on-surface-variant dark:text-zinc-400">
+                      <tr><td colSpan={6} className="px-8 py-12 text-center text-sm text-on-surface-variant dark:text-zinc-400">
                         No earnings yet — earnings appear here when guests book your experiences.
                       </td></tr>
                     ) : (
@@ -766,7 +750,8 @@ export default function HostWallet() {
           {activeTab === "withdrawals" && (
             <>
               <p className="px-8 py-3 text-[11px] text-on-surface-variant dark:text-zinc-500 border-b border-outline-variant/10 dark:border-zinc-700 leading-relaxed">
-                Each payout request is kept on file. Requesting a new withdrawal adds a row — it does not replace completed or failed payouts.
+                Each payout request is kept on file. Requesting a new withdrawal adds a row — it does not replace completed or failed payouts.{' '}
+                <span className="text-on-surface dark:text-zinc-400 font-medium">You may start one new payout request every 7 days.</span>
               </p>
 
               {withdrawalsLoading ? (

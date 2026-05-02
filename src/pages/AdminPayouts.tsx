@@ -37,7 +37,10 @@ function bankDetailsForPayout(wr: AdminWithdrawal): {
   const dest = wr.destination;
   const host = wr.host;
   const bank =
-    dest?.bankName ?? wr.bankName ?? "Commercial Bank of Ethiopia (CBE)";
+    dest?.bankName ??
+    host?.hostPayoutBankName ??
+    wr.bankName ??
+    "—";
   const accountName =
     dest?.accountName ?? host?.cbeAccountName ?? wr.accountName ?? "—";
   const full =
@@ -95,53 +98,58 @@ function MarkPaidModal({
   const receiptOk = isValidHttpUrl(receiptUrl);
 
   return (
-    <div className="fixed inset-0 bg-primary/20 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#2d3133] w-full max-w-md rounded-2xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-start justify-between mb-4">
-          <h3 className="font-headline font-extrabold text-lg text-primary">Mark as paid</h3>
-          <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-surface-container text-on-surface-variant">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden border border-outline-variant/20 dark:border-zinc-700">
+        <div className="shrink-0 flex items-start justify-between px-6 pt-6 pb-2">
+          <h3 className="font-headline font-extrabold text-lg text-primary dark:text-emerald-400">Mark as paid</h3>
+          <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-surface-container-low dark:hover:bg-zinc-800 text-on-surface-variant">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <p className="text-xs text-on-surface-variant mb-4">
-          Confirm transfer to <strong>{wr.host?.name}</strong> for <strong>ETB {fmtETB(wr.amountCents ?? 0)}</strong>.
-        </p>
-        <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low/50 p-3 mb-4 space-y-1.5 text-xs">
-          <p>
-            <span className="text-on-surface-variant">Bank: </span>
-            <span className="font-semibold text-on-surface">{bank.bank}</span>
+        <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-4">
+          <p className="text-xs text-on-surface-variant dark:text-zinc-400">
+            Confirm transfer to <strong className="text-on-surface dark:text-zinc-200">{wr.host?.name}</strong> for{" "}
+            <strong className="text-on-surface dark:text-zinc-200">ETB {fmtETB(wr.amountCents ?? 0)}</strong>.
           </p>
-          <p>
-            <span className="text-on-surface-variant">Account name: </span>
-            <span className="font-semibold text-on-surface">{bank.accountName}</span>
-          </p>
-          <p>
-            <span className="text-on-surface-variant">Account no.: </span>
-            <span className="font-mono font-semibold text-primary">{bank.accountNumber}</span>
-          </p>
+          <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low/50 dark:bg-zinc-800/80 p-3 space-y-1.5 text-xs">
+            <p>
+              <span className="text-on-surface-variant">Bank: </span>
+              <span className="font-semibold text-on-surface dark:text-zinc-200">{bank.bank}</span>
+            </p>
+            <p>
+              <span className="text-on-surface-variant">Account name: </span>
+              <span className="font-semibold text-on-surface dark:text-zinc-200">{bank.accountName}</span>
+            </p>
+            <p>
+              <span className="text-on-surface-variant">Account no.: </span>
+              <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">{bank.accountNumber}</span>
+            </p>
+          </div>
+          <div>
+            <label className="block text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant mb-2">
+              Payment receipt link <span className="text-error">(required)</span>
+            </label>
+            <input
+              type="url"
+              value={receiptUrl}
+              onChange={(e) => setReceiptUrl(e.target.value)}
+              placeholder="https://… link to receipt or proof of transfer"
+              className="w-full bg-surface-container-low dark:bg-zinc-800 border border-outline-variant/30 rounded-xl px-3 py-2.5 text-sm text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/25"
+            />
+            {receiptUrl.trim() !== "" && !receiptOk && (
+              <p className="text-[10px] text-red-600 dark:text-red-400 mt-1">Enter a valid URL starting with http:// or https://</p>
+            )}
+            <p className="text-[10px] text-on-surface-variant dark:text-zinc-500 mt-2 leading-relaxed">
+              Hosts will see this link in their wallet after you confirm. Use a stable URL (e.g. uploaded receipt or bank portal screenshot).
+            </p>
+          </div>
         </div>
-        <label className="block text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant mb-2">
-          Payment receipt link <span className="text-error">(required)</span>
-        </label>
-        <input
-          type="url"
-          value={receiptUrl}
-          onChange={(e) => setReceiptUrl(e.target.value)}
-          placeholder="https://… link to receipt or proof of transfer"
-          className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 mb-2"
-        />
-        {receiptUrl.trim() !== "" && !receiptOk && (
-          <p className="text-[10px] text-error mb-4">Enter a valid URL starting with https://</p>
-        )}
-        <p className="text-[10px] text-on-surface-variant mb-4">
-          Hosts will see this link in their wallet after you confirm. Use a stable URL (e.g. uploaded receipt or bank portal screenshot).
-        </p>
-        <div className="flex gap-3">
+        <div className="shrink-0 flex gap-3 px-6 py-4 border-t border-outline-variant/15 dark:border-zinc-700 bg-white dark:bg-zinc-900">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="flex-1 py-2.5 rounded-xl border border-outline-variant text-on-surface font-headline font-bold text-sm hover:bg-surface-container transition-colors"
+            className="flex-1 py-3 rounded-xl border border-outline-variant/50 dark:border-zinc-600 text-on-surface dark:text-zinc-200 font-headline font-bold text-sm hover:bg-surface-container-low dark:hover:bg-zinc-800 transition-colors"
           >
             Cancel
           </button>
@@ -149,7 +157,7 @@ function MarkPaidModal({
             type="button"
             onClick={() => receiptOk && onConfirm(wr._id, receiptUrl.trim())}
             disabled={loading || !receiptOk}
-            className="flex-1 py-2.5 rounded-xl bg-primary text-white font-headline font-bold text-sm shadow-md hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60"
+            className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-headline font-bold text-sm shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
           >
             {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             Confirm paid
@@ -170,51 +178,54 @@ function FailModal({ wr, onClose, onConfirm, loading }: {
   const [reason, setReason] = useState("Invalid Account Number");
   const [note, setNote]     = useState("");
   return (
-    <div className="fixed inset-0 bg-primary/20 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#2d3133] w-full max-w-md rounded-2xl p-8 shadow-2xl">
-        <div className="flex items-start justify-between mb-1">
-          <h3 className="font-headline font-extrabold text-lg text-primary">Mark Payout as Failed</h3>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-surface-container text-on-surface-variant">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden border border-outline-variant/20 dark:border-zinc-700">
+        <div className="shrink-0 flex items-start justify-between px-6 pt-6 pb-2">
+          <h3 className="font-headline font-extrabold text-lg text-red-700 dark:text-red-400">Mark Payout as Failed</h3>
+          <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-surface-container-low dark:hover:bg-zinc-800 text-on-surface-variant">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <p className="text-xs text-on-surface-variant mb-6">
-          Specify the reason for failure for <strong>{wr.host?.name}</strong>. This will be visible to the host.
-        </p>
-        <div className="space-y-4 mb-6">
-          <div>
-            <label className="block text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant mb-2">Reason Code</label>
-            <select
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              <option>Invalid Account Number</option>
-              <option>Bank Rejection (Insufficient Funds)</option>
-              <option>Incomplete Bank Profile</option>
-              <option>Verification Required</option>
-              <option>Other (Specify below)</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant mb-2">Internal Note</label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={3}
-              placeholder="Details for the audit log..."
-              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-            />
+        <div className="flex-1 overflow-y-auto px-6 pb-4">
+          <p className="text-xs text-on-surface-variant dark:text-zinc-400 mb-4">
+            Specify the reason for failure for <strong className="text-on-surface dark:text-zinc-200">{wr.host?.name}</strong>. This will be visible to the host.
+          </p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant mb-2">Reason Code</label>
+              <select
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="w-full bg-surface-container-low dark:bg-zinc-800 border border-outline-variant/30 rounded-xl px-3 py-2.5 text-sm text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/25"
+              >
+                <option>Invalid Account Number</option>
+                <option>Bank Rejection (Insufficient Funds)</option>
+                <option>Incomplete Bank Profile</option>
+                <option>Verification Required</option>
+                <option>Other (Specify below)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant mb-2">Internal Note</label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                placeholder="Details for the audit log..."
+                className="w-full bg-surface-container-low dark:bg-zinc-800 border border-outline-variant/30 rounded-xl px-3 py-2.5 text-sm text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/25 resize-none"
+              />
+            </div>
           </div>
         </div>
-        <div className="flex gap-3">
-          <button onClick={onClose} disabled={loading} className="flex-1 py-2.5 rounded-xl border border-outline-variant text-on-surface font-headline font-bold text-sm hover:bg-surface-container transition-colors">
+        <div className="shrink-0 flex gap-3 px-6 py-4 border-t border-outline-variant/15 dark:border-zinc-700 bg-white dark:bg-zinc-900">
+          <button type="button" onClick={onClose} disabled={loading} className="flex-1 py-3 rounded-xl border border-outline-variant/50 dark:border-zinc-600 text-on-surface dark:text-zinc-200 font-headline font-bold text-sm hover:bg-surface-container-low dark:hover:bg-zinc-800 transition-colors disabled:opacity-50">
             Cancel
           </button>
           <button
+            type="button"
             onClick={() => onConfirm(wr._id, `${reason}${note ? ": " + note : ""}`)}
             disabled={loading}
-            className="flex-1 py-2.5 rounded-xl bg-error text-white font-headline font-bold text-sm shadow-md hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-60"
+            className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-headline font-bold text-sm shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             Confirm Failure
@@ -343,7 +354,7 @@ export default function AdminPayouts() {
           {/* ── Stat cards ── */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Total Paid Out */}
-            <div className="relative bg-white dark:bg-[#2d3133] p-6 rounded-2xl shadow-sm overflow-hidden group">
+            <div className="relative bg-white dark:bg-[#2d3133] p-6 rounded-2xl shadow-sm min-w-0 group">
               <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full group-hover:scale-125 transition-transform duration-500" style={{ background: "rgba(0,82,52,0.12)" }} />
               <div className="absolute -right-2 -top-2 w-16 h-16 rounded-full group-hover:scale-110 transition-transform duration-500" style={{ background: "rgba(0,82,52,0.07)" }} />
               <p className="text-xs font-semibold text-on-surface-variant flex items-center gap-1.5 mb-4">
@@ -356,7 +367,7 @@ export default function AdminPayouts() {
             </div>
 
             {/* Pending Transfers */}
-            <div className="relative bg-white dark:bg-[#2d3133] p-6 rounded-2xl shadow-sm overflow-hidden group border-b-4 border-amber-300/60">
+            <div className="relative bg-white dark:bg-[#2d3133] p-6 rounded-2xl shadow-sm min-w-0 group border-b-4 border-amber-300/60">
               <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full group-hover:scale-125 transition-transform duration-500" style={{ background: "rgba(255,179,71,0.22)" }} />
               <div className="absolute -right-2 -top-2 w-16 h-16 rounded-full group-hover:scale-110 transition-transform duration-500" style={{ background: "rgba(255,179,71,0.14)" }} />
               <p className="text-xs font-semibold text-on-surface-variant flex items-center gap-1.5 mb-4">
@@ -374,7 +385,7 @@ export default function AdminPayouts() {
             </div>
 
             {/* Failed Payouts */}
-            <div className="relative bg-white dark:bg-[#2d3133] p-6 rounded-2xl shadow-sm overflow-hidden group">
+            <div className="relative bg-white dark:bg-[#2d3133] p-6 rounded-2xl shadow-sm min-w-0 group">
               <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full group-hover:scale-125 transition-transform duration-500" style={{ background: "rgba(186,26,26,0.12)" }} />
               <div className="absolute -right-2 -top-2 w-16 h-16 rounded-full group-hover:scale-110 transition-transform duration-500" style={{ background: "rgba(186,26,26,0.07)" }} />
               <p className="text-xs font-semibold text-on-surface-variant flex items-center gap-1.5 mb-4">
@@ -388,7 +399,7 @@ export default function AdminPayouts() {
           </div>
 
           {/* ── Transaction history (completed payouts) ── */}
-          <div className="bg-white dark:bg-[#2d3133] rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-[#2d3133] rounded-2xl shadow-sm min-w-0">
             <div className="px-6 py-4 bg-surface-container-low/50 border-b border-outline-variant/10">
               <h3 className="font-headline font-extrabold text-base text-primary flex items-center gap-2">
                 <History className="h-4 w-4 text-on-surface-variant" /> Transaction history
@@ -409,7 +420,7 @@ export default function AdminPayouts() {
               </div>
             ) : (
               <>
-                <div className="scrollbar-hide" style={{ overflowX: "auto", scrollbarWidth: "none" }}>
+                <div className="w-full max-w-full overflow-x-auto">
                   <table className="w-full min-w-[880px] text-left">
                     <thead className="bg-surface-container-low/30">
                       <tr>
@@ -535,7 +546,7 @@ export default function AdminPayouts() {
           </div>
 
           {/* ── Withdrawal requests (pending only) ── */}
-          <div className="bg-white dark:bg-[#2d3133] rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-[#2d3133] rounded-2xl shadow-sm min-w-0">
             <div className="px-6 py-4 bg-surface-container-low/50 border-b border-outline-variant/10">
               <h3 className="font-headline font-extrabold text-base text-primary">Withdrawal requests</h3>
               <p className="text-xs text-on-surface-variant mt-1">
@@ -554,7 +565,7 @@ export default function AdminPayouts() {
               </div>
             ) : (
               <>
-                <div className="scrollbar-hide" style={{ overflowX: "auto", scrollbarWidth: "none" }}>
+                <div className="w-full max-w-full overflow-x-auto">
                   <table className="w-full min-w-[960px] text-left">
                     <thead className="bg-surface-container-low/30">
                       <tr>
