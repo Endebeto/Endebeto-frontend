@@ -1,10 +1,12 @@
 import { Star, Quote } from "lucide-react";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export interface Testimonial {
   quote: string;
   name: string;
   sub: string;
-  initials?: string;
+  /** Profile image URL (https) — optional */
+  photo?: string;
   rating?: number;
 }
 
@@ -72,13 +74,13 @@ function TestimonialCard({
       </p>
 
       <div className="flex items-center gap-3">
-        {t.initials ? (
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 font-headline text-xs font-bold text-primary dark:bg-primary/30 dark:text-green-400 md:h-11 md:w-11">
-            {t.initials}
-          </div>
-        ) : (
-          <div className="h-10 w-10 shrink-0 rounded-full bg-surface-container dark:bg-zinc-700 md:h-11 md:w-11" />
-        )}
+        <UserAvatar
+          name={t.name}
+          photo={t.photo}
+          className="h-10 w-10 md:h-11 md:w-11 rounded-full bg-primary/15 ring-1 ring-primary/10 dark:bg-primary/30 dark:ring-white/10"
+          initialsClassName="text-xs md:text-sm font-bold text-primary dark:text-green-400"
+          imgClassName="h-full w-full rounded-full object-cover"
+        />
         <div>
           <p className={`font-headline text-sm font-bold md:text-base ${nameColor}`}>
             {t.name}

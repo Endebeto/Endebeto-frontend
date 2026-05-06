@@ -67,7 +67,7 @@ export const authService = {
   signup: (payload: SignupPayload) =>
     api.post<AuthResponse>("/users/signup", payload),
 
-  logout: () => api.get<{ status: string }>("/users/logout"),
+  logout: () => api.post<{ status: string }>("/users/logout"),
 
   getMe: () =>
     api.get<{ status: string; data: { data: User } }>("/users/me"),

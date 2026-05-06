@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const navLinks = [
   { icon: LayoutDashboard, label: "Dashboard",         href: "/host-dashboard" },
@@ -48,18 +49,11 @@ export default function HostLayout({
     <>
       {/* Brand */}
       <div className="px-8 pt-8 pb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 shadow-sm">
-            <Compass className="h-4 w-4 text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg font-headline font-extrabold text-primary dark:text-green-400 tracking-tighter leading-none">
-              Endebeto
-            </h1>
-            <p className="text-[10px] uppercase tracking-widest text-on-surface-variant dark:text-zinc-500 mt-0.5 font-semibold">
-              Host Dashboard
-            </p>
-          </div>
+        <div className="flex flex-col gap-1">
+          <BrandLogo imgClassName="h-9 max-w-[10rem]" />
+          <p className="text-[10px] uppercase tracking-widest text-on-surface-variant dark:text-zinc-500 font-semibold pl-0.5">
+            Host Dashboard
+          </p>
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import {
   TrendingDown, CheckCircle2, Search,
 } from "lucide-react";
 import HostLayout from "@/components/HostLayout";
+import { UserAvatar } from "@/components/UserAvatar";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { walletService, type WithdrawalRequest, type EarningRow } from "@/services/wallet.service";
@@ -536,9 +537,23 @@ export default function HostWallet() {
       <main className="p-10 max-w-[1440px]">
 
         {/* ── Page Header ──────────────────────────────── */}
-        <header className="mb-10">
-          <h1 className="text-3xl font-headline font-extrabold text-primary dark:text-green-400 tracking-tight">Host Wallet</h1>
-          <p className="text-on-surface-variant dark:text-zinc-400 mt-1">Manage your earnings, payouts, and financial history.</p>
+        <header className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+          <UserAvatar
+            name={user?.name ?? "Host"}
+            photo={user?.photo}
+            className="h-14 w-14 rounded-full bg-primary text-white ring-2 ring-primary/20 dark:ring-green-400/30"
+            initialsClassName="text-lg text-white"
+            imgClassName="h-full w-full object-cover"
+            alt={user?.name ?? "Host"}
+          />
+          <div className="min-w-0">
+            <h1 className="text-3xl font-headline font-extrabold text-primary dark:text-green-400 tracking-tight">
+              Host Wallet
+            </h1>
+            <p className="text-on-surface-variant dark:text-zinc-400 mt-1">
+              Manage your earnings, payouts, and financial history.
+            </p>
+          </div>
         </header>
 
         {/* ── Balance cards ────────────────────────────── */}

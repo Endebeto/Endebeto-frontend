@@ -4,6 +4,7 @@ import { Eye, EyeOff, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react"
 import heroCoffee from "@/assets/hero-coffee.jpg";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { authService } from "@/services/auth.service";
+import { BrandLogo } from "@/components/BrandLogo";
 
 /* ── password strength ──────────────────────────────── */
 function getStrength(pw: string): { score: number; label: string; color: string } {
@@ -58,9 +59,7 @@ export default function ResetPassword() {
 
       {/* ── Form side ── */}
       <div className="flex flex-col justify-center px-8 py-12 lg:px-16 bg-background dark:bg-zinc-950">
-        <Link to="/" className="font-headline text-xl font-black tracking-tighter text-primary dark:text-green-400">
-          Endebeto
-        </Link>
+        <BrandLogo />
 
         <div className="mt-10 max-w-sm w-full">
 

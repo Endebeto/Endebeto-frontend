@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 import heroCoffee from "@/assets/hero-coffee.jpg";
 import { authService } from "@/services/auth.service";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export default function ForgotPassword() {
   const [email, setEmail]       = useState("");
@@ -29,9 +30,7 @@ export default function ForgotPassword() {
 
       {/* ── Form side ── */}
       <div className="flex flex-col justify-center px-8 py-12 lg:px-16 bg-background dark:bg-zinc-950">
-        <Link to="/" className="font-headline text-xl font-black tracking-tighter text-primary dark:text-green-400">
-          Endebeto
-        </Link>
+        <BrandLogo />
 
         <div className="mt-10 max-w-sm w-full">
 

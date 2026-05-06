@@ -6,6 +6,7 @@ import authSideImage from "@/assets/hero-highlands.jpg";
 import { useAuth } from "@/context/AuthContext";
 import { getStoredRef } from "@/lib/referral";
 import { getFriendlyErrorMessage } from "@/lib/errors";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const Signup = () => {
   const { signup, isAuthenticated } = useAuth();
@@ -45,6 +46,15 @@ const Signup = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-6">
         <div className="max-w-sm w-full text-center">
+          <div className="mb-6 flex flex-col items-center gap-2">
+            <BrandLogo
+              className="justify-center"
+              imgClassName="h-24 w-auto max-w-[min(100%,20rem)] object-contain object-center sm:h-32 sm:max-w-[26rem] md:h-40 md:max-w-[32rem]"
+            />
+            <p className="font-headline text-3xl font-black tracking-tighter text-primary sm:text-4xl md:text-[2.5rem]">
+              Endebeto
+            </p>
+          </div>
           <CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-4" />
           <h1 className="font-headline font-extrabold text-2xl text-primary mb-2">Check your email</h1>
           <p className="text-on-surface-variant text-sm leading-relaxed">
@@ -79,12 +89,18 @@ const Signup = () => {
       </div>
 
       {/* ── Form (right on desktop) ── */}
-      <div className="flex flex-col justify-center px-8 py-12 lg:px-16 bg-background">
-        <Link to="/" className="font-headline text-xl font-black tracking-tighter text-primary">
-          Endebeto
-        </Link>
+      <div className="flex flex-col items-center justify-center px-8 py-12 lg:px-16 bg-background">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <BrandLogo
+            className="justify-center"
+            imgClassName="h-24 w-auto max-w-[min(100%,20rem)] object-contain object-center sm:h-32 sm:max-w-[26rem] md:h-40 md:max-w-[32rem]"
+          />
+          <p className="font-headline text-3xl font-black tracking-tighter text-primary sm:text-4xl md:text-[2.5rem]">
+            Endebeto
+          </p>
+        </div>
 
-        <div className="mt-10 max-w-sm w-full">
+        <div className="mt-10 w-full max-w-sm">
           <h1 className="font-headline font-extrabold text-2xl text-primary mb-1">Create your account</h1>
           <p className="text-on-surface-variant text-sm mb-8">
             Join Endebeto and start discovering unique Ethiopian experiences.

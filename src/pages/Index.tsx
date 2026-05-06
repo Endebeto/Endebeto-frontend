@@ -105,6 +105,7 @@ const testimonials = [
     name: "Sarah J.",
     sub: "Booked in London",
     rating: 5,
+    photo: "https://randomuser.me/api/portraits/women/44.jpg",
   },
   {
     quote:
@@ -112,6 +113,7 @@ const testimonials = [
     name: "Marc L.",
     sub: "Booked from Paris",
     rating: 5,
+    photo: "https://randomuser.me/api/portraits/men/32.jpg",
   },
   {
     quote:
@@ -119,6 +121,7 @@ const testimonials = [
     name: "Elena R.",
     sub: "Booked from Rome",
     rating: 5,
+    photo: "https://randomuser.me/api/portraits/women/68.jpg",
   },
   {
     quote:
@@ -126,6 +129,7 @@ const testimonials = [
     name: "Kenji T.",
     sub: "Booked from Tokyo",
     rating: 5,
+    photo: "https://randomuser.me/api/portraits/men/75.jpg",
   },
 ];
 

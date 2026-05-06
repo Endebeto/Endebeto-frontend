@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Send, Globe, Camera, Radio } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const Footer = () => {
   return (
@@ -11,7 +12,9 @@ const Footer = () => {
 
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <h3 className="font-headline text-xl font-black text-primary mb-2 md:mb-4">Endebeto</h3>
+            <div className="mb-2 md:mb-4">
+              <BrandLogo imgClassName="h-9 max-w-[10.5rem] sm:h-10 sm:max-w-[12rem]" />
+            </div>
             <p className="text-xs md:text-sm text-on-surface-variant max-w-xs leading-relaxed">
               Curating the finest heritage experiences across the Horn of Africa.
             </p>

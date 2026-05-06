@@ -17,6 +17,7 @@ import {
   REVIEW_BANNER_HEIGHT_PX,
 } from "@/components/ReviewPendingBanner";
 import { cn } from "@/lib/utils";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const Navbar = () => {
   const location = useLocation();
@@ -107,12 +108,7 @@ const Navbar = () => {
                 "ring-1 ring-black/[0.04] dark:ring-white/5",
               )}
             >
-              <Link
-                to="/"
-                className="font-headline shrink-0 text-xl font-black tracking-tighter text-primary drop-shadow-sm"
-              >
-                Endebeto
-              </Link>
+              <BrandLogo className="drop-shadow-sm" />
 
               <div className="hidden min-w-0 items-center gap-1 md:flex md:gap-1 lg:gap-1.5 font-headline text-[0.8125rem] sm:text-sm font-semibold tracking-tight">
                 {navLinks.map(({ to, label }) => (

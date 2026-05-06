@@ -14,6 +14,7 @@ import {
   Home,
   MessageSquare,
 } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const navLinks = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
@@ -59,8 +60,8 @@ export default function AdminLayout({
     <>
       {/* Brand */}
       <div className="mb-8 px-2 pt-1">
-        <h1 className="font-headline text-xl font-black text-white tracking-tighter">Endebeto</h1>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mt-0.5">Admin Portal</p>
+        <BrandLogo paddedTile imgClassName="h-7 max-w-[9rem] sm:h-8 sm:max-w-[10rem]" />
+        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mt-2">Admin Portal</p>
       </div>
 
       {/* Nav */}
