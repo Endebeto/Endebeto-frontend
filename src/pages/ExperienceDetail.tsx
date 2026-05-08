@@ -687,11 +687,13 @@ const ExperienceDetail = () => {
                 {exp.location}
               </span>
               <span className="w-1 h-1 rounded-full bg-outline-variant/40" />
-              <span className="flex items-center gap-1">
-                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                <strong className="text-on-surface dark:text-white">{exp.ratingsAverage.toFixed(1)}</strong>
-                <span>({exp.ratingsQuantity} reviews)</span>
-              </span>
+              {exp.ratingsAverage !== null && (
+                <span className="flex items-center gap-1">
+                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                  <strong className="text-on-surface dark:text-white">{exp.ratingsAverage.toFixed(1)}</strong>
+                  <span>({exp.ratingsQuantity} reviews)</span>
+                </span>
+              )}
             </div>
 
             {/* Host row */}
@@ -753,7 +755,7 @@ const ExperienceDetail = () => {
                 { icon: Clock,  label: "DURATION",   value: exp.duration },
                 { icon: Users,  label: "GROUP SIZE",  value: `Up to ${exp.maxGuests}` },
                 { icon: Globe,  label: "LANGUAGES",   value: "English, Amharic" },
-                { icon: Star,   label: "RATING",      value: `${exp.ratingsAverage.toFixed(1)} / 5.0` },
+                { icon: Star,   label: "RATING",      value: exp.ratingsAverage !== null ? `${exp.ratingsAverage.toFixed(1)} / 5.0` : 'New' },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex items-start gap-2.5 py-2">
                   <Icon className="h-4 w-4 text-on-surface-variant dark:text-zinc-500 mt-0.5 shrink-0" />
@@ -828,10 +830,12 @@ const ExperienceDetail = () => {
             <div className="py-5">
               <div className="flex items-center gap-2 mb-4">
                 <h2 className="font-headline font-extrabold text-base text-on-surface dark:text-white">Guest Reviews</h2>
-                <span className="text-xs text-on-surface-variant dark:text-zinc-400 flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                  <strong className="text-on-surface dark:text-white">{exp.ratingsAverage.toFixed(1)}</strong> · {exp.ratingsQuantity}
-                </span>
+                {exp.ratingsAverage !== null && (
+                  <span className="text-xs text-on-surface-variant dark:text-zinc-400 flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    <strong className="text-on-surface dark:text-white">{exp.ratingsAverage.toFixed(1)}</strong> · {exp.ratingsQuantity}
+                  </span>
+                )}
               </div>
               <div className="space-y-3">
                 {reviews.length > 0
@@ -933,12 +937,16 @@ const ExperienceDetail = () => {
                 style={{ textShadow: "0 1px 6px rgba(0,0,0,0.8)" }}
               >
                 <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 fill-current text-on-tertiary-container" />{exp.location}</span>
-                <span className="w-1 h-1 rounded-full bg-white/60" />
-                <span className="flex items-center gap-1">
-                  <Star className="h-3.5 w-3.5 fill-current text-on-tertiary-container" />
-                  <strong>{exp.ratingsAverage.toFixed(1)}</strong>
-                  <span className="opacity-80">({exp.ratingsQuantity} reviews)</span>
-                </span>
+                {exp.ratingsAverage !== null && (
+                  <>
+                    <span className="w-1 h-1 rounded-full bg-white/60" />
+                    <span className="flex items-center gap-1">
+                      <Star className="h-3.5 w-3.5 fill-current text-on-tertiary-container" />
+                      <strong>{exp.ratingsAverage.toFixed(1)}</strong>
+                      <span className="opacity-80">({exp.ratingsQuantity} reviews)</span>
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -1130,10 +1138,12 @@ const ExperienceDetail = () => {
             <div className="pt-6 border-t border-outline-variant/20">
               <div className="flex items-center gap-3 mb-5">
                 <h2 className="font-headline font-extrabold text-lg text-primary">Guest Reviews</h2>
-                <span className="flex items-center gap-1 text-sm text-on-surface-variant">
-                  <Star className="h-3.5 w-3.5 fill-current text-on-tertiary-container" />
-                  <strong className="text-foreground">{exp.ratingsAverage.toFixed(1)}</strong> · {exp.ratingsQuantity} reviews
-                </span>
+                {exp.ratingsAverage !== null && (
+                  <span className="flex items-center gap-1 text-sm text-on-surface-variant">
+                    <Star className="h-3.5 w-3.5 fill-current text-on-tertiary-container" />
+                    <strong className="text-foreground">{exp.ratingsAverage.toFixed(1)}</strong> · {exp.ratingsQuantity} reviews
+                  </span>
+                )}
               </div>
               <div className="space-y-4">
                 {reviews.length > 0

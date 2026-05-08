@@ -130,8 +130,14 @@ function ExperienceBrowseCard({ exp }: { exp: Experience }) {
             {exp.title}
           </h3>
           <div className="flex items-center gap-0.5 font-bold shrink-0 text-xs text-on-tertiary-container">
-            <Star className="h-3 w-3 fill-current" />
-            {exp.ratingsAverage.toFixed(1)}
+            {exp.ratingsAverage !== null ? (
+              <>
+                <Star className="h-3 w-3 fill-current" />
+                {exp.ratingsAverage.toFixed(1)}
+              </>
+            ) : (
+              <span className="text-[10px] font-bold uppercase tracking-wide">New</span>
+            )}
           </div>
         </div>
         <p className="text-on-surface-variant text-xs mb-1.5 flex items-center gap-1">
