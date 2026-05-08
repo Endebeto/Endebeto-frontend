@@ -66,7 +66,7 @@ function isExperienceSuspended(b: Booking): boolean {
 function partitionBookings(list: Booking[]) {
   const upcoming = list.filter((b) => b.status === "upcoming");
   const past = list.filter((b) =>
-    ["completed", "expired", "cancelled"].includes(b.status)
+    ["completed", "paymentExpired", "cancelled"].includes(b.status)
   );
   return { upcoming, past };
 }

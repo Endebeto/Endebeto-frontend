@@ -25,7 +25,7 @@ export interface Booking {
   price: number;
   txRef?: string;
   experienceDate?: string;
-  status: "upcoming" | "completed" | "expired" | "cancelled";
+  status: "upcoming" | "completed" | "paymentExpired" | "cancelled";
   paid: boolean;
   /** From GET /bookings/me: whether this user already left a review for this experience. */
   userHasReviewed?: boolean;
@@ -40,7 +40,7 @@ export interface BookingListResponse {
   total: number;
   page: number;
   pages: number;
-  summary?: { upcoming: number; completed: number; expired: number };
+  summary?: { upcoming: number; completed: number; paymentExpired: number };
   totalEarnings?: number;
   totalRevenue?: number;
   data: Booking[];

@@ -11,8 +11,7 @@ interface AuthContextValue {
     name: string,
     email: string,
     password: string,
-    passwordConfirm: string,
-    referredBy?: string
+    passwordConfirm: string
   ) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
@@ -76,17 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: string,
     email: string,
     password: string,
-    passwordConfirm: string,
-    referredBy?: string
+    passwordConfirm: string
   ) => {
     // Backend returns 201 { status, message } — no token until email is verified.
-    await authService.signup({
-      name,
-      email,
-      password,
-      passwordConfirm,
-      ...(referredBy ? { referredBy } : {}),
-    });
+    await authService.signup({ name, email, password, passwordConfirm });
   };
 
   const logout = () => {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useLayoutEffect } from "react";
-import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -13,7 +13,6 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { experiencesService, type Review } from "@/services/experiences.service";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import { useAuth } from "@/context/AuthContext";
-import { persistRefParam } from "@/lib/referral";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 
 function apiErrMessage(e: unknown): string {
@@ -548,11 +547,6 @@ const ExperienceDetail = () => {
   const hasMore      = reviews.length < totalReviews;
 
   const exp = data?.data.data.data;
-
-  const [searchParams] = useSearchParams();
-  useEffect(() => {
-    persistRefParam(searchParams.get("ref") ?? undefined);
-  }, [searchParams]);
 
   const handleCopyPublicLink = useCallback(async () => {
     try {

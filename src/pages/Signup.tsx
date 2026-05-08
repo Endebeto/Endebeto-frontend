@@ -4,7 +4,6 @@ import { Eye, EyeOff, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import authSideImage from "@/assets/hero-highlands.jpg";
 import { useAuth } from "@/context/AuthContext";
-import { getStoredRef } from "@/lib/referral";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { BrandLogo } from "@/components/BrandLogo";
 
@@ -32,7 +31,7 @@ const Signup = () => {
     if (passwordWeak || !passwordsMatch) return;
     setSubmitting(true);
     try {
-      await signup(name, email, password, confirm, getStoredRef());
+      await signup(name, email, password, confirm);
       setSubmitted(true);
       toast.success("Account created! Please check your email to verify.");
     } catch (err: unknown) {

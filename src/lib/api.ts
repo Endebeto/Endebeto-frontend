@@ -1,4 +1,4 @@
-import axios, { AxiosError } from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { getFriendlyErrorMessage } from "./errors";
 import { logger } from "./logger";
 
@@ -20,43 +20,101 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor: normalise errors, redirect on unauthenticated.
+// Refresh-token retry state — shared across all concurrent requests.
+let isRefreshing = false;
+let failedQueue: {
+  resolve: () => void;
+  reject: (e: unknown) => void;
+}[] = [];
+
+const processQueue = (error: unknown) => {
+  failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve()));
+  failedQueue = [];
+};
+
+// Paths where a 401 must NOT trigger a refresh attempt (would cause loops or
+// are already handling credential errors themselves).
+const NO_REFRESH_PATHS = [
+  "/users/refresh",
+  "/users/login",
+  "/users/signup",
+  "/users/forgotPassword",
+  "/users/updateMyPassword",
+];
+
+// Response interceptor: normalise errors, attempt token refresh on 401.
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    // Log only to our dev-only logger — production builds silence it.
+  async (error: AxiosError) => {
     const status = error.response?.status;
     const url = error.config?.url ?? "";
+    const originalConfig = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
+
+    // Log only to our dev-only logger — production builds silence it.
     const isSessionProbe401 = status === 401 && url.includes("/users/me");
     if (!isSessionProbe401) {
       logger.error("[api]", url, status);
     }
 
     if (status === 401) {
-      // Wrong current password returns 401 — don't force logout on Profile
+      // Wrong current password returns 401 — don't force logout on Profile.
       if (url.includes("/users/updateMyPassword")) {
         return Promise.reject(decorateError(error));
       }
-      // NOTE: /users/me is used for "session refresh" on app load; a 401 is normal
-      // when not logged in or after secrets/env change. Do not hard-redirect-loop.
-      const publicPaths = [
-        "/users/login",
-        "/users/signup",
-        "/users/forgotPassword",
-        "/users/me",
-      ];
-      const isPublic = publicPaths.some((p) => url.includes(p));
-      if (!isPublic) {
-        localStorage.removeItem("user");
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
-        }
+
+      // Do not retry refresh endpoint or other public auth endpoints.
+      const skipRefresh = NO_REFRESH_PATHS.some((p) => url.includes(p));
+      // Also skip if we already retried once (avoid infinite loop).
+      if (skipRefresh || originalConfig._retry) {
+        redirectToLogin();
+        return Promise.reject(decorateError(error));
+      }
+
+      // NOTE: /users/me is used as a session probe on app load — a 401 is
+      // expected when the user is not logged in. Don't try to refresh here
+      // as it would generate a spurious /refresh call for every unauthenticated
+      // page load.
+      if (url.includes("/users/me")) {
+        return Promise.reject(decorateError(error));
+      }
+
+      if (isRefreshing) {
+        // Queue this request until the in-flight refresh completes.
+        return new Promise<void>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(() => api(originalConfig))
+          .catch((e) => Promise.reject(decorateError(e as AxiosError)));
+      }
+
+      originalConfig._retry = true;
+      isRefreshing = true;
+
+      try {
+        await api.post("/users/refresh");
+        processQueue(null);
+        return api(originalConfig);
+      } catch (refreshError) {
+        processQueue(refreshError);
+        redirectToLogin();
+        return Promise.reject(decorateError(refreshError as AxiosError));
+      } finally {
+        isRefreshing = false;
       }
     }
 
     return Promise.reject(decorateError(error));
-  }
+  },
 );
+
+function redirectToLogin() {
+  localStorage.removeItem("user");
+  if (window.location.pathname !== "/login") {
+    window.location.href = "/login";
+  }
+}
 
 /**
  * Attach a sanitised, user-displayable message on every rejected request

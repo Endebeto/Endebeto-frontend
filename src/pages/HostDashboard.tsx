@@ -22,12 +22,12 @@ const fmtDate = (iso?: string) => {
 const statusStyle: Record<string, string> = {
   upcoming:  "bg-secondary-container text-on-secondary-fixed-variant dark:bg-emerald-900/40 dark:text-green-400",
   completed: "bg-surface-container-high text-on-surface-variant dark:bg-zinc-700 dark:text-zinc-300",
-  expired:   "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
+  paymentExpired: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
   cancelled: "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400",
 };
 
 const statusLabel: Record<string, string> = {
-  upcoming: "Upcoming", completed: "Completed", expired: "Expired", cancelled: "Cancelled",
+  upcoming: "Upcoming", completed: "Completed", paymentExpired: "Payment Expired", cancelled: "Cancelled",
 };
 
 /* ─── component ──────────────────────────────────────── */
@@ -64,7 +64,7 @@ export default function HostDashboard() {
   });
 
   const allBookings: Booking[] = bookingsData?.data.data ?? [];
-  const summary                = bookingsData?.data.summary ?? { upcoming: 0, completed: 0, expired: 0 };
+  const summary                = bookingsData?.data.summary ?? { upcoming: 0, completed: 0, paymentExpired: 0 };
 
   const wallet = walletData?.data.data.wallet;
   const availableBalanceCents = wallet?.availableBalanceCents ?? 0;

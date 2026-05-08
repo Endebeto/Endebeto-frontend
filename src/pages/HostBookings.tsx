@@ -26,11 +26,11 @@ const AVATAR_COLORS = [
 const STATUS_CFG: Record<string, { label: string; cls: string }> = {
   upcoming:  { label: "Upcoming",  cls: "bg-secondary-container text-on-secondary-fixed-variant dark:bg-emerald-900/40 dark:text-green-400" },
   completed: { label: "Completed", cls: "bg-surface-container-high text-on-surface-variant dark:bg-zinc-700 dark:text-zinc-300" },
-  expired:   { label: "Expired",   cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" },
+  paymentExpired: { label: "Payment Expired", cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" },
   cancelled: { label: "Cancelled", cls: "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" },
 };
 
-const TABS = ["all", "upcoming", "completed", "expired", "cancelled"] as const;
+const TABS = ["all", "upcoming", "completed", "paymentExpired", "cancelled"] as const;
 type Tab = (typeof TABS)[number];
 
 const PAGE_SIZE = 15;
@@ -148,7 +148,7 @@ export default function HostBookings() {
   });
 
   const allBookings: Booking[] = data?.data.data ?? [];
-  const summary = data?.data.summary ?? { upcoming: 0, completed: 0, expired: 0 };
+  const summary = data?.data.summary ?? { upcoming: 0, completed: 0, paymentExpired: 0 };
 
   /* Filter by tab + search */
   const filtered = useMemo(() => {
@@ -175,7 +175,7 @@ export default function HostBookings() {
     all:       allBookings.length,
     upcoming:  summary.upcoming,
     completed: summary.completed,
-    expired:   summary.expired ?? 0,
+    paymentExpired: summary.paymentExpired ?? 0,
     cancelled: allBookings.filter((b) => b.status === "cancelled").length,
   };
 

@@ -10,8 +10,6 @@ export interface SignupPayload {
   email: string;
   password: string;
   passwordConfirm: string;
-  /** Optional referrer user id (Mongo ObjectId) from `?ref=` or stored ref. */
-  referredBy?: string;
 }
 
 export interface AuthResponse {
@@ -127,6 +125,8 @@ export const authService = {
     token: string,
     payload: { password: string; passwordConfirm: string },
   ) => api.patch<AuthResponse>(`/users/resetPassword/${token}`, payload),
+
+  refresh: () => api.post<{ status: string }>("/users/refresh"),
 
   verifyEmail: (token: string) => api.get(`/users/verifyEmail/${token}`),
 

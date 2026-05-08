@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   ArrowRight,
   TrendingUp,
@@ -19,8 +19,6 @@ import ctaBg from "@/assets/cta-bg.jpg";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
 import TestimonialSlider from "@/components/TestimonialSlider";
-import { persistRefParam } from "@/lib/referral";
-
 /* ─── static data ─────────────────────────────────────── */
 
 const heroSlides = [
@@ -162,11 +160,6 @@ function StatItem({
 
 const Index = () => {
   const [current, setCurrent] = useState(0);
-  const [searchParams] = useSearchParams();
-
-  useEffect(() => {
-    persistRefParam(searchParams.get("ref") ?? undefined);
-  }, [searchParams]);
 
   // featured experiences from API (fetch extra, then take top-rated with spots left for display)
   const { data: featuredData, isLoading: featuredLoading } = useQuery({
