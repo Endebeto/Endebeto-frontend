@@ -261,7 +261,11 @@ export interface AdminUser {
   hostListingSuspended?: boolean;
   hostListingSuspendedReason?: string | null;
   hostListingSuspendedAt?: string | null;
-  hostListingSuspendedBy?: { _id: string; name?: string; email?: string } | null;
+  hostListingSuspendedBy?: {
+    _id: string;
+    name?: string;
+    email?: string;
+  } | null;
 }
 
 /* ─── Withdrawals ────────────────────────────────────────── */
@@ -273,7 +277,6 @@ export interface AdminWithdrawal {
     email: string;
     photo?: string;
     cbeAccountName?: string;
-    cbeAccountNumber?: string;
     /** Last payout bank chosen by host (same field name as Mongo) */
     hostPayoutBankName?: string;
   };
@@ -320,10 +323,9 @@ export const adminService = {
     ),
 
   getTopHosts: (params?: { limit?: number }) =>
-    api.get<{ status: string; data: TopHost[] }>(
-      "/admin/dashboard/top-hosts",
-      { params },
-    ),
+    api.get<{ status: string; data: TopHost[] }>("/admin/dashboard/top-hosts", {
+      params,
+    }),
 
   getAdminReviews: (params?: {
     page?: number;
@@ -478,4 +480,19 @@ export const adminService = {
       status: string;
       data: { csv: string; filename: string; count: number };
     }>("/admin/payouts/exports"),
+
+  /** Reveal the full account number for a single withdrawal (admin only).
+   *  Every call is audit-logged on the backend with adminId + timestamp. */
+  revealWithdrawalAccount: (id: string) =>
+    api.get<{
+      status: string;
+      data: {
+        withdrawalId: string;
+        hostId: string;
+        hostName: string;
+        bankName: string | null;
+        accountName: string | null;
+        accountNumber: string | null;
+      };
+    }>(`/admin/payouts/withdrawals/${id}/reveal`),
 };

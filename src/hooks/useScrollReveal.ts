@@ -19,7 +19,7 @@ export function useScrollReveal<T extends Element = Element>(threshold = 0.15) {
           observer.disconnect();
         }
       },
-      { threshold }
+      { threshold },
     );
 
     observer.observe(el);

@@ -34,7 +34,11 @@ export interface User {
   hostListingSuspended?: boolean;
   hostListingSuspendedReason?: string | null;
   hostListingSuspendedAt?: string | null;
-  hostListingSuspendedBy?: { _id: string; name?: string; email?: string } | null;
+  hostListingSuspendedBy?: {
+    _id: string;
+    name?: string;
+    email?: string;
+  } | null;
   /** Categories the host was approved to offer. Populated from their host application on approval. */
   approvedCategories?: string[];
   /** Present when returned from API; OAuth users may not use password change. `facebook` is legacy only. */
@@ -46,6 +50,9 @@ export interface User {
   hostPayoutBankName?: string;
   cbeAccountName?: string;
   cbeAccountNumber?: string;
+  /** ISO timestamp of the host's most-recent payout request. Used client-side
+   *  to compute whether the 7-day cooldown has elapsed before enabling Withdraw. */
+  lastPayoutRequestAt?: string;
   hostApplicationData?: {
     fullName?: string;
     phoneNumber?: string;
@@ -69,13 +76,25 @@ export const authService = {
 
   logout: () => api.post<{ status: string }>("/users/logout"),
 
-  getMe: () =>
-    api.get<{ status: string; data: { data: User } }>("/users/me"),
+  getMe: () => api.get<{ status: string; data: { data: User } }>("/users/me"),
 
-  updateMe: (data: FormData | Partial<Pick<User, "name" | "email" | "photo" | "bio" | "phone" | "hostStory">>) =>
-    api.patch<{ status: string; data: { user: User } }>("/users/updateMe", data, {
-      headers: data instanceof FormData ? { "Content-Type": "multipart/form-data" } : {},
-    }),
+  updateMe: (
+    data:
+      | FormData
+      | Partial<
+          Pick<User, "name" | "email" | "photo" | "bio" | "phone" | "hostStory">
+        >,
+  ) =>
+    api.patch<{ status: string; data: { user: User } }>(
+      "/users/updateMe",
+      data,
+      {
+        headers:
+          data instanceof FormData
+            ? { "Content-Type": "multipart/form-data" }
+            : {},
+      },
+    ),
 
   /** Soft-delete: sets `active: false`; user cannot log in afterward. */
   deleteMe: () => api.delete("/users/deleteMe"),
@@ -84,27 +103,36 @@ export const authService = {
   uploadProfilePhoto: (file: File) => {
     const form = new FormData();
     form.append("photo", file);
-    return api.patch<{ status: string; data: { user: User } }>("/users/me/photo", form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    return api.patch<{ status: string; data: { user: User } }>(
+      "/users/me/photo",
+      form,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      },
+    );
   },
 
   updatePassword: (payload: {
     passwordCurrent: string;
     password: string;
     passwordConfirm: string;
-  }) =>
-    api.patch<AuthResponse>("/users/updateMyPassword", payload),
+  }) => api.patch<AuthResponse>("/users/updateMyPassword", payload),
 
   forgotPassword: (email: string) =>
-    api.post<{ status: string; message: string }>("/users/forgotPassword", { email }),
+    api.post<{ status: string; message: string }>("/users/forgotPassword", {
+      email,
+    }),
 
-  resetPassword: (token: string, payload: { password: string; passwordConfirm: string }) =>
-    api.patch<AuthResponse>(`/users/resetPassword/${token}`, payload),
+  resetPassword: (
+    token: string,
+    payload: { password: string; passwordConfirm: string },
+  ) => api.patch<AuthResponse>(`/users/resetPassword/${token}`, payload),
 
-  verifyEmail: (token: string) =>
-    api.get(`/users/verifyEmail/${token}`),
+  verifyEmail: (token: string) => api.get(`/users/verifyEmail/${token}`),
 
   resendVerificationEmail: (email: string) =>
-    api.post<{ status: string; message: string }>('/users/resendVerificationEmail', { email }),
+    api.post<{ status: string; message: string }>(
+      "/users/resendVerificationEmail",
+      { email },
+    ),
 };
