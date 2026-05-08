@@ -364,9 +364,11 @@ export const adminService = {
     api.get<{
       status: string;
       results: number;
-      page?: number;
+      total: number;
+      page: number;
+      limit: number;
       pages?: number;
-      data: { data: AdminExperience[] };
+      data: AdminExperience[];
     }>("/experiences/admin/catalog", { params: { filter, ...params } }),
 
   suspendExperience: (id: string, reason: string) =>

@@ -29,6 +29,7 @@ import {
   parseExperiencesUrlSearch,
   serializeExperiencesUrl,
 } from "@/lib/experiencesBrowseUrl";
+import { normalizeApiList } from "@/lib/normalizeApiList";
 
 /* ─── constants ─────────────────────────────────────────── */
 
@@ -345,8 +346,7 @@ const Experiences = () => {
   });
 
   const listBody = listRes?.data;
-  const totalCount = listBody?.results ?? 0;
-  const pageItems = listBody?.data?.data ?? [];
+  const { items: pageItems, total: totalCount } = normalizeApiList<Experience>(listBody);
 
   /* active filter flags */
   const locationActive = locationQ.trim() !== "";

@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { adminService, type AdminWithdrawal } from "@/services/admin.service";
+import { adminQueryKeys } from "@/lib/adminQueryKeys";
 
 /* ─── types ──────────────────────────────────────────────── */
 type PayoutStatus = "pending_transfer" | "paid" | "failed";
@@ -323,7 +324,7 @@ export default function AdminPayouts() {
   const [revealingId, setRevealingId] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["admin-withdrawals"],
+    queryKey: adminQueryKeys.withdrawals(),
     queryFn: () =>
       adminService.getWithdrawals({}).then((r) => r.data.data.withdrawals),
     staleTime: 30_000,
@@ -384,7 +385,7 @@ export default function AdminPayouts() {
     }) => adminService.markWithdrawalPaid(id, paymentReceiptUrl),
     onSuccess: () => {
       toast.success("Withdrawal marked as paid");
-      qc.invalidateQueries({ queryKey: ["admin-withdrawals"] });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.withdrawalsPrefix });
       setPaidTarget(null);
     },
     onError: () => toast.error("Failed to mark as paid"),
@@ -395,7 +396,7 @@ export default function AdminPayouts() {
       adminService.markWithdrawalFailed(id, reason),
     onSuccess: () => {
       toast.success("Withdrawal marked as failed");
-      qc.invalidateQueries({ queryKey: ["admin-withdrawals"] });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.withdrawalsPrefix });
       setFailTarget(null);
     },
     onError: () => toast.error("Failed to mark as failed"),

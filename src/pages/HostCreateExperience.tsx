@@ -10,7 +10,8 @@ import HostLayout from "@/components/HostLayout";
 import LocationPicker, { type PinLocation } from "@/components/LocationPicker";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { experiencesService } from "@/services/experiences.service";
+import { experiencesService, type Experience } from "@/services/experiences.service";
+import { normalizeApiList } from "@/lib/normalizeApiList";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 
 /* ─── types ──────────────────────────────────────────── */
@@ -96,7 +97,7 @@ export default function HostCreateExperience() {
     queryFn: () => experiencesService.getMyExperiences(),
     staleTime: 30_000,
   });
-  const myExperiences = myExpData?.data.data.data ?? [];
+  const myExperiences = normalizeApiList<Experience>(myExpData?.data).items;
 
   // Check if the currently selected category already has an active experience
   const categoryTaken = myExperiences.some(

@@ -47,6 +47,7 @@ import {
   type TopExperience,
   type TopHost,
 } from "@/services/admin.service";
+import { adminQueryKeys } from "@/lib/adminQueryKeys";
 
 /* ─── formatters ─────────────────────────────────────────── */
 function fmtNum(n: number) {
@@ -302,7 +303,7 @@ function KpiTile({
 function TopExperiencesCard() {
   const [by, setBy] = useState<"revenue" | "bookings" | "rating">("revenue");
   const { data, isLoading } = useQuery({
-    queryKey: ["admin-top-experiences", by],
+    queryKey: adminQueryKeys.topExperiences(by),
     queryFn: () =>
       adminService
         .getTopExperiences({ limit: 5, by })
@@ -427,7 +428,7 @@ function TopExperiencesCard() {
 /* ─── top hosts card ─────────────────────────────────────── */
 function TopHostsCard() {
   const { data, isLoading } = useQuery({
-    queryKey: ["admin-top-hosts"],
+    queryKey: adminQueryKeys.topHosts(),
     queryFn: () =>
       adminService
         .getTopHosts({ limit: 5 })
@@ -506,7 +507,7 @@ export default function AdminDashboard() {
   );
 
   const { data: statsData, isLoading } = useQuery({
-    queryKey: ["admin-stats", compare],
+    queryKey: adminQueryKeys.stats(compare),
     queryFn: () =>
       adminService.getStats({ compare }).then((r) => r.data.data),
     staleTime: 60_000,
@@ -514,7 +515,7 @@ export default function AdminDashboard() {
   });
 
   const { data: chartsData, isLoading: chartsLoading } = useQuery({
-    queryKey: ["admin-dashboard-charts", months],
+    queryKey: adminQueryKeys.charts(months),
     queryFn: () =>
       adminService
         .getDashboardCharts({ months })

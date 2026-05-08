@@ -12,6 +12,7 @@ import HostLayout from "@/components/HostLayout";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { experiencesService, type Experience } from "@/services/experiences.service";
+import { normalizeApiList } from "@/lib/normalizeApiList";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 
 /* ─── helpers ────────────────────────────────────────── */
@@ -459,7 +460,7 @@ export default function HostExperiences() {
     queryFn: () => experiencesService.getMyExperiences(),
   });
 
-  const exps: Experience[] = data?.data.data.data ?? [];
+  const exps: Experience[] = normalizeApiList<Experience>(data?.data).items;
 
   const stopMutation = useMutation({
     mutationFn: (id: string) => experiencesService.stop(id),

@@ -14,6 +14,8 @@ import {
   type AdminBookingStatus,
   type AdminExperienceBookingStats,
 } from "@/services/admin.service";
+import { normalizeApiList } from "@/lib/normalizeApiList";
+import { adminQueryKeys } from "@/lib/adminQueryKeys";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 
 type ExpStatus = "pending" | "approved" | "rejected" | "draft";
@@ -352,7 +354,7 @@ function BookingsSection({ expId }: { expId: string }) {
   const limit = 10;
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["admin-exp-bookings", expId, filter, page],
+    queryKey: adminQueryKeys.experienceBookings(expId, filter, page),
     queryFn: () =>
       adminService
         .getAdminExperienceBookings(expId, {
@@ -520,7 +522,7 @@ function DetailPanel({
   const status = (exp.status ?? "draft") as ExpStatus;
 
   const { data: detailData, isLoading: detailLoading } = useQuery({
-    queryKey: ["admin-exp-detail", exp._id],
+    queryKey: adminQueryKeys.experienceDetail(exp._id),
     queryFn: () =>
       adminService.getAdminExperienceDetail(exp._id).then((r) => r.data.data),
     staleTime: 30_000,
@@ -764,8 +766,11 @@ export default function AdminExperiences() {
   const [suspendModalExp, setSuspendModalExp] = useState<AdminExperience | null>(null);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["admin-experiences-manage", tab],
-    queryFn: () => adminService.getAdminCatalog(tab, { limit: 200 }).then((r) => r.data.data.data),
+    queryKey: adminQueryKeys.experiencesCatalog(tab),
+    queryFn: () =>
+      adminService
+        .getAdminCatalog(tab, { limit: 200 })
+        .then((r) => normalizeApiList<AdminExperience>(r.data).items),
     staleTime: 30_000,
   });
 
@@ -781,10 +786,10 @@ export default function AdminExperiences() {
       } else {
         toast.success("Listing suspended. Email notifications skipped — SMTP not configured.");
       }
-      queryClient.invalidateQueries({ queryKey: ["admin-experiences-manage"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-exp-detail"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-exp-bookings"] });
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.experiencesCatalogPrefix });
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.experienceDetailPrefix });
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.experienceBookingsPrefix });
       setSuspendModalExp(null);
       setSelected(null);
     },
@@ -805,10 +810,10 @@ export default function AdminExperiences() {
       } else {
         toast.success("Listing reinstated. Email notifications skipped — SMTP not configured.");
       }
-      queryClient.invalidateQueries({ queryKey: ["admin-experiences-manage"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-exp-detail"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-exp-bookings"] });
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.experiencesCatalogPrefix });
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.experienceDetailPrefix });
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.experienceBookingsPrefix });
       setSelected(null);
     },
     onError: (err: unknown) => {

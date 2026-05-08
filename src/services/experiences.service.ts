@@ -50,11 +50,18 @@ export interface Experience {
   upcomingBookingsCount?: number;
 }
 
-// factory.getAll  → { status, results: totalCount, data: { data: T[] } }
+// §3.17: canonical paginated shape — { status, results, total, page, limit, data: T[] }
 export interface ExperienceListResponse {
   status: string;
+  /** Count of items in the current page. */
   results: number;
-  data: { data: Experience[] };
+  /** Total count across all pages. */
+  total: number;
+  page: number;
+  limit: number;
+  /** Convenience alias for ceil(total/limit). Present on some endpoints. */
+  pages?: number;
+  data: Experience[];
 }
 
 // factory.getOne  → { status, data: { data: T } }

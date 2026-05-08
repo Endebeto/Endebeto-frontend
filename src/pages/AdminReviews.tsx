@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { adminService, type AdminReview } from "@/services/admin.service";
+import { adminQueryKeys } from "@/lib/adminQueryKeys";
 
 const PAGE_SIZE = 20;
 
@@ -118,7 +119,7 @@ export default function AdminReviews() {
   }, [searchInput]);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["admin-reviews", page, search],
+    queryKey: adminQueryKeys.reviews({ page, search }),
     queryFn: () =>
       adminService
         .getAdminReviews({
@@ -134,8 +135,8 @@ export default function AdminReviews() {
     mutationFn: (id: string) => adminService.deleteReview(id),
     onSuccess: () => {
       toast.success("Review removed");
-      qc.invalidateQueries({ queryKey: ["admin-reviews"] });
-      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.reviewsPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
       setDeleteTarget(null);
     },
     onError: () => {

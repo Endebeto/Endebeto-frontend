@@ -12,7 +12,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import DestinationCard from "@/components/DestinationCard";
-import { experiencesService } from "@/services/experiences.service";
+import { experiencesService, type Experience } from "@/services/experiences.service";
+import { normalizeApiList } from "@/lib/normalizeApiList";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ctaBg from "@/assets/cta-bg.jpg";
@@ -167,7 +168,7 @@ const Index = () => {
     queryFn: () =>
       experiencesService.getAll({ limit: 16, sort: "-ratingsAverage" }),
   });
-  const rawFeatured = featuredData?.data.data.data ?? [];
+  const rawFeatured = normalizeApiList<Experience>(featuredData?.data).items;
   const featuredExperiences = useMemo(
     () => rawFeatured.filter((e) => e.isSoldOut !== true).slice(0, 4),
     [rawFeatured],

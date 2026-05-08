@@ -164,7 +164,7 @@ const Navbar = () => {
                           alt={user.name}
                         />
                         <span className="max-w-[92px] truncate font-headline text-sm font-bold text-slate-800 transition-colors group-hover:text-primary dark:text-zinc-200 dark:group-hover:text-primary">
-                          {user.name.split(" ")[0]}
+                          {user.name?.split(" ")[0] ?? "Account"}
                         </span>
                       </Link>
                     ) : (

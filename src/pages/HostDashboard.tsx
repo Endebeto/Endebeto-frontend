@@ -11,6 +11,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/context/AuthContext";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import { experiencesService, type Experience } from "@/services/experiences.service";
+import { normalizeApiList } from "@/lib/normalizeApiList";
 import { walletService } from "@/services/wallet.service";
 
 /* ─── helpers ────────────────────────────────────────── */
@@ -77,7 +78,7 @@ export default function HostDashboard() {
   const etb = (cents: number) => (cents / 100).toLocaleString("en-ET", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const recentBookings         = allBookings.slice(0, 5);
 
-  const allExperiences: Experience[] = expData?.data.data.data ?? [];
+  const allExperiences: Experience[] = normalizeApiList<Experience>(expData?.data).items;
   const activeCount = allExperiences.filter((e) => e.status === "approved").length;
 
   /* ── Build per-experience booking stats from the fetched list ── */

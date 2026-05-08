@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { UserAvatar } from "@/components/UserAvatar";
 import { adminService, type AdminHostApplication } from "@/services/admin.service";
+import { adminQueryKeys } from "@/lib/adminQueryKeys";
 
 /* ─── status styles ──────────────────────────────────────── */
 type Status = "pending" | "approved" | "rejected";
@@ -137,13 +138,13 @@ export default function AdminHostApplications() {
   const [search, setSearch]         = useState("");
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["admin-host-applications", activeTab],
+    queryKey: adminQueryKeys.hostApplications(activeTab),
     queryFn: () => adminService.getHostApplications({ status: activeTab }).then(r => r.data.data.applications),
     staleTime: 30_000,
   });
 
   const { data: counts } = useQuery({
-    queryKey: ["admin-host-applications-counts"],
+    queryKey: adminQueryKeys.hostApplicationCounts(),
     queryFn: async () => {
       const [p, a, r] = await Promise.all([
         adminService.getHostApplications({ status: "pending"  }).then(r => r.data.results),
@@ -159,9 +160,8 @@ export default function AdminHostApplications() {
     mutationFn: (id: string) => adminService.approveHostApplication(id),
     onSuccess: () => {
       toast.success("Application approved");
-      qc.invalidateQueries({ queryKey: ["admin-host-applications"] });
-      qc.invalidateQueries({ queryKey: ["admin-host-applications-counts"] });
-      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.hostApplicationsPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
       setSelected(null);
     },
     onError: () => toast.error("Failed to approve application"),
@@ -172,9 +172,8 @@ export default function AdminHostApplications() {
       adminService.rejectHostApplication(id, reason),
     onSuccess: () => {
       toast.success("Application rejected");
-      qc.invalidateQueries({ queryKey: ["admin-host-applications"] });
-      qc.invalidateQueries({ queryKey: ["admin-host-applications-counts"] });
-      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.hostApplicationsPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
       setShowReject(false);
       setSelected(null);
     },

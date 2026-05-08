@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { UserAvatar } from "@/components/UserAvatar";
+import { adminQueryKeys } from "@/lib/adminQueryKeys";
 import { adminService, type AdminUser } from "@/services/admin.service";
 import { useAuth } from "@/context/AuthContext";
 import { getFriendlyErrorMessage } from "@/lib/errors";
@@ -438,7 +439,7 @@ export default function AdminUsers() {
   const [hostListingReinstateTarget, setHostListingReinstateTarget] = useState<AdminUser | null>(null);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["admin-users", page, search, statusFilter],
+    queryKey: adminQueryKeys.users({ page, search, statusFilter }),
     queryFn: () =>
       adminService.getUsers({ page, limit: PAGE_SIZE, search: search || undefined, status: statusFilter })
         .then(r => r.data),
@@ -462,8 +463,8 @@ export default function AdminUsers() {
       } else {
         toast.success("Account suspended. Email notifications skipped — SMTP not configured.");
       }
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
-      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.usersPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
       setSuspendTarget(null);
     },
     onError: (err: unknown) => {
@@ -482,8 +483,8 @@ export default function AdminUsers() {
       } else {
         toast.success("Account reinstated. Email notifications skipped — SMTP not configured.");
       }
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
-      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.usersPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
       setSuspendTarget(null);
     },
     onError: (err: unknown) => {
@@ -495,8 +496,8 @@ export default function AdminUsers() {
     mutationFn: (id: string) => adminService.deleteUser(id),
     onSuccess: () => {
       toast.success("User deleted");
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
-      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.usersPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
       setDeleteTarget(null);
     },
     onError: () => toast.error("Failed to delete user"),
@@ -514,7 +515,7 @@ export default function AdminUsers() {
       } else {
         toast.success("Host listing access suspended. Email notifications skipped — SMTP not configured.");
       }
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.usersPrefix });
       setHostListingSuspendTarget(null);
     },
     onError: (err: unknown) => {
@@ -531,7 +532,7 @@ export default function AdminUsers() {
       } else {
         toast.success("Host listings reinstated.");
       }
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.usersPrefix });
       setHostListingReinstateTarget(null);
     },
     onError: (err: unknown) => {

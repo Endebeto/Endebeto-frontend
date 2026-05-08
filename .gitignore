@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# §3.10: npm is the single package manager; ignore bun lockfiles
+bun.lock
+bun.lockb
+
 # Environment (keep .env.example)
 .env
 .env.*

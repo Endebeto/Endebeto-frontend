@@ -33,14 +33,18 @@ export interface Booking {
   createdAt: string;
 }
 
-// Backend wraps bookings directly in `data` (array), not `data.bookings`
+// §3.17: canonical paginated shape — { status, results, total, page, limit, pages, data: T[] }
 export interface BookingListResponse {
   status: string;
+  /** Count of items in the current page. */
   results: number;
+  /** Total count across all pages. */
   total: number;
   page: number;
+  limit: number;
   pages: number;
-  summary?: { upcoming: number; completed: number; paymentExpired: number };
+  // §5A: cancelled added to match backend summarizeBookings output
+  summary?: { upcoming: number; completed: number; paymentExpired: number; cancelled: number };
   totalEarnings?: number;
   totalRevenue?: number;
   data: Booking[];

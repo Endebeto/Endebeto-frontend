@@ -75,7 +75,16 @@ function ProtectedRoute({
   allowedRoles?: string[];
 }) {
   const { isAuthenticated, loading, user } = useAuth();
-  if (loading) return null;
+  if (loading)
+    return (
+      <div
+        className="flex min-h-screen w-full items-center justify-center bg-background"
+        role="status"
+        aria-label="Checking session"
+      >
+        <div className="h-9 w-9 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   if (allowedRoles && user) {
