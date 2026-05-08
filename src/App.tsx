@@ -1,5 +1,5 @@
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -33,6 +33,25 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const OAuthSuccess = lazy(() => import("./pages/OAuthSuccess"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+
+/**
+ * §3.6: Listens for the `auth:expired` event dispatched by the Axios
+ * interceptor and navigates to /login using React Router (no hard reload).
+ * Must be rendered inside BrowserRouter so useNavigate is available.
+ */
+function AuthExpiredRedirect() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const handler = () => {
+      if (window.location.pathname !== "/login") {
+        navigate("/login", { replace: true });
+      }
+    };
+    window.addEventListener("auth:expired", handler);
+    return () => window.removeEventListener("auth:expired", handler);
+  }, [navigate]);
+  return null;
+}
 
 /** Shown while a lazy route chunk loads (first visit to that page). */
 function RouteFallback() {
@@ -121,6 +140,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <AuthExpiredRedirect />
         <AuthProvider>
           <Suspense fallback={<RouteFallback />}>
             <AppRoutes />

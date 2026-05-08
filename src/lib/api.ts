@@ -1,11 +1,10 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { getFriendlyErrorMessage } from "./errors";
 import { logger } from "./logger";
-
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1";
+import { API_BASE_URL } from "./config";
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE_URL,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
   timeout: 15000,
@@ -109,11 +108,14 @@ api.interceptors.response.use(
   },
 );
 
+/**
+ * §3.6: Dispatch a custom DOM event instead of doing a hard navigation.
+ * App.tsx listens for this event and calls React Router's navigate() so
+ * we get a client-side transition (no full page reload, history preserved).
+ */
 function redirectToLogin() {
   localStorage.removeItem("user");
-  if (window.location.pathname !== "/login") {
-    window.location.href = "/login";
-  }
+  window.dispatchEvent(new CustomEvent("auth:expired"));
 }
 
 /**

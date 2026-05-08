@@ -29,6 +29,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
   });
+  // §3.5: serverConfirmed tracks whether the server has validated the session.
+  // isAuthenticated is only true once the server confirms, preventing routes
+  // and role-gated UI from rendering based on stale localStorage data alone.
+  const [serverConfirmed, setServerConfirmed] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
@@ -38,9 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const freshUser = res.data.data.data;
       setUser(freshUser);
       localStorage.setItem("user", JSON.stringify(freshUser));
+      setServerConfirmed(true);
     } catch {
       localStorage.removeItem("user");
       setUser(null);
+      setServerConfirmed(false);
     } finally {
       setLoading(false);
     }
@@ -58,6 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       /* private / disabled storage */
     }
     if (!stored) {
+      // No stored session — no server call needed, not authenticated.
+      setServerConfirmed(false);
       setLoading(false);
       return;
     }
@@ -69,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = res.data;
     localStorage.setItem("user", JSON.stringify(data.user));
     setUser(data.user);
+    setServerConfirmed(true);
   };
 
   const signup = async (
@@ -85,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authService.logout().catch(() => {});
     localStorage.removeItem("user");
     setUser(null);
+    setServerConfirmed(false);
   };
 
   const updateUser = (updated: User) => {
@@ -96,7 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
+        // §3.5: Only true after the server has confirmed the session.
+        isAuthenticated: !!user && serverConfirmed,
         loading,
         login,
         signup,
