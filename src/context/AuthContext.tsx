@@ -72,6 +72,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshUser();
   }, [refreshUser]);
 
+  // Keep React auth state in sync when the API interceptor forces logout
+  // (expired JWT, failed refresh, or inactive/suspended account 403).
+  useEffect(() => {
+    const onSessionEnded = () => {
+      setUser(null);
+      setServerConfirmed(false);
+    };
+    window.addEventListener("auth:expired", onSessionEnded);
+    return () => window.removeEventListener("auth:expired", onSessionEnded);
+  }, []);
+
   const login = async (email: string, password: string) => {
     const res = await authService.login({ email, password });
     const { data } = res.data;

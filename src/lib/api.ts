@@ -1,5 +1,8 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import { getFriendlyErrorMessage } from "./errors";
+import {
+  extractInactiveAccountForbiddenMessage,
+  getFriendlyErrorMessage,
+} from "./errors";
 import { logger } from "./logger";
 import { API_BASE_URL } from "./config";
 
@@ -97,10 +100,21 @@ api.interceptors.response.use(
         return api(originalConfig);
       } catch (refreshError) {
         processQueue(refreshError);
-        redirectToLogin();
+        const inactiveMsg = extractInactiveAccountForbiddenMessage(
+          refreshError,
+        );
+        redirectToLogin(inactiveMsg ?? undefined);
         return Promise.reject(decorateError(refreshError as AxiosError));
       } finally {
         isRefreshing = false;
+      }
+    }
+
+    if (status === 403) {
+      const inactiveMsg = extractInactiveAccountForbiddenMessage(error);
+      if (inactiveMsg) {
+        redirectToLogin(inactiveMsg);
+        return Promise.reject(decorateError(error));
       }
     }
 
@@ -113,9 +127,13 @@ api.interceptors.response.use(
  * App.tsx listens for this event and calls React Router's navigate() so
  * we get a client-side transition (no full page reload, history preserved).
  */
-function redirectToLogin() {
+function redirectToLogin(sessionMessage?: string) {
   localStorage.removeItem("user");
-  window.dispatchEvent(new CustomEvent("auth:expired"));
+  window.dispatchEvent(
+    new CustomEvent<{ message?: string }>("auth:expired", {
+      detail: sessionMessage ? { message: sessionMessage } : undefined,
+    }),
+  );
 }
 
 /**

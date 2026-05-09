@@ -74,7 +74,7 @@ function bankDetailsForPayout(wr: AdminWithdrawal): {
   const dest = wr.destination;
   const host = wr.host;
   const bank = dest?.bankName ?? host?.hostPayoutBankName ?? "—";
-  const accountName = dest?.accountName ?? host?.cbeAccountName ?? "—";
+  const accountName = dest?.accountName ?? host?.hostPayoutAccountName ?? "—";
   // Backend returns a masked string (•••• 1234); fall back to last4 if needed.
   const accountNumber =
     dest?.accountNumber ??

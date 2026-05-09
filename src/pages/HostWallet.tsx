@@ -92,7 +92,7 @@ function WithdrawModal({
   onWithdrawComplete: () => Promise<void>;
 }) {
   const presetHolder =
-    accountHolderLegalName.trim() || savedAccountName?.trim() || "";
+    savedAccountName?.trim() || accountHolderLegalName.trim() || "";
 
   const [form, setForm] = useState({
     amountETB: "",
@@ -358,11 +358,20 @@ function WithdrawModal({
               <UserCheck className="h-3.5 w-3.5 text-primary dark:text-green-400 shrink-0 mt-0.5" />
               <p className="text-[11px] text-primary dark:text-green-400 leading-relaxed font-medium">
                 {legalRef ? (
-                  <>
-                    Pre-filled from your approved host application. The account
-                    holder name must match: <strong>{legalRef}</strong>. You can
-                    save bank details for next time by submitting a withdrawal.
-                  </>
+                  savedAccountName?.trim() ? (
+                    <>
+                      Using your <strong>saved payout account name</strong>. It
+                      must exactly match your approved host application legal
+                      name: <strong>{legalRef}</strong>.
+                    </>
+                  ) : (
+                    <>
+                      Pre-filled from your approved host application. The
+                      account holder name must match:{" "}
+                      <strong>{legalRef}</strong>. You can save bank details
+                      for next time by submitting a withdrawal.
+                    </>
+                  )
                 ) : (
                   <>
                     The account holder name should match your{" "}
@@ -691,8 +700,8 @@ export default function HostWallet() {
           availableETB={availableETB}
           accountHolderLegalName={legalHostName}
           savedBankName={user?.hostPayoutBankName}
-          savedAccountName={user?.cbeAccountName}
-          savedAccountNumber={user?.cbeAccountNumber}
+          savedAccountName={user?.hostPayoutAccountName}
+          savedAccountNumber={user?.hostPayoutAccountNumber}
           onClose={() => setShowWithdraw(false)}
           onWithdrawComplete={async () => {
             await refreshUser();

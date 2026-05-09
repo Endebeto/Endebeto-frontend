@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import authSideImage from "@/assets/hero-coffee.jpg";
@@ -10,6 +10,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 const Login = () => {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [showPass, setShowPass] = useState(false);
   const [oauthError, setOauthError] = useState("");
@@ -23,10 +24,21 @@ const Login = () => {
       setOauthError("OAuth sign-in failed. Please try again or use email & password.");
     } else if (err === "suspended") {
       setOauthError(
-        "This account has been suspended. Please contact support if you believe this is a mistake.",
+        "This account has been suspended by an administrator. Please contact support if you believe this is a mistake.",
+      );
+    } else if (err === "deactivated") {
+      setOauthError(
+        "This account was deactivated. Please contact support if you need access again.",
       );
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const msg = (location.state as { authSessionMessage?: string } | null)?.authSessionMessage;
+    if (!msg) return;
+    toast.error(msg);
+    navigate(location.pathname + location.search, { replace: true, state: null });
+  }, [location.state, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     if (isAuthenticated) navigate("/", { replace: true });

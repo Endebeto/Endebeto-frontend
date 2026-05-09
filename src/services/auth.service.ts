@@ -46,8 +46,8 @@ export interface User {
   facebookId?: string;
   /** Persisted payout profile (filled on first withdrawal); bank must be one of CBE / BOA / Awash */
   hostPayoutBankName?: string;
-  cbeAccountName?: string;
-  cbeAccountNumber?: string;
+  hostPayoutAccountName?: string;
+  hostPayoutAccountNumber?: string;
   /** ISO timestamp of the host's most-recent payout request. Used client-side
    *  to compute whether the 7-day cooldown has elapsed before enabling Withdraw. */
   lastPayoutRequestAt?: string;

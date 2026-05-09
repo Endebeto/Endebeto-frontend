@@ -1,5 +1,13 @@
 import { AxiosError } from "axios";
 
+/** Substrings synced with backend `utils/inactiveAccountMessaging.js` (403 copies). */
+const INACTIVE_ACCOUNT_403_MARKERS = [
+  "suspended by an administrator",
+  "has been deactivated. if you need access again",
+  "linked to a suspended account",
+  "linked to a deactivated account",
+] as const;
+
 /**
  * Central place to derive a message safe to show the user.
  *
@@ -86,4 +94,21 @@ export function getFriendlyErrorMessage(
  */
 export function apiErrMessage(error: unknown, fallback?: string): string {
   return getFriendlyErrorMessage(error, fallback);
+}
+
+/**
+ * When `protect` / `refreshToken` / login blocks an inactive account, the API
+ * returns 403 with a known message. Used by the Axios interceptor to force a
+ * client-side session reset (same as expired JWT) without treating every 403 as logout.
+ */
+export function extractInactiveAccountForbiddenMessage(
+  error: unknown,
+): string | null {
+  if (!(error instanceof AxiosError)) return null;
+  if (error.response?.status !== 403) return null;
+  const msg = extractBackendMessage(error);
+  if (!msg) return null;
+  const lower = msg.toLowerCase();
+  if (!INACTIVE_ACCOUNT_403_MARKERS.some((m) => lower.includes(m))) return null;
+  return msg;
 }

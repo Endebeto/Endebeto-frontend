@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AxiosError } from "axios";
-import { apiErrMessage, getFriendlyErrorMessage } from "./errors";
+import { apiErrMessage, extractInactiveAccountForbiddenMessage, getFriendlyErrorMessage } from "./errors";
 
 function axErr(
   status: number | undefined,
@@ -58,5 +58,29 @@ describe("getFriendlyErrorMessage", () => {
 
   it("apiErrMessage delegates to getFriendlyErrorMessage", () => {
     expect(apiErrMessage(axErr(422, { message: "Nope" }), "X")).toBe("Nope");
+  });
+});
+
+describe("extractInactiveAccountForbiddenMessage", () => {
+  it("returns message for admin suspension copy", () => {
+    const msg = "Your account has been suspended by an administrator.";
+    const e = axErr(403, { message: msg });
+    expect(extractInactiveAccountForbiddenMessage(e)).toBe(msg);
+  });
+
+  it("returns message for self-deactivation copy", () => {
+    const msg =
+      "This account has been deactivated. If you need access again, please contact support.";
+    const e = axErr(403, { message: msg });
+    expect(extractInactiveAccountForbiddenMessage(e)).toBe(msg);
+  });
+
+  it("returns null for unrelated 403", () => {
+    const e = axErr(403, { message: "You do not have permission to perform this action" });
+    expect(extractInactiveAccountForbiddenMessage(e)).toBeNull();
+  });
+
+  it("returns null for 403 without body message", () => {
+    expect(extractInactiveAccountForbiddenMessage(axErr(403, {}))).toBeNull();
   });
 });

@@ -42,10 +42,10 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 function AuthExpiredRedirect() {
   const navigate = useNavigate();
   useEffect(() => {
-    const handler = () => {
-      if (window.location.pathname !== "/login") {
-        navigate("/login", { replace: true });
-      }
+    const handler = (e: Event) => {
+      const message = (e as CustomEvent<{ message?: string }>).detail?.message;
+      const state = message ? { authSessionMessage: message } : undefined;
+      navigate("/login", { replace: true, state });
     };
     window.addEventListener("auth:expired", handler);
     return () => window.removeEventListener("auth:expired", handler);
@@ -154,8 +154,8 @@ const App = () => (
           v7_relativeSplatPath: true,
         }}
       >
-        <AuthExpiredRedirect />
         <AuthProvider>
+          <AuthExpiredRedirect />
           <Suspense fallback={<RouteFallback />}>
             <AppRoutes />
           </Suspense>

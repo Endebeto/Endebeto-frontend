@@ -35,8 +35,7 @@ import {
   AreaChart,
   Area,
 } from "recharts";
-import type { TooltipProps } from "recharts";
-import type { ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
+import type { TooltipContentProps } from "recharts";
 import AdminLayout from "@/components/AdminLayout";
 import { UserAvatar } from "@/components/UserAvatar";
 import { DeltaBadge } from "@/components/admin/DeltaBadge";
@@ -148,17 +147,19 @@ const EMPTY_STATS: PlatformStats = {
   },
 };
 
-/* Align with Recharts generic tooltip payload (ValueType / NameType) */
-type ChartTooltipProps = TooltipProps<ValueType, NameType>;
+/* Align with Recharts v3 custom Tooltip content props */
+type ChartTooltipProps = TooltipContentProps;
 
 /* ─── tooltips ───────────────────────────────────────────── */
 function BarTooltipBody({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-outline-variant/20 bg-white dark:bg-zinc-800 px-3 py-2.5 text-xs shadow-lg max-w-[220px]">
-      <p className="font-headline font-bold text-primary mb-1.5 border-b border-outline-variant/10 pb-1">
-        {label}
-      </p>
+      {label != null && label !== "" ? (
+        <p className="font-headline font-bold text-primary mb-1.5 border-b border-outline-variant/10 pb-1">
+          {label}
+        </p>
+      ) : null}
       <ul className="space-y-1">
         {payload.map((p) => (
           <li key={String(p.name)} className="flex justify-between gap-6">
@@ -177,9 +178,11 @@ function AreaTooltipBody({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-outline-variant/20 bg-white dark:bg-zinc-800 px-3 py-2.5 text-xs shadow-lg max-w-[220px]">
-      <p className="font-headline font-bold text-primary mb-1.5 border-b border-outline-variant/10 pb-1">
-        {label}
-      </p>
+      {label != null && label !== "" ? (
+        <p className="font-headline font-bold text-primary mb-1.5 border-b border-outline-variant/10 pb-1">
+          {label}
+        </p>
+      ) : null}
       <ul className="space-y-1">
         {payload.map((p) => (
           <li key={String(p.name)} className="flex justify-between gap-6">
@@ -969,9 +972,6 @@ export default function AdminDashboard() {
                           }
                         />
                       </Pie>
-                      <Tooltip
-                        content={(props) => <PieTooltipBody {...props} />}
-                      />
                       <Legend
                         verticalAlign="bottom"
                         formatter={(value, entry) => {
@@ -980,6 +980,9 @@ export default function AdminDashboard() {
                           return `${value} (${v ?? 0})`;
                         }}
                         wrapperStyle={{ fontSize: "11px", paddingTop: 6 }}
+                      />
+                      <Tooltip
+                        content={(props) => <PieTooltipBody {...props} />}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -1027,10 +1030,10 @@ export default function AdminDashboard() {
                       tick={{ fontSize: 11 }}
                       width={40}
                     />
+                    <Legend wrapperStyle={{ fontSize: "12px" }} />
                     <Tooltip
                       content={(props) => <BarTooltipBody {...props} />}
                     />
-                    <Legend wrapperStyle={{ fontSize: "12px" }} />
                     <Bar
                       dataKey="signups"
                       name="New users"
