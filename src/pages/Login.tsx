@@ -55,7 +55,6 @@ const Login = () => {
           src={authSideImage}
           alt="Ethiopian coffee ceremony and culture"
           className="h-full min-h-screen w-full object-cover"
-          fetchPriority="high"
           loading="eager"
           decoding="async"
         />

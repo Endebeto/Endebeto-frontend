@@ -75,7 +75,6 @@ const Signup = () => {
           src={authSideImage}
           alt="Ethiopian highlands landscape"
           className="h-full min-h-screen w-full object-cover"
-          fetchPriority="high"
           loading="eager"
           decoding="async"
         />

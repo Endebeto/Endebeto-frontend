@@ -13,7 +13,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  /* Single worker: shared Vite dev server; parallel tests can race browse URL hydration. */
+  workers: 1,
   reporter: "list",
   use: {
     baseURL: "http://localhost:8080",

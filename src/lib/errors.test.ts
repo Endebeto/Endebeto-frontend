@@ -1,0 +1,62 @@
+import { describe, expect, it } from "vitest";
+import { AxiosError } from "axios";
+import { apiErrMessage, getFriendlyErrorMessage } from "./errors";
+
+function axErr(
+  status: number | undefined,
+  data?: { message?: string },
+  code?: string,
+): AxiosError {
+  const err = new AxiosError("request failed", code, undefined, undefined, {
+    status,
+    statusText: "",
+    headers: {},
+    config: {} as AxiosError["config"],
+    data,
+  } as AxiosError["response"]);
+  return err;
+}
+
+describe("getFriendlyErrorMessage", () => {
+  it("uses friendlyMessage when present on error object", () => {
+    const err = { friendlyMessage: "Safe msg" };
+    expect(getFriendlyErrorMessage(err)).toBe("Safe msg");
+  });
+
+  it("uses backend 4xx message when present", () => {
+    const err = axErr(400, { message: "Invalid input." });
+    expect(getFriendlyErrorMessage(err, "fallback")).toBe("Invalid input.");
+  });
+
+  it("uses fallback for 4xx when body has no message", () => {
+    const err = axErr(404, {});
+    expect(getFriendlyErrorMessage(err, "Nothing here.")).toBe("Nothing here.");
+  });
+
+  it("uses fallback for 5xx", () => {
+    const err = axErr(500, { message: "DB down" });
+    expect(getFriendlyErrorMessage(err, "Try later.")).toBe("Try later.");
+  });
+
+  it("uses fallback for network / no response", () => {
+    const err = new AxiosError("Network Error", "ERR_NETWORK");
+    expect(getFriendlyErrorMessage(err, "Offline.")).toBe("Offline.");
+  });
+
+  it("extracts message from non-axios object with response.data.message", () => {
+    const err = { response: { data: { message: "Not found" } } };
+    expect(getFriendlyErrorMessage(err, "fallback")).toBe("Not found");
+  });
+
+  it("truncates overly long backend messages", () => {
+    const long = "x".repeat(300);
+    const err = axErr(400, { message: long });
+    const out = getFriendlyErrorMessage(err, "f");
+    expect(out.length).toBeLessThanOrEqual(240);
+    expect(out.endsWith("…")).toBe(true);
+  });
+
+  it("apiErrMessage delegates to getFriendlyErrorMessage", () => {
+    expect(apiErrMessage(axErr(422, { message: "Nope" }), "X")).toBe("Nope");
+  });
+});

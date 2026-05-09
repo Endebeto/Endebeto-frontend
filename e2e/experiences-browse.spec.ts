@@ -51,6 +51,8 @@ test.describe("Experiences browse: URL and API query strings", () => {
     const qs = "page=2&sort=price-asc";
     await page.goto(`/experiences?${qs}`);
 
+    await expect.poll(() => new URL(page.url()).searchParams.get("page")).toBe("2");
+
     await expect.poll(() => listRequests.length).toBeGreaterThan(0);
     const u = new URL(
       listRequests.find((r) => new URL(r).searchParams.get("page") === "2") ?? listRequests.at(-1)!,
@@ -60,9 +62,8 @@ test.describe("Experiences browse: URL and API query strings", () => {
     expect(u.searchParams.get("limit")).toBe("10");
     expect(u.searchParams.get("onlyAvailable")).toBeNull();
 
-    const bar = new URL(page.url());
-    expect(bar.searchParams.get("page")).toBe("2");
-    expect(bar.searchParams.get("sort")).toBe("price-asc");
+    await expect.poll(() => new URL(page.url()).searchParams.get("page")).toBe("2");
+    await expect.poll(() => new URL(page.url()).searchParams.get("sort")).toBe("price-asc");
   });
 
   test("deep link with q= and rating= is reflected in the list API", async ({ page }) => {

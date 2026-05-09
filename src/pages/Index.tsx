@@ -213,7 +213,6 @@ const Index = () => {
             src={heroSlides[current].image}
             alt={heroSlides[current].title}
             className="h-full w-full object-cover object-[center_30%] md:object-center transition-opacity duration-1000"
-            fetchPriority="high"
             loading="eager"
             decoding="async"
             sizes="100vw"
@@ -540,7 +539,6 @@ const Index = () => {
                 className="w-full h-full object-cover opacity-40"
                 loading="lazy"
                 decoding="async"
-                fetchPriority="low"
               />
               <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary/60 to-black/70" />
             </div>

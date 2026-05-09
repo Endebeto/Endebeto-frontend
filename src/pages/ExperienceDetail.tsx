@@ -1,15 +1,24 @@
-import { useState, useEffect, useCallback, useMemo, useLayoutEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   MapPin, Star, Clock, Users, Globe,
-  AlertCircle, ArrowRight, ChevronLeft, ChevronRight, ExternalLink, X,
-  Share2, Link2, Loader2, Plus, Mail, Lock, MessageCircle,
+  AlertCircle, ArrowRight, ChevronLeft, ExternalLink, X,
+  Share2, Link2, Loader2,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { UserAvatar } from "@/components/UserAvatar";
+import {
+  buildGalleryUrls,
+  getGalleryPreviewSlots,
+  GalleryMoreOverlay,
+  GalleryLightbox,
+} from "@/components/experience/ExperienceGallery";
+import { ContactHostButton } from "@/components/experience/ContactHostButton";
+import { fmtDate, fmtTime, ReviewCard } from "@/components/experience/ExperienceReviewCard";
+import { ExperienceDetailSkeleton } from "@/components/experience/ExperienceDetailSkeleton";
 import { experiencesService, type Review } from "@/services/experiences.service";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import { useAuth } from "@/context/AuthContext";
@@ -26,388 +35,42 @@ function bookingExperienceId(b: Booking): string {
 
 const REVIEWS_PER_PAGE = 3;
 
-/** Cover first, then gallery URLs, deduped in order */
-function buildGalleryUrls(imageCover: string, images?: string[]) {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const u of [imageCover, ...(images ?? [])]) {
-    if (!u || seen.has(u)) continue;
-    seen.add(u);
-    out.push(u);
-  }
-  return out;
-}
-
-const GALLERY_PREVIEW_MAX = 4;
-
-/** Up to 4 thumbnails; when total > 4, last tile shows 4th image + “+N” (N = not shown on page) */
-function getGalleryPreviewSlots(urls: string[]) {
-  if (urls.length === 0) return [];
-  const len = Math.min(GALLERY_PREVIEW_MAX, urls.length);
-  const slots: { imageIndex: number; src: string; moreCount: number }[] = [];
-  for (let i = 0; i < len; i++) {
-    const isLastSlot = i === GALLERY_PREVIEW_MAX - 1;
-    const moreCount =
-      isLastSlot && urls.length > GALLERY_PREVIEW_MAX ? urls.length - GALLERY_PREVIEW_MAX : 0;
-    slots.push({ imageIndex: i, src: urls[i], moreCount });
-  }
-  return slots;
-}
-
-function GalleryMoreOverlay({ moreCount, compact }: { moreCount: number; compact?: boolean }) {
-  if (moreCount <= 0) return null;
-  return (
-    <div className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center gap-0.5 sm:gap-1 backdrop-blur-[2px]">
-      <div
-        className={`flex items-center justify-center rounded-full bg-white/20 border border-white/50 text-white shadow-lg ${
-          compact ? "w-9 h-9" : "w-11 h-11 sm:w-12 sm:h-12"
-        }`}
-      >
-        <Plus className={compact ? "h-4 w-4 stroke-[2.5]" : "h-5 w-5 sm:h-6 sm:w-6 stroke-[2.5]"} />
-      </div>
-      <span
-        className={`text-white font-headline font-extrabold leading-none ${
-          compact ? "text-sm" : "text-base sm:text-lg"
-        }`}
-      >
-        +{moreCount}
-      </span>
-      <span className="text-white/80 text-[8px] sm:text-[9px] uppercase tracking-widest font-bold">
-        photos
-      </span>
-    </div>
-  );
-}
-
-/* ─── full-screen image lightbox ────────────────────────── */
-
-function GalleryLightbox({
-  images,
-  index,
-  title,
-  onClose,
+/** Lightweight map look for guests who have not booked: one static image (no iframe/JS) or a CSS grid fallback. */
+function UnbookedMapPlaceholder({
+  mapImageUrl,
+  children,
 }: {
-  images: string[];
-  index: number;
-  title: string;
-  onClose: () => void;
+  mapImageUrl: string | null;
+  children: ReactNode;
 }) {
-  const [i, setI] = useState(index);
-  useEffect(() => {
-    setI(index);
-  }, [index]);
-
-  const goPrev = useCallback(() => {
-    setI((x) => (x > 0 ? x - 1 : images.length - 1));
-  }, [images.length]);
-  const goNext = useCallback(() => {
-    setI((x) => (x < images.length - 1 ? x + 1 : 0));
-  }, [images.length]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        goPrev();
-      }
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        goNext();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, goPrev, goNext]);
-
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
-
-  if (images.length === 0) return null;
-  const safe = Math.min(Math.max(i, 0), images.length - 1);
-
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-5"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Photo gallery"
-    >
-      <button
-        type="button"
-        aria-label="Close gallery"
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      {/* Compact “window” — good for testing in a small browser viewport; ← → keys still work */}
-      <div className="relative z-10 flex flex-col w-full max-w-3xl max-h-[min(88vh,820px)] rounded-2xl overflow-hidden bg-zinc-950 border border-white/15 shadow-2xl pointer-events-auto">
-        <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2.5 shrink-0 border-b border-white/10 bg-black/40">
-          <p className="text-white/90 text-xs sm:text-sm font-headline font-semibold truncate min-w-0">
-            {title}
-            <span className="text-white/45 font-normal ml-2 whitespace-nowrap">
-              {safe + 1} / {images.length}
-            </span>
-          </p>
-          <div className="flex items-center gap-1 shrink-0">
-            <span className="hidden sm:inline text-[10px] text-white/40 mr-1">← →</span>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 flex items-center justify-center min-h-0 p-2 sm:p-4 relative bg-black/50">
-          {images.length > 1 && (
-            <button
-              type="button"
-              onClick={goPrev}
-              className="absolute left-1 sm:left-2 z-20 p-2 sm:p-2.5 rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors"
-              aria-label="Previous image"
-            >
-              <ChevronLeft className="h-6 w-6 sm:h-7 sm:w-7" />
-            </button>
-          )}
-          <img
-            src={images[safe]}
-            alt={`${title} — photo ${safe + 1}`}
-            className="max-h-[min(62vh,520px)] sm:max-h-[min(68vh,560px)] w-full object-contain select-none"
-          />
-          {images.length > 1 && (
-            <button
-              type="button"
-              onClick={goNext}
-              className="absolute right-1 sm:right-2 z-20 p-2 sm:p-2.5 rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors"
-              aria-label="Next image"
-            >
-              <ChevronRight className="h-6 w-6 sm:h-7 sm:w-7" />
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── helpers ───────────────────────────────────────────── */
-
-function fmtDate(iso?: string) {
-  if (!iso) return null;
-  return new Date(iso).toLocaleDateString("en-US", {
-    weekday: "short", year: "numeric", month: "short", day: "numeric",
-  });
-}
-
-function fmtTime(iso?: string) {
-  if (!iso) return null;
-  return new Date(iso).toLocaleTimeString("en-US", {
-    hour: "2-digit", minute: "2-digit",
-  });
-}
-
-/* ─── small star row ────────────────────────────────────── */
-
-function Stars({ rating = 5 }: { rating?: number }) {
-  const full  = Math.floor(rating);
-  const items = Array.from({ length: 5 }, (_, i) => i < full);
-  return (
-    <div className="flex gap-0.5">
-      {items.map((filled, i) => (
-        <Star
-          key={i}
-          className={`h-3 w-3 ${filled ? "fill-current text-on-tertiary-container" : "text-outline-variant/40"}`}
+    <div className="relative h-full w-full">
+      {mapImageUrl ? (
+        <img
+          src={mapImageUrl}
+          alt=""
+          className="absolute inset-0 h-full w-full scale-105 object-cover blur-[2px] opacity-90 dark:opacity-80"
+          loading="lazy"
+          decoding="async"
         />
-      ))}
-    </div>
-  );
-}
-
-/* ─── review card ───────────────────────────────────────── */
-
-const AVATAR_COLORS = [
-  "bg-secondary-container text-on-secondary-container",
-  "bg-primary/10 text-primary",
-  "bg-tertiary-container text-on-tertiary-container",
-  "bg-accent/20 text-accent",
-];
-
-function ReviewCard({ review, index }: { review: Review; index: number }) {
-  const initials = review.user?.name
-    ? review.user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-    : "?";
-  const color = AVATAR_COLORS[index % AVATAR_COLORS.length];
-  const date  = review.createdAt
-    ? new Date(review.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
-    : "";
-  return (
-    <div className="bg-surface-container-low dark:bg-zinc-900 p-4 rounded-2xl">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center font-headline font-bold text-[10px] shrink-0 ${color}`}>
-            {initials}
-          </div>
-          <div>
-            <p className="font-headline font-bold text-xs text-on-surface dark:text-white">{review.user?.name ?? "Guest"}</p>
-            {date && <p className="text-[9px] text-on-surface-variant dark:text-zinc-500">{date}</p>}
-          </div>
-        </div>
-        <Stars rating={review.rating} />
-      </div>
-      <p className="text-[11px] text-on-surface-variant dark:text-zinc-400 italic leading-relaxed">"{review.review}"</p>
-    </div>
-  );
-}
-
-/* ─── contact host helpers ──────────────────────────────── */
-
-function buildWaLink(phone: string | undefined, experienceTitle: string) {
-  if (!phone) return null;
-  const digits = phone.replace(/[^\d+]/g, "").replace(/^\+/, "");
-  if (digits.length < 7) return null;
-  const msg = encodeURIComponent(`Hi! I booked your experience "${experienceTitle}" on Endebeto — I have a question.`);
-  return `https://wa.me/${digits}?text=${msg}`;
-}
-
-function buildMailtoLink(email: string | undefined, experienceTitle: string) {
-  if (!email) return null;
-  return `mailto:${email}?subject=${encodeURIComponent(`Question about: ${experienceTitle}`)}`;
-}
-
-interface ContactHostButtonProps {
-  host: { name?: string; email?: string; phone?: string; hostStory?: string } | undefined;
-  experienceTitle: string;
-  booked: boolean;
-  compact?: boolean;
-}
-
-function ContactHostButton({ host, experienceTitle, booked, compact = false }: ContactHostButtonProps) {
-  const [open, setOpen] = useState(false);
-
-  const waLink      = buildWaLink(host?.phone, experienceTitle);
-  const mailtoLink  = buildMailtoLink(host?.email, experienceTitle);
-  const hasAny      = !!(waLink || mailtoLink);
-
-  if (!booked) {
-    return (
-      <button
-        disabled
-        title="Book this experience to contact the host"
-        className={`flex items-center gap-1.5 font-bold text-on-surface-variant/50 dark:text-zinc-500 border border-outline-variant/20 dark:border-zinc-700 cursor-not-allowed ${
-          compact
-            ? "text-xs px-4 py-1.5 rounded-full"
-            : "text-xs px-3 py-1.5 rounded-lg"
-        }`}
-      >
-        <Lock className="h-3.5 w-3.5" />
-        Book to Contact
-      </button>
-    );
-  }
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className={`flex items-center gap-1.5 font-bold text-primary dark:text-green-400 border border-primary/40 dark:border-green-400/40 hover:bg-primary/5 transition-colors ${
-          compact
-            ? "text-xs px-4 py-1.5 rounded-full"
-            : "text-xs px-3 py-1.5 rounded-lg"
-        }`}
-      >
-        <MessageCircle className="h-3.5 w-3.5" />
-        Contact Host
-      </button>
-
-      {open && (
-        <>
-          {/* backdrop */}
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-
-          {/* picker card */}
-          <div className={`absolute z-50 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/20 dark:border-zinc-700 p-4 w-64 ${
-            compact ? "left-0 top-full mt-2" : "right-0 top-full mt-2"
-          }`}>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant dark:text-zinc-400 mb-3">
-              Contact {host?.name?.split(" ")[0] ?? "Host"} via
-            </p>
-
-            {!hasAny && (
-              <p className="text-xs text-on-surface-variant dark:text-zinc-400 italic py-2">
-                The host hasn't added contact details yet.
-              </p>
-            )}
-
-            {waLink && (
-              <a
-                href={waLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-[#25D366]/10 transition-colors mb-2 group"
-              >
-                <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center shrink-0">
-                  <MessageCircle className="h-4 w-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-on-surface dark:text-white group-hover:text-[#128C7E]">WhatsApp</p>
-                  <p className="text-[11px] text-on-surface-variant dark:text-zinc-400">Opens WhatsApp with pre-filled message</p>
-                </div>
-              </a>
-            )}
-
-            {mailtoLink && (
-              <a
-                href={mailtoLink}
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-primary/5 transition-colors group"
-              >
-                <div className="w-9 h-9 rounded-full bg-primary/10 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-                  <Mail className="h-4 w-4 text-primary dark:text-green-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-on-surface dark:text-white group-hover:text-primary dark:group-hover:text-green-400">Email</p>
-                  <p className="text-[11px] text-on-surface-variant dark:text-zinc-400">Opens your email client</p>
-                </div>
-              </a>
-            )}
-
-            <p className="text-[10px] text-on-surface-variant/60 dark:text-zinc-500 mt-3 leading-relaxed">
-              Contact info is only visible because you have a booking for this experience.
-            </p>
-          </div>
-        </>
+      ) : (
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `
+              repeating-linear-gradient(90deg, rgba(100, 116, 139, 0.09) 0 1px, transparent 1px 20px),
+              repeating-linear-gradient(0deg, rgba(100, 116, 139, 0.09) 0 1px, transparent 1px 20px),
+              linear-gradient(155deg, rgb(207 250 254 / 0.9) 0%, rgb(209 250 229 / 0.85) 38%, rgb(231 229 228 / 0.95) 100%)
+            `,
+          }}
+          aria-hidden
+        />
       )}
-    </div>
-  );
-}
-
-/* ─── skeleton ──────────────────────────────────────────── */
-
-function DetailSkeleton() {
-  return (
-    <div className="min-h-screen bg-background animate-pulse">
-      <Navbar />
-      <div className="h-[420px] bg-surface-container" />
-      <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-3 gap-10">
-        <div className="col-span-2 space-y-6">
-          <div className="h-8 w-2/3 bg-surface-container rounded" />
-          <div className="h-4 w-1/3 bg-surface-container rounded" />
-          <div className="h-24 bg-surface-container rounded" />
-        </div>
-        <div className="col-span-1 h-64 bg-surface-container rounded-2xl" />
-      </div>
+      <div
+        className="absolute inset-0 bg-gradient-to-t from-background/88 via-background/40 to-transparent dark:from-zinc-950/92 dark:via-zinc-950/45"
+        aria-hidden
+      />
+      <div className="absolute inset-0 flex flex-col items-center justify-center px-4 sm:px-6">{children}</div>
     </div>
   );
 }
@@ -432,6 +95,34 @@ const ExperienceDetail = () => {
     enabled: !!id && isAuthenticated,
   });
 
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["experience", id],
+    queryFn: () => experiencesService.getOne(id!),
+    enabled: !!id,
+    staleTime: 60_000,
+  });
+
+  const expForAvail = data?.data?.data?.data;
+
+  const { data: availPayload } = useQuery({
+    queryKey: ["booking-availability", id],
+    queryFn: async () => {
+      const res = await bookingsService.getAvailability(id!);
+      return res.data.data;
+    },
+    enabled: Boolean(id && expForAvail),
+    staleTime: 30_000,
+  });
+
+  const maxBookable = useMemo(() => {
+    if (!expForAvail) return 1;
+    const cap = Math.min(
+      expForAvail.maxGuests,
+      availPayload?.available ?? expForAvail.maxGuests
+    );
+    return Math.max(0, cap);
+  }, [expForAvail, availPayload?.available]);
+
   const hasUpcomingBookingHere = useMemo(() => {
     if (!isAuthenticated || !id) return false;
     const list = myBookingsPayload ?? [];
@@ -454,33 +145,7 @@ const ExperienceDetail = () => {
     if (hasUpcomingBookingHere && showBookingModal) setShowBookingModal(false);
   }, [hasUpcomingBookingHere, showBookingModal]);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["experience", id],
-    queryFn: () => experiencesService.getOne(id!),
-    enabled: !!id,
-  });
-
-  const expForAvail = data?.data?.data?.data;
-
-  const { data: availPayload } = useQuery({
-    queryKey: ["booking-availability", id],
-    queryFn: async () => {
-      const res = await bookingsService.getAvailability(id!);
-      return res.data.data;
-    },
-    enabled: Boolean(id && expForAvail),
-  });
-
-  const maxBookable = useMemo(() => {
-    if (!expForAvail) return 1;
-    const cap = Math.min(
-      expForAvail.maxGuests,
-      availPayload?.available ?? expForAvail.maxGuests
-    );
-    return Math.max(0, cap);
-  }, [expForAvail, availPayload?.available]);
-
-  useLayoutEffect(() => {
+  useEffect(() => {
     setGuests((g) => {
       if (maxBookable === 0) return 0;
       return Math.min(Math.max(1, g), maxBookable);
@@ -525,13 +190,19 @@ const ExperienceDetail = () => {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   /* ─── paginated reviews ── */
-  const [reviewPage, setReviewPage]     = useState(1);
-  const [reviews, setReviews]           = useState<Review[]>([]);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviews, setReviews] = useState<Review[]>([]);
+
+  useEffect(() => {
+    setReviewPage(1);
+    setReviews([]);
+  }, [id]);
 
   const { data: reviewsData, isFetching: reviewsFetching } = useQuery({
     queryKey: ["reviews", id, reviewPage],
     queryFn: () => experiencesService.getReviews(id!, { page: reviewPage, limit: REVIEWS_PER_PAGE }),
     enabled: !!id,
+    staleTime: 60_000,
   });
 
   // Append newly fetched page to the accumulated list
@@ -544,9 +215,57 @@ const ExperienceDetail = () => {
   }, [reviewsData, reviewPage]);
 
   const totalReviews = reviewsData?.data.results ?? 0;
-  const hasMore      = reviews.length < totalReviews;
+  const hasMore = reviews.length < totalReviews;
 
   const exp = data?.data.data.data;
+
+  /** Defer heavy Google Maps embed until the map block is near the viewport (booked users only). */
+  const mobileMapMountRef = useRef<HTMLDivElement>(null);
+  const desktopMapMountRef = useRef<HTMLDivElement>(null);
+  const [loadMapEmbeds, setLoadMapEmbeds] = useState(false);
+
+  useEffect(() => {
+    setLoadMapEmbeds(false);
+  }, [id]);
+
+  useEffect(() => {
+    if (!hasUpcomingBookingHere || loadMapEmbeds || isLoading) return;
+    const nodes = [mobileMapMountRef.current, desktopMapMountRef.current].filter(
+      (n): n is HTMLDivElement => n !== null
+    );
+    if (nodes.length === 0) return;
+    const ob = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) setLoadMapEmbeds(true);
+      },
+      { root: null, rootMargin: "200px", threshold: 0 }
+    );
+    nodes.forEach((n) => ob.observe(n));
+    return () => ob.disconnect();
+  }, [hasUpcomingBookingHere, loadMapEmbeds, exp?._id, isLoading]);
+
+  const allGalleryImages = useMemo(
+    () => (exp ? buildGalleryUrls(exp.imageCover, exp.images) : []),
+    [exp]
+  );
+  const galleryPreviewSlots = useMemo(
+    () => getGalleryPreviewSlots(allGalleryImages),
+    [allGalleryImages]
+  );
+  const occurrenceDate = useMemo(() => fmtDate(exp?.nextOccurrenceAt), [exp?.nextOccurrenceAt]);
+  const occurrenceTime = useMemo(() => fmtTime(exp?.nextOccurrenceAt), [exp?.nextOccurrenceAt]);
+
+  const mapsSearchHref = useMemo(() => {
+    if (!exp) return "#";
+    // Public page: avoid linking precise coordinates before the guest has booked.
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(exp.location)}`;
+  }, [exp]);
+
+  /** Single static map image when coords exist; no iframe (see UnbookedMapPlaceholder). */
+  const unbookedApproxMapImageUrl = useMemo(() => {
+    if (!exp || exp.latitude == null || exp.longitude == null) return null;
+    return `https://staticmap.openstreetmap.de/staticmap.php?center=${exp.latitude},${exp.longitude}&zoom=10&size=800x320&maptype=mapnik`;
+  }, [exp]);
 
   const handleCopyPublicLink = useCallback(async () => {
     try {
@@ -572,7 +291,7 @@ const ExperienceDetail = () => {
     }
   }, [exp?.title, handleCopyPublicLink]);
 
-  if (isLoading) return <DetailSkeleton />;
+  if (isLoading) return <ExperienceDetailSkeleton />;
 
   if (isError || !exp) {
     return (
@@ -590,12 +309,6 @@ const ExperienceDetail = () => {
   }
 
   const totalBase = exp.price * guests;
-
-  const allGalleryImages = buildGalleryUrls(exp.imageCover, exp.images);
-  const galleryPreviewSlots = getGalleryPreviewSlots(allGalleryImages);
-
-  const occurrenceDate = fmtDate(exp.nextOccurrenceAt);
-  const occurrenceTime = fmtTime(exp.nextOccurrenceAt);
 
   return (
     <div className="min-h-screen bg-background">
@@ -790,32 +503,43 @@ const ExperienceDetail = () => {
               </p>
               <div className="relative w-full h-44 rounded-2xl overflow-hidden bg-surface-container">
                 {hasUpcomingBookingHere ? (
-                  <iframe
-                    title={`Meetup point for ${exp.title}`}
-                    className="w-full h-full"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    src={exp.latitude && exp.longitude
-                      ? `https://maps.google.com/maps?q=${exp.latitude},${exp.longitude}&output=embed&z=17`
-                      : `https://maps.google.com/maps?q=${encodeURIComponent(exp.location)}&output=embed&z=15`}
-                  />
-                ) : (
-                  <>
-                    <iframe
-                      title={`Area map for ${exp.title}`}
-                      className="w-full h-full blur-[3px] scale-110 pointer-events-none"
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      src={`https://maps.google.com/maps?q=${encodeURIComponent(exp.location)}&output=embed&z=11`}
-                    />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 backdrop-blur-[1px]">
-                      <div className="bg-white dark:bg-zinc-900 rounded-xl px-4 py-3 text-center shadow-lg border border-outline-variant/20 mx-4">
-                        <MapPin className="h-5 w-5 text-primary mx-auto mb-1" />
-                        <p className="text-xs font-bold text-on-surface dark:text-white">Exact meetup point shared after booking</p>
-                        <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 mt-0.5">Book this experience to see the precise location</p>
+                  <div ref={mobileMapMountRef} className="relative h-full w-full">
+                    {loadMapEmbeds ? (
+                      <iframe
+                        title={`Meetup point for ${exp.title}`}
+                        className="h-full w-full border-0"
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        src={
+                          exp.latitude && exp.longitude
+                            ? `https://maps.google.com/maps?q=${exp.latitude},${exp.longitude}&output=embed&z=17`
+                            : `https://maps.google.com/maps?q=${encodeURIComponent(exp.location)}&output=embed&z=15`
+                        }
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-surface-container">
+                        <MapPin className="h-9 w-9 text-outline-variant/45" aria-hidden />
                       </div>
+                    )}
+                  </div>
+                ) : (
+                  <UnbookedMapPlaceholder mapImageUrl={unbookedApproxMapImageUrl}>
+                    <div className="rounded-xl border border-outline-variant/20 bg-white px-4 py-3 text-center shadow-lg dark:bg-zinc-900">
+                      <MapPin className="mx-auto mb-1 h-5 w-5 text-primary" />
+                      <p className="text-xs font-bold text-on-surface dark:text-white">Exact meetup point shared after booking</p>
+                      <p className="mt-0.5 text-[10px] text-on-surface-variant dark:text-zinc-400">
+                        Book this experience to see the precise location
+                      </p>
+                      <a
+                        href={mapsSearchHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-primary dark:text-green-400"
+                      >
+                        Open approximate area <ExternalLink className="h-3 w-3" />
+                      </a>
                     </div>
-                  </>
+                  </UnbookedMapPlaceholder>
                 )}
               </div>
             </div>
@@ -1085,45 +809,61 @@ const ExperienceDetail = () => {
               </div>
               <div className="relative w-full h-64 rounded-2xl overflow-hidden border border-outline-variant/20 shadow-sm bg-surface-container">
                 {hasUpcomingBookingHere ? (
-                  <>
-                    <iframe
-                      title={`Meetup point for ${exp.title}`}
-                      className="w-full h-full"
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      src={exp.latitude && exp.longitude
-                        ? `https://maps.google.com/maps?q=${exp.latitude},${exp.longitude}&output=embed&z=17`
-                        : `https://maps.google.com/maps?q=${encodeURIComponent(exp.location)}&output=embed&z=15`}
-                    />
-                    <a
-                      href={exp.latitude && exp.longitude
-                        ? `https://www.google.com/maps/dir/?api=1&destination=${exp.latitude},${exp.longitude}`
-                        : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(exp.location)}`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-white dark:bg-zinc-800 text-primary text-xs font-bold px-3 py-1.5 rounded-lg shadow-md border border-outline-variant/20"
-                    >
-                      <MapPin className="h-3 w-3" /> Get Directions
-                    </a>
-                  </>
-                ) : (
-                  <>
-                    <iframe
-                      title={`Area map for ${exp.title}`}
-                      className="w-full h-full blur-[4px] scale-110 pointer-events-none"
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      src={`https://maps.google.com/maps?q=${encodeURIComponent(exp.location)}&output=embed&z=11`}
-                    />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/25 backdrop-blur-[1px]">
-                      <div className="bg-white dark:bg-zinc-900 rounded-2xl px-6 py-5 text-center shadow-xl border border-outline-variant/20 max-w-xs">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                          <MapPin className="h-5 w-5 text-primary" />
-                        </div>
-                        <p className="font-headline font-bold text-sm text-on-surface dark:text-white mb-1">Exact meetup point shared after booking</p>
-                        <p className="text-[11px] text-on-surface-variant dark:text-zinc-400">The precise pin drops as soon as your booking is confirmed.</p>
+                  <div ref={desktopMapMountRef} className="relative h-full w-full">
+                    {loadMapEmbeds ? (
+                      <>
+                        <iframe
+                          title={`Meetup point for ${exp.title}`}
+                          className="h-full w-full border-0"
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                          src={
+                            exp.latitude && exp.longitude
+                              ? `https://maps.google.com/maps?q=${exp.latitude},${exp.longitude}&output=embed&z=17`
+                              : `https://maps.google.com/maps?q=${encodeURIComponent(exp.location)}&output=embed&z=15`
+                          }
+                        />
+                        <a
+                          href={
+                            exp.latitude && exp.longitude
+                              ? `https://www.google.com/maps/dir/?api=1&destination=${exp.latitude},${exp.longitude}`
+                              : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(exp.location)}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg border border-outline-variant/20 bg-white px-3 py-1.5 text-xs font-bold text-primary shadow-md dark:bg-zinc-800"
+                        >
+                          <MapPin className="h-3 w-3" /> Get Directions
+                        </a>
+                      </>
+                    ) : (
+                      <div className="flex h-64 w-full items-center justify-center bg-surface-container">
+                        <MapPin className="h-10 w-10 text-outline-variant/45" aria-hidden />
                       </div>
+                    )}
+                  </div>
+                ) : (
+                  <UnbookedMapPlaceholder mapImageUrl={unbookedApproxMapImageUrl}>
+                    <div className="max-w-xs rounded-2xl border border-outline-variant/20 bg-white px-6 py-5 text-center shadow-xl dark:bg-zinc-900">
+                      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                        <MapPin className="h-5 w-5 text-primary" />
+                      </div>
+                      <p className="mb-1 font-headline text-sm font-bold text-on-surface dark:text-white">
+                        Exact meetup point shared after booking
+                      </p>
+                      <p className="text-[11px] text-on-surface-variant dark:text-zinc-400">
+                        The precise pin drops as soon as your booking is confirmed.
+                      </p>
+                      <a
+                        href={mapsSearchHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                      >
+                        Open approximate area in Google Maps <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
                     </div>
-                  </>
+                  </UnbookedMapPlaceholder>
                 )}
               </div>
             </div>
@@ -1141,29 +881,7 @@ const ExperienceDetail = () => {
               </div>
               <div className="space-y-4">
                 {reviews.length > 0
-                  ? reviews.map((r, i) => (
-                      <div key={r._id} className="bg-surface-container-low/50 p-4 rounded-xl">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-headline font-bold text-xs ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}>
-                              {r.user?.name
-                                ? r.user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-                                : "?"}
-                            </div>
-                            <div>
-                              <p className="font-headline font-bold text-sm text-primary">{r.user?.name ?? "Guest"}</p>
-                              {r.createdAt && (
-                                <p className="text-[10px] text-on-surface-variant">
-                                  {new Date(r.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <Stars rating={r.rating} />
-                        </div>
-                        <p className="text-on-surface-variant text-xs italic leading-relaxed">"{r.review}"</p>
-                      </div>
-                    ))
+                  ? reviews.map((r, i) => <ReviewCard key={r._id} review={r} index={i} />)
                   : !reviewsFetching && <p className="text-sm text-on-surface-variant">No reviews yet. Be the first to book!</p>
                 }
                 {reviewsFetching && (

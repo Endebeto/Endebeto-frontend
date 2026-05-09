@@ -128,7 +128,6 @@ export default function ForgotPassword() {
           src={heroCoffee}
           alt="Ethiopian landscape"
           className="absolute inset-0 w-full h-full object-cover"
-          fetchPriority="high"
           loading="eager"
           decoding="async"
         />
