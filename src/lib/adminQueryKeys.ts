@@ -32,11 +32,16 @@ export const adminQueryKeys = {
   }) => ["admin", "withdrawals", filters] as const,
   withdrawalsPrefix: ["admin", "withdrawals"] as const,
 
-  hostApplications: (status: string) => ["admin", "host-applications", status] as const,
+  hostApplications: (filters: {
+    status: string;
+    page: number;
+    search: string;
+  }) => ["admin", "host-applications", filters.status, filters.page, filters.search] as const,
   hostApplicationCounts: () => ["admin", "host-applications", "counts"] as const,
   hostApplicationsPrefix: ["admin", "host-applications"] as const,
 
-  experiencesCatalog: (tab: string) => ["admin", "experiences", "catalog", tab] as const,
+  experiencesCatalog: (filters: { tab: string; page: number; search: string }) =>
+    ["admin", "experiences", "catalog", filters.tab, filters.page, filters.search] as const,
   experiencesCatalogPrefix: ["admin", "experiences", "catalog"] as const,
 
   experienceDetail: (id: string) => ["admin", "experiences", "detail", id] as const,

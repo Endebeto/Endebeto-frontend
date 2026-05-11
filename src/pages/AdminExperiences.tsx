@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   MapPin, Users, Timer, Star, DollarSign, ImageIcon, Eye, X, ChevronRight,
@@ -21,6 +21,8 @@ import { ExperienceDescriptionMarkdown } from "@/components/ExperienceDescriptio
 
 type ExpStatus = "pending" | "approved" | "rejected" | "draft";
 type TabKey = "live" | "expired" | "suspended" | "draft";
+
+const CATALOG_PAGE_SIZE = 20;
 
 // Approved + (missing or past-dated) nextOccurrenceAt + not suspended = Expired.
 // Expired is deduced, not stored, so host-facing, admin-facing, and API views stay in sync.
@@ -765,16 +767,48 @@ function DetailPanel({
 export default function AdminExperiences() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<TabKey>("live");
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const searchEffectSkipMount = useRef(true);
   const [selected, setSelected] = useState<AdminExperience | null>(null);
   const [suspendModalExp, setSuspendModalExp] = useState<AdminExperience | null>(null);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: adminQueryKeys.experiencesCatalog(tab),
+  useEffect(() => {
+    if (searchEffectSkipMount.current) {
+      searchEffectSkipMount.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const { data: catalogData, isLoading, isError } = useQuery({
+    queryKey: adminQueryKeys.experiencesCatalog({
+      tab,
+      page,
+      search: search.trim(),
+    }),
     queryFn: () =>
       adminService
-        .getAdminCatalog(tab, { limit: 200 })
-        .then((r) => normalizeApiList<AdminExperience>(r.data).items),
+        .getAdminCatalog(tab, {
+          page,
+          limit: CATALOG_PAGE_SIZE,
+          ...(search.trim() ? { search: search.trim() } : {}),
+        })
+        .then((r) => {
+          const normalized = normalizeApiList<AdminExperience>(r.data);
+          return {
+            items: normalized.items,
+            total: normalized.total,
+            pages: r.data.pages ?? 1,
+            page: r.data.page ?? page,
+          };
+        }),
+    placeholderData: (prev) => prev,
     staleTime: 30_000,
   });
 
@@ -825,17 +859,10 @@ export default function AdminExperiences() {
     },
   });
 
-  const experiences = data ?? [];
-  const filtered = experiences.filter((e) => {
-    const q = search.toLowerCase();
-    const loc = locationText(e).toLowerCase();
-    return (
-      !q ||
-      e.title.toLowerCase().includes(q) ||
-      (e.host?.name ?? "").toLowerCase().includes(q) ||
-      loc.includes(q)
-    );
-  });
+  const experiences = catalogData?.items ?? [];
+  const catalogTotal = catalogData?.total ?? 0;
+  const catalogPages = catalogData?.pages ?? 1;
+  const catalogPage = catalogData?.page ?? page;
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "live", label: TAB_LABEL.live },
@@ -849,9 +876,9 @@ export default function AdminExperiences() {
   return (
     <AdminLayout
       searchPlaceholder="Search title, host, or location…"
-      searchValue={search}
+      searchValue={searchInput}
       onSearch={(v) => {
-        setSearch(v);
+        setSearchInput(v);
         setSelected(null);
       }}
     >
@@ -883,6 +910,7 @@ export default function AdminExperiences() {
                   key={t.key}
                   onClick={() => {
                     setTab(t.key);
+                    setPage(1);
                     setSelected(null);
                   }}
                   className={`relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold transition-colors shrink-0 ${tab === t.key
@@ -909,18 +937,18 @@ export default function AdminExperiences() {
                 <AlertCircle className="h-8 w-8" />
                 <p className="text-sm">Failed to load experiences.</p>
               </div>
-            ) : filtered.length === 0 ? (
+            ) : experiences.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-12 h-12 rounded-full bg-surface dark:bg-zinc-800 flex items-center justify-center mb-3">
                   <Eye className="h-5 w-5 text-on-surface-variant dark:text-zinc-500" />
                 </div>
                 <p className="text-sm font-semibold text-on-surface dark:text-white mb-1">No {emptyLabel} listings</p>
                 <p className="text-xs text-on-surface-variant dark:text-zinc-400">
-                  {search ? "Try a different search." : "Nothing in this tab yet."}
+                  {search.trim() ? "Try a different search." : "Nothing in this tab yet."}
                 </p>
               </div>
             ) : (
-              filtered.map((exp) => {
+              experiences.map((exp) => {
                 const isSelected = selected?._id === exp._id;
                 const st = (exp.status ?? "draft") as ExpStatus;
                 const rowExpired = isExpired(exp);
@@ -1004,6 +1032,37 @@ export default function AdminExperiences() {
               })
             )}
           </div>
+
+          {catalogTotal > 0 && (
+            <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-t border-outline-variant/10 dark:border-zinc-700 text-xs text-on-surface-variant dark:text-zinc-400">
+              <span>
+                {catalogTotal} listing{catalogTotal === 1 ? "" : "s"}
+                {catalogPages > 1 && ` · Page ${catalogPage} of ${catalogPages}`}
+              </span>
+              {catalogPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={catalogPage <= 1 || isLoading}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="p-1.5 rounded-lg border border-outline-variant/20 disabled:opacity-40 hover:bg-surface dark:hover:bg-zinc-800"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={catalogPage >= catalogPages || isLoading}
+                    onClick={() => setPage((p) => Math.min(catalogPages, p + 1))}
+                    className="p-1.5 rounded-lg border border-outline-variant/20 disabled:opacity-40 hover:bg-surface dark:hover:bg-zinc-800"
+                    aria-label="Next page"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {selected && (

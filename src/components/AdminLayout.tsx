@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -127,6 +127,7 @@ export default function AdminLayout({
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   /* close drawer on route change */
   useEffect(() => {
@@ -200,10 +201,11 @@ export default function AdminLayout({
               />
             </Link>
 
-            {/* Search — hidden on small mobile */}
-            <div className="relative hidden sm:block flex-1 max-w-md md:max-w-lg min-w-0">
+            {/* Search — compact on mobile, expands with header */}
+            <div className="relative flex-1 min-w-0 max-w-md md:max-w-lg">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-on-surface-variant pointer-events-none" />
               <input
+                ref={searchInputRef}
                 type="text"
                 value={searchValue}
                 onChange={(e) => onSearch?.(e.target.value)}
@@ -214,11 +216,12 @@ export default function AdminLayout({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Mobile search icon */}
+            {/* Mobile: jump to search field (same field visible in header) */}
             <button
               type="button"
               className="sm:hidden p-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors"
-              aria-label="Search"
+              aria-label="Focus search"
+              onClick={() => searchInputRef.current?.focus()}
             >
               <Search className="h-[18px] w-[18px]" />
             </button>

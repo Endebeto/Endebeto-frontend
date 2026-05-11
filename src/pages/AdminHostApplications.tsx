@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FileText, X, ShieldCheck, ChevronRight, ZoomIn, Loader2, AlertCircle, Check } from "lucide-react";
+import { FileText, X, ShieldCheck, ChevronRight, ChevronLeft, ZoomIn, Loader2, AlertCircle, Check } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -8,15 +8,17 @@ import { adminService, type AdminHostApplication } from "@/services/admin.servic
 import { adminQueryKeys } from "@/lib/adminQueryKeys";
 
 /* ─── status styles ──────────────────────────────────────── */
-type Status = "pending" | "approved" | "rejected";
+type Status = "pending" | "submitted" | "approved" | "rejected";
 
 const STATUS_STYLES: Record<Status, string> = {
   pending:  "text-amber-600 bg-amber-50",
+  submitted: "text-amber-600 bg-amber-50",
   approved: "text-emerald-700 bg-emerald-50",
   rejected: "text-red-600 bg-red-50",
 };
 const DOT_STYLES: Record<Status, string> = {
   pending:  "bg-amber-500",
+  submitted: "bg-amber-500",
   approved: "bg-emerald-500",
   rejected: "bg-red-500",
 };
@@ -130,29 +132,56 @@ function PhotoViewer({ url, label }: { url?: string; label: string }) {
 /* ─── page ──────────────────────────────────────────────── */
 type Tab = "pending" | "approved" | "rejected";
 
+const PAGE_SIZE = 10;
+
 export default function AdminHostApplications() {
   const qc = useQueryClient();
   const [activeTab, setActiveTab]   = useState<Tab>("pending");
+  const [page, setPage]             = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch]         = useState("");
+  const searchEffectSkipMount       = useRef(true);
   const [selected, setSelected]     = useState<AdminHostApplication | null>(null);
   const [showReject, setShowReject] = useState(false);
-  const [search, setSearch]         = useState("");
+
+  useEffect(() => {
+    if (searchEffectSkipMount.current) {
+      searchEffectSkipMount.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: adminQueryKeys.hostApplications(activeTab),
-    queryFn: () => adminService.getHostApplications({ status: activeTab }).then(r => r.data.data.applications),
-    staleTime: 30_000,
-  });
-
-  const { data: counts } = useQuery({
-    queryKey: adminQueryKeys.hostApplicationCounts(),
-    queryFn: async () => {
-      const [p, a, r] = await Promise.all([
-        adminService.getHostApplications({ status: "pending"  }).then(r => r.data.results),
-        adminService.getHostApplications({ status: "approved" }).then(r => r.data.results),
-        adminService.getHostApplications({ status: "rejected" }).then(r => r.data.results),
-      ]);
-      return { pending: p, approved: a, rejected: r };
-    },
+    queryKey: adminQueryKeys.hostApplications({
+      status: activeTab,
+      page,
+      search: search.trim(),
+    }),
+    queryFn: () =>
+      adminService
+        .getHostApplications({
+          status: activeTab,
+          page,
+          limit: PAGE_SIZE,
+          ...(search.trim() ? { search: search.trim() } : {}),
+        })
+        .then((r) => ({
+          applications: r.data.data.applications,
+          total: r.data.total,
+          pages: r.data.pages,
+          page: r.data.page,
+          tabCounts: r.data.tabCounts ?? {
+            pending: 0,
+            approved: 0,
+            rejected: 0,
+          },
+        })),
+    placeholderData: (prev) => prev,
     staleTime: 30_000,
   });
 
@@ -180,23 +209,28 @@ export default function AdminHostApplications() {
     onError: () => toast.error("Failed to reject application"),
   });
 
-  const applications = data ?? [];
-  const filtered = applications.filter(a =>
-    a.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
-    a.user?.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  const applications = data?.applications ?? [];
+  const total = data?.total ?? 0;
+  const pages = data?.pages ?? 1;
+  const currentPage = data?.page ?? page;
+
+  const tabCounts = data?.tabCounts ?? {
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+  };
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "pending",  label: `Pending (${counts?.pending  ?? "…"})` },
-    { id: "approved", label: `Approved (${counts?.approved ?? "…"})` },
-    { id: "rejected", label: `Rejected (${counts?.rejected ?? "…"})` },
+    { id: "pending",  label: `Pending (${isLoading && data == null ? "…" : tabCounts.pending})` },
+    { id: "approved", label: `Approved (${isLoading && data == null ? "…" : tabCounts.approved})` },
+    { id: "rejected", label: `Rejected (${isLoading && data == null ? "…" : tabCounts.rejected})` },
   ];
 
   return (
     <AdminLayout
       searchPlaceholder="Search applications..."
-      searchValue={search}
-      onSearch={setSearch}
+      searchValue={searchInput}
+      onSearch={setSearchInput}
     >
       <div className="flex flex-1 overflow-hidden">
 
@@ -213,7 +247,7 @@ export default function AdminHostApplications() {
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => { setActiveTab(tab.id); setSelected(null); }}
+                  onClick={() => { setActiveTab(tab.id); setPage(1); setSelected(null); }}
                   className={`pb-3.5 text-sm font-headline font-semibold transition-all ${
                     activeTab === tab.id
                       ? "border-b-2 border-primary text-primary"
@@ -236,6 +270,7 @@ export default function AdminHostApplications() {
                 <p className="text-sm">Failed to load applications.</p>
               </div>
             ) : (
+              <>
               <div
                 className="scrollbar-hide bg-white dark:bg-[#2d3133] rounded-2xl shadow-sm border border-outline-variant/10"
                 style={{ overflowX: "auto", scrollbarWidth: "none" }}
@@ -254,13 +289,14 @@ export default function AdminHostApplications() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/8">
-                    {filtered.length === 0 ? (
+                    {applications.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-5 py-12 text-center text-sm text-on-surface-variant">
-                          No {activeTab} applications found.
+                          No {activeTab} applications found
+                          {search.trim() ? ". Try a different search." : "."}
                         </td>
                       </tr>
-                    ) : filtered.map((app) => {
+                    ) : applications.map((app) => {
                       const st = app.status as Status;
                       return (
                         <tr
@@ -313,6 +349,37 @@ export default function AdminHostApplications() {
                   </tbody>
                 </table>
               </div>
+              {total > 0 && (
+                <div className="flex items-center justify-between gap-3 mt-4 text-xs text-on-surface-variant px-1">
+                  <span>
+                    {total} application{total === 1 ? "" : "s"}
+                    {pages > 1 && ` · Page ${currentPage} of ${pages}`}
+                  </span>
+                  {pages > 1 && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={currentPage <= 1 || isLoading}
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        className="p-1.5 rounded-lg border border-outline-variant/20 disabled:opacity-40 hover:bg-surface-container"
+                        aria-label="Previous page"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={currentPage >= pages || isLoading}
+                        onClick={() => setPage((p) => Math.min(pages, p + 1))}
+                        className="p-1.5 rounded-lg border border-outline-variant/20 disabled:opacity-40 hover:bg-surface-container"
+                        aria-label="Next page"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              </>
             )}
           </div>
         </div>
@@ -327,7 +394,7 @@ export default function AdminHostApplications() {
               >
                 <X className="h-4 w-4" />
               </button>
-              {selected.status === "pending" && (
+              {(selected.status === "pending" || selected.status === "submitted") && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setShowReject(true)}

@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import { experiencesService, type Experience } from "@/services/experiences.service";
 import { normalizeApiList } from "@/lib/normalizeApiList";
 import { getFriendlyErrorMessage } from "@/lib/errors";
+import { cn } from "@/lib/utils";
 
 /* ─── helpers ────────────────────────────────────────── */
 const isExpired = (exp: Experience) => {
@@ -156,14 +157,37 @@ function ActionMenu({
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen((p) => !p)}
-        className="p-1.5 rounded-full hover:bg-surface-container dark:hover:bg-zinc-700 text-on-surface-variant transition-colors">
-        <MoreVertical className="h-4 w-4" />
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label="Listing actions — edit, view listing, reschedule, stop"
+        title="Listing actions"
+        className={cn(
+          "flex items-center justify-center rounded-full min-h-[2.75rem] min-w-[2.75rem] p-2",
+          /* Light frosted chip in both themes — reads reliably on varied cover photos */
+          "bg-white/95 dark:bg-white/[0.94] backdrop-blur-md backdrop-saturate-150",
+          "text-zinc-900 dark:text-zinc-950",
+          "shadow-[0_2px_14px_rgba(0,0,0,0.18)] dark:shadow-[0_3px_24px_rgba(0,0,0,0.72),0_1px_0_rgba(255,255,255,0.35)_inset]",
+          "ring-2 ring-black/[0.14] dark:ring-black/25",
+          "hover:bg-white hover:text-zinc-950 hover:ring-black/22 dark:hover:bg-white dark:hover:text-zinc-950 dark:hover:ring-black/30 dark:hover:shadow-[0_4px_28px_rgba(0,0,0,0.78)]",
+          "transition-all duration-200 group-hover:scale-[1.06]",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white/95 dark:focus-visible:ring-offset-white",
+          open &&
+            "ring-2 ring-primary ring-offset-2 ring-offset-white dark:ring-offset-white bg-white dark:bg-white scale-[1.02] shadow-[0_2px_18px_rgba(0,0,0,0.22)] dark:shadow-[0_4px_26px_rgba(0,0,0,0.65)]",
+        )}
+      >
+        <MoreVertical className="h-6 w-6 shrink-0" strokeWidth={2.75} aria-hidden />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
-          <div className="absolute right-0 top-8 z-50 w-44 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-outline-variant/20 dark:border-zinc-700 overflow-hidden py-1">
+          <div
+            role="menu"
+            aria-orientation="vertical"
+            className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-44 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-outline-variant/20 dark:border-zinc-700 overflow-hidden py-1"
+          >
             {isPubliclyVisible && (
               <Link to={`/experiences/${id}`}
                 className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors">
@@ -241,10 +265,10 @@ function StopModal({
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative z-10 my-auto w-full max-w-sm rounded-2xl border border-outline-variant/15 bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 max-h-[min(90vh,520px)] overflow-y-auto">
+      <div className="relative z-10 my-auto w-full max-w-sm rounded-2xl border border-outline-variant/20 bg-white p-6 shadow-2xl dark:border-zinc-600 dark:bg-zinc-900 max-h-[min(90vh,520px)] overflow-y-auto">
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center shrink-0">
-            <Ban className="h-5 w-5 text-error dark:text-red-400" />
+          <div className="w-10 h-10 rounded-xl bg-destructive/15 dark:bg-destructive/25 flex items-center justify-center shrink-0 ring-1 ring-destructive/25">
+            <Ban className="h-5 w-5 text-destructive" />
           </div>
           <div className="min-w-0">
             <h3 className="font-headline font-bold text-on-surface dark:text-white">Stop this experience?</h3>
@@ -252,20 +276,20 @@ function StopModal({
           </div>
         </div>
 
-        <p className="text-sm text-on-surface-variant dark:text-zinc-300 leading-relaxed mb-5">
+        <p className="text-sm text-on-surface-variant dark:text-zinc-300 leading-relaxed mb-6">
           It will no longer accept bookings and will disappear from the public catalog. You can bring it back anytime by rescheduling.
           Reviews and booking history are preserved.
         </p>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-stretch border-t border-outline-variant/15 dark:border-zinc-700 pt-5 -mx-6 px-6 -mb-6 pb-6 bg-surface-container-low/80 dark:bg-zinc-800/80 rounded-b-2xl">
           <button type="button" onClick={onClose} disabled={isPending}
-            className="flex-1 py-2.5 rounded-xl border border-outline-variant/30 dark:border-zinc-600 text-sm font-semibold text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-800 transition-colors disabled:opacity-50">
+            className="flex-1 min-h-[44px] py-2.5 rounded-xl border-2 border-outline-variant/35 dark:border-zinc-500 bg-white dark:bg-zinc-900 text-sm font-semibold text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-800 transition-colors disabled:opacity-50">
             Cancel
           </button>
           <button type="button" onClick={onConfirm} disabled={isPending}
-            className="flex-1 py-2.5 rounded-xl bg-error text-white text-sm font-semibold hover:bg-error/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
-            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
-            Stop
+            className="flex-1 min-h-[44px] py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-bold shadow-md shadow-destructive/30 hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2">
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4 shrink-0" />}
+            Stop listing
           </button>
         </div>
       </div>

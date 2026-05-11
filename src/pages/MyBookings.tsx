@@ -313,12 +313,23 @@ function CancelBookingDialog({
   const mutation = useMutation({
     mutationFn: () => bookingsService.cancelBooking(booking._id),
     onSuccess: () => {
-      toast.success("Booking cancelled successfully.");
+      toast.success("Booking cancelled.");
       queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
       onClose();
     },
     onError: (err: unknown) => {
-      toast.error(getFriendlyErrorMessage(err, "Failed to cancel booking. Please try again."));
+      const status =
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err &&
+        typeof (err as { response?: { status?: number } }).response?.status === "number"
+          ? (err as { response: { status: number } }).response.status
+          : 0;
+      if (status === 400 || status === 403 || status === 404) {
+        toast.error("This booking can't be cancelled.");
+        return;
+      }
+      toast.error("Something went wrong. Please try again.");
     },
   });
 
@@ -347,10 +358,10 @@ function CancelBookingDialog({
                   {formatDate(booking.experienceDate ?? booking.createdAt)} · {booking.quantity} guest{booking.quantity > 1 ? "s" : ""}
                 </p>
               </div>
-              <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200/80 dark:border-red-800/50 rounded-xl">
-                <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-red-700 dark:text-red-300 leading-relaxed">
-                  <strong>This action cannot be undone.</strong> No refund is provided for cancelled bookings. Please review our cancellation policy before proceeding.
+              <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-800/50 rounded-xl">
+                <XCircle className="h-4 w-4 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+                  <strong>This can't be undone.</strong> You won't be refunded. The host is paid for this booking. Your spot may be offered to someone else.
                 </p>
               </div>
             </div>

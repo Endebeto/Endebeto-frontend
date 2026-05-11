@@ -346,10 +346,26 @@ export const adminService = {
   deleteReview: (id: string) => api.delete(`/reviews/${id}`),
 
   /* Host Applications */
-  getHostApplications: (params?: { status?: string }) =>
+  getHostApplicationCounts: () =>
+    api.get<{
+      status: string;
+      data: { pending: number; approved: number; rejected: number };
+    }>("/host-applications/admin/counts"),
+
+  getHostApplications: (params?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) =>
     api.get<{
       status: string;
       results: number;
+      total: number;
+      page: number;
+      limit: number;
+      pages: number;
+      tabCounts: { pending: number; approved: number; rejected: number };
       data: { applications: AdminHostApplication[] };
     }>("/host-applications/admin/all", { params }),
   approveHostApplication: (id: string, notes?: string) =>
@@ -360,7 +376,7 @@ export const adminService = {
   /** Admin catalog: filter = live | expired | suspended | draft */
   getAdminCatalog: (
     filter: "live" | "expired" | "suspended" | "draft",
-    params?: { page?: number; limit?: number },
+    params?: { page?: number; limit?: number; search?: string },
   ) =>
     api.get<{
       status: string;

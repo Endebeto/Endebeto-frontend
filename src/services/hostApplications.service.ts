@@ -81,10 +81,16 @@ export const hostApplicationsService = {
     api.get<ApplicationResponse>("/host-applications/my-application"),
 
   // Admin endpoints
-  getPending: () =>
-    api.get<{ status: string; results: number; data: { applications: HostApplication[] } }>(
-      "/host-applications/pending"
-    ),
+  getPending: (params?: { page?: number; limit?: number }) =>
+    api.get<{
+      status: string;
+      results: number;
+      total: number;
+      page: number;
+      limit: number;
+      pages: number;
+      data: { applications: HostApplication[] };
+    }>("/host-applications/pending", { params }),
 
   getByUserId: (userId: string) =>
     api.get<ApplicationResponse>(`/host-applications/user/${userId}`),

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -20,7 +20,17 @@ import ctaBg from "@/assets/cta-bg.jpg";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
 import TestimonialSlider from "@/components/TestimonialSlider";
+import { cn } from "@/lib/utils";
+
 /* ─── static data ─────────────────────────────────────── */
+
+const HERO_SLIDE_INTERVAL_MS = 8000;
+/** Photo crossfade between stacked hero layers */
+const HERO_CROSSFADE_MS = 750;
+/** Hero headline/subtitle fade (opacity + slight vertical shift) */
+const HERO_TEXT_TRANSITION_MS = 420;
+/** Hold full fade-out before swapping copy so change isn’t a hard snap */
+const HERO_TEXT_SWAP_DELAY_MS = 170;
 
 const heroSlides = [
   {
@@ -161,6 +171,58 @@ function StatItem({
 
 const Index = () => {
   const [current, setCurrent] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  /** Rear layer (opaque) slide index when crossfade is enabled */
+  const [baseIdx, setBaseIdx] = useState(0);
+  /** Front layer slide index (fades in over base) */
+  const [overlayIdx, setOverlayIdx] = useState(0);
+  const [overlayVisible, setOverlayVisible] = useState(false);
+  /** Which slide copy is shown (crossfades separately from `current` for smoother text). */
+  const [heroCopyIdx, setHeroCopyIdx] = useState(0);
+  const [heroCopyVisible, setHeroCopyVisible] = useState(true);
+  /** Last slide index used for crossfade logic (avoids bogus fades / Strict Mode quirks). */
+  const lastCrossfadeAt = useRef<number | null>(null);
+  /** When true, wait for overlay `<img>` decode then start opacity fade (sync with bitmap). */
+  const pendingHeroFadeRef = useRef(false);
+  const heroOverlayImgRef = useRef<HTMLImageElement | null>(null);
+
+  const beginHeroOverlayFade = () => {
+    requestAnimationFrame(() => setOverlayVisible(true));
+  };
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduceMotion(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!reduceMotion) return;
+    setOverlayVisible(false);
+    setBaseIdx(current);
+    setOverlayIdx(current);
+    lastCrossfadeAt.current = current;
+    setHeroCopyIdx(current);
+    setHeroCopyVisible(true);
+  }, [reduceMotion, current]);
+
+  /** Hero title/subtitle: fade out, swap index, fade in (no instant content swap). */
+  useEffect(() => {
+    if (reduceMotion) return;
+    if (heroCopyIdx === current) return;
+    setHeroCopyVisible(false);
+    const swapId = window.setTimeout(() => {
+      setHeroCopyIdx(current);
+      requestAnimationFrame(() => setHeroCopyVisible(true));
+    }, HERO_TEXT_SWAP_DELAY_MS);
+    return () => window.clearTimeout(swapId);
+  }, [current, reduceMotion, heroCopyIdx]);
 
   // featured experiences from API (fetch extra, then take top-rated with spots left for display)
   const { data: featuredData, isLoading: featuredLoading } = useQuery({
@@ -178,9 +240,56 @@ const Index = () => {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrent((c) => (c + 1) % heroSlides.length);
-    }, 8000);
+    }, HERO_SLIDE_INTERVAL_MS);
     return () => clearInterval(timer);
   }, []);
+
+  /** Start crossfade when `current` advances (no-op on initial paint or duplicate runs). */
+  useEffect(() => {
+    if (reduceMotion) return;
+    if (lastCrossfadeAt.current === null) {
+      lastCrossfadeAt.current = current;
+      return;
+    }
+    if (lastCrossfadeAt.current === current) return;
+    lastCrossfadeAt.current = current;
+    setOverlayVisible(false);
+    pendingHeroFadeRef.current = true;
+    setOverlayIdx(current);
+  }, [current, reduceMotion]);
+
+  /** Cached decode: start fade same frame when bitmap is already ready. */
+  useLayoutEffect(() => {
+    if (reduceMotion || !pendingHeroFadeRef.current) return;
+    const el = heroOverlayImgRef.current;
+    if (el?.complete && el.naturalHeight > 0) {
+      pendingHeroFadeRef.current = false;
+      beginHeroOverlayFade();
+    }
+  }, [overlayIdx, reduceMotion]);
+
+  /** Decode path: start fade when overlay slide finishes loading. */
+  const onHeroOverlayImgLoad = () => {
+    if (!pendingHeroFadeRef.current || reduceMotion) return;
+    pendingHeroFadeRef.current = false;
+    beginHeroOverlayFade();
+  };
+
+  const onHeroOverlayImgError = () => {
+    if (!pendingHeroFadeRef.current || reduceMotion) return;
+    pendingHeroFadeRef.current = false;
+    beginHeroOverlayFade();
+  };
+
+  /** After fade-in completes, promote overlay to base and hide overlay layer. */
+  useEffect(() => {
+    if (reduceMotion || !overlayVisible) return;
+    const id = window.setTimeout(() => {
+      setBaseIdx(overlayIdx);
+      setOverlayVisible(false);
+    }, HERO_CROSSFADE_MS);
+    return () => window.clearTimeout(id);
+  }, [overlayVisible, overlayIdx, reduceMotion]);
 
   /** Warm the next slide so auto-advance doesn’t wait on the network. */
   useEffect(() => {
@@ -205,27 +314,62 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* ── Hero: single active image (avoids loading/decoding 4 full-bleed photos on every visit) ── */}
+      {/* ── Hero: dual-layer crossfade (two images max; rest preloaded via Image()) ── */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-slate-900" aria-hidden />
-        <div className="absolute inset-0">
-          <img
-            src={heroSlides[current].image}
-            alt={heroSlides[current].title}
-            className="h-full w-full object-cover object-[center_30%] md:object-center transition-opacity duration-1000"
-            loading="eager"
-            decoding="async"
-            sizes="100vw"
-          />
+        <div className="absolute inset-0 z-0">
+          {reduceMotion ? (
+            <img
+              src={heroSlides[current].image}
+              alt={heroSlides[current].title}
+              className="h-full w-full object-cover object-[center_30%] md:object-center"
+              loading="eager"
+              decoding="async"
+              sizes="100vw"
+            />
+          ) : (
+            <>
+              <img
+                src={heroSlides[baseIdx].image}
+                alt=""
+                aria-hidden
+                className="absolute inset-0 z-0 h-full w-full object-cover object-[center_30%] md:object-center"
+                loading={baseIdx === 0 ? "eager" : "lazy"}
+                decoding="async"
+                sizes="100vw"
+              />
+              <img
+                ref={heroOverlayImgRef}
+                src={heroSlides[overlayIdx].image}
+                alt=""
+                aria-hidden
+                className={cn(
+                  "absolute inset-0 z-10 h-full w-full object-cover object-[center_30%] md:object-center ease-in-out motion-reduce:transition-none",
+                  overlayVisible ? "opacity-100" : "opacity-0",
+                )}
+                style={{
+                  transitionDuration: `${HERO_CROSSFADE_MS}ms`,
+                  transitionProperty: "opacity",
+                }}
+                loading="lazy"
+                decoding="async"
+                sizes="100vw"
+                onLoad={onHeroOverlayImgLoad}
+                onError={onHeroOverlayImgError}
+              />
+            </>
+          )}
         </div>
 
-        {/* Dark overlay */}
-        <div className="absolute inset-0 bg-black/55" />
+        {/* Dark scrim above photo stack so tint and hero copy stay aligned with the visible slide */}
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] bg-black/55"
+          aria-hidden
+        />
 
         {/* SVG dashed path decoration */}
         <svg
-          className="absolute inset-0 w-full h-full pointer-events-none"
-          style={{ zIndex: 1 }}
+          className="pointer-events-none absolute inset-0 z-[2] h-full w-full"
         >
           <path
             d="M 300,200 Q 420,360 520,410 T 730,570"
@@ -242,12 +386,28 @@ const Index = () => {
         <div className="relative z-10 flex min-h-[100svh] w-full flex-col justify-center pt-[calc(var(--header-stack)+0.75rem)] pb-8 md:min-h-[118vh] md:pb-12">
           <div className="container w-full">
             <div className="mx-auto max-w-2xl text-center text-white">
-              <h1 className="mb-4 font-headline text-3xl font-extrabold leading-[1.08] tracking-tight sm:text-4xl md:mb-5 md:text-5xl lg:text-6xl xl:text-7xl">
-                {heroSlides[current].title}
-              </h1>
-              <p className="mb-6 max-w-xl text-sm leading-relaxed text-white/88 sm:mx-auto sm:text-base md:mb-8 md:text-lg">
-                {heroSlides[current].subtitle}
-              </p>
+              <div
+                className={cn(
+                  "motion-reduce:transform-none motion-reduce:transition-none",
+                  !reduceMotion &&
+                    "transition-[opacity,transform] ease-out will-change-[opacity,transform]",
+                  heroCopyVisible
+                    ? "translate-y-0 opacity-100"
+                    : "-translate-y-1 opacity-0 motion-reduce:translate-y-0 motion-reduce:opacity-100",
+                )}
+                style={
+                  reduceMotion
+                    ? undefined
+                    : { transitionDuration: `${HERO_TEXT_TRANSITION_MS}ms` }
+                }
+              >
+                <h1 className="mb-4 font-headline text-3xl font-extrabold leading-[1.08] tracking-tight sm:text-4xl md:mb-5 md:text-5xl lg:text-6xl xl:text-7xl">
+                  {heroSlides[heroCopyIdx].title}
+                </h1>
+                <p className="mb-6 max-w-xl text-sm leading-relaxed text-white/88 sm:mx-auto sm:text-base md:mb-8 md:text-lg">
+                  {heroSlides[heroCopyIdx].subtitle}
+                </p>
+              </div>
               <div className="flex justify-center">
                 <Link to="/experiences">
                   <Button className="h-auto gap-2 rounded-2xl bg-accent px-7 py-3.5 font-headline text-sm font-bold text-accent-foreground hover:bg-accent/90 sm:text-base md:px-9 md:py-4">
