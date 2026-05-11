@@ -19,6 +19,7 @@ import {
 import { ContactHostButton } from "@/components/experience/ContactHostButton";
 import { fmtDate, fmtTime, ReviewCard } from "@/components/experience/ExperienceReviewCard";
 import { ExperienceDetailSkeleton } from "@/components/experience/ExperienceDetailSkeleton";
+import { ExperienceDescriptionMarkdown } from "@/components/ExperienceDescriptionMarkdown";
 import { experiencesService, type Review } from "@/services/experiences.service";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import { useAuth } from "@/context/AuthContext";
@@ -477,7 +478,10 @@ const ExperienceDetail = () => {
             {/* About */}
             <div className="py-5 border-b border-outline-variant/15 dark:border-zinc-800">
               <h2 className="font-headline font-extrabold text-base text-on-surface dark:text-white mb-3">About this Experience</h2>
-              <p className="text-xs text-on-surface-variant dark:text-zinc-400 leading-relaxed">{exp.description}</p>
+              <ExperienceDescriptionMarkdown
+                markdown={exp.description}
+                className="text-xs [&_p]:text-xs [&_li]:text-xs [&_ul]:text-xs [&_ol]:text-xs"
+              />
             </div>
 
             {/* Location */}
@@ -771,7 +775,7 @@ const ExperienceDetail = () => {
             <div>
               <h2 className="font-headline font-extrabold text-lg text-primary mb-3">About this Experience</h2>
               <div className="space-y-3 text-on-surface-variant text-sm leading-relaxed">
-                <p>{exp.description}</p>
+                <ExperienceDescriptionMarkdown markdown={exp.description} />
                 {exp.summary && exp.summary !== exp.description && (
                   <p className="text-xs italic opacity-80">{exp.summary}</p>
                 )}

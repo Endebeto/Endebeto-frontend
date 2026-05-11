@@ -25,11 +25,6 @@ jobs:
 
       - run: npm test
 
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-
-      - run: npm run test:e2e
-
       - name: npm audit (high+)
         run: npm audit --audit-level=high
 

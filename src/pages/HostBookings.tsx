@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Mail, Users, CalendarDays, Loader2, AlertCircle,
@@ -33,7 +33,7 @@ const STATUS_CFG: Record<string, { label: string; cls: string }> = {
 const TABS = ["all", "upcoming", "completed", "paymentExpired", "cancelled"] as const;
 type Tab = (typeof TABS)[number];
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 
 /* ─── guest row ───────────────────────────────────────── */
 function GuestRow({ booking, idx }: { booking: Booking; idx: number }) {
@@ -140,43 +140,36 @@ export default function HostBookings() {
   const [tab, setTab]         = useState<Tab>("all");
   const [page, setPage]       = useState(1);
 
-  /* Fetch a large batch so we can do client-side search/filter */
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["host-bookings-list"],
-    queryFn: () => bookingsService.getHostBookings({ limit: 200 }),
+    queryKey: ["host-bookings-list", tab, page, search],
+    queryFn: () =>
+      bookingsService.getHostBookings({
+        page,
+        limit: PAGE_SIZE,
+        ...(tab !== "all" ? { tab } : {}),
+        ...(search.trim() ? { q: search.trim() } : {}),
+      }),
     staleTime: 30_000,
   });
 
-  const allBookings: Booking[] = data?.data.data ?? [];
-  const summary = data?.data.summary ?? { upcoming: 0, completed: 0, paymentExpired: 0 };
-
-  /* Filter by tab + search */
-  const filtered = useMemo(() => {
-    let list = tab === "all" ? allBookings : allBookings.filter((b) => b.status === tab);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter((b) => {
-        const gName  = b.user?.name?.toLowerCase() ?? "";
-        const gEmail = b.user?.email?.toLowerCase() ?? "";
-        const expTitle = typeof b.experience === "object"
-          ? b.experience.title?.toLowerCase() ?? ""
-          : "";
-        return gName.includes(q) || gEmail.includes(q) || expTitle.includes(q);
-      });
-    }
-    return list;
-  }, [allBookings, tab, search]);
-
-  /* Pagination */
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const body = data?.data;
+  const bookings: Booking[] = body?.data ?? [];
+  const total = body?.total ?? 0;
+  const totalBookings = body?.totalBookings ?? 0;
+  const totalPages = Math.max(1, body?.pages ?? 1);
+  const summary = body?.summary ?? {
+    upcoming: 0,
+    completed: 0,
+    paymentExpired: 0,
+    cancelled: 0,
+  };
 
   const counts: Record<Tab, number> = {
-    all:       allBookings.length,
+    all:       totalBookings,
     upcoming:  summary.upcoming,
     completed: summary.completed,
     paymentExpired: summary.paymentExpired ?? 0,
-    cancelled: allBookings.filter((b) => b.status === "cancelled").length,
+    cancelled: summary.cancelled ?? 0,
   };
 
   const handleTabChange = (t: Tab) => { setTab(t); setPage(1); };
@@ -287,7 +280,7 @@ export default function HostBookings() {
                       <p className="text-sm text-error">Failed to load bookings.</p>
                     </td>
                   </tr>
-                ) : paginated.length === 0 ? (
+                ) : bookings.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-8 py-16 text-center">
                       <CalendarDays className="h-8 w-8 text-on-surface-variant/30 dark:text-zinc-600 mx-auto mb-3" />
@@ -300,7 +293,7 @@ export default function HostBookings() {
                     </td>
                   </tr>
                 ) : (
-                  paginated.map((b, i) => (
+                  bookings.map((b, i) => (
                     <GuestRow key={b._id} booking={b} idx={(page - 1) * PAGE_SIZE + i} />
                   ))
                 )}
@@ -312,7 +305,7 @@ export default function HostBookings() {
           {totalPages > 1 && (
             <div className="px-6 py-4 bg-white dark:bg-zinc-900 border-t border-outline-variant/10 dark:border-zinc-700 flex items-center justify-between">
               <span className="text-xs text-on-surface-variant dark:text-zinc-400">
-                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
               </span>
               <div className="flex items-center gap-1">
                 <button

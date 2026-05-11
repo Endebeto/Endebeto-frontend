@@ -7,6 +7,10 @@ type BrandLogoProps = {
   imgClassName?: string;
   /** Rounded light backing so the mark reads on primary / dark sidebars */
   paddedTile?: boolean;
+  /** Extra classes on the padded tile wrapper (when paddedTile is true) */
+  paddedTileClassName?: string;
+  /** Logo mark only — use inside a parent `<Link>` to avoid nested anchors */
+  nested?: boolean;
 };
 
 export function BrandLogo({
@@ -14,6 +18,8 @@ export function BrandLogo({
   className,
   imgClassName,
   paddedTile,
+  paddedTileClassName,
+  nested,
 }: BrandLogoProps) {
   const img = (
     <img
@@ -29,22 +35,29 @@ export function BrandLogo({
   );
 
   const inner = paddedTile ? (
-    <span className="inline-flex items-center rounded-lg bg-white px-2 py-1 shadow-sm ring-1 ring-black/10">
+    <span
+      className={cn(
+        "inline-flex items-center rounded-xl bg-white px-2.5 py-1.5 shadow-md shadow-black/8 ring-1 ring-black/[0.07]",
+        paddedTileClassName,
+      )}
+    >
       {img}
     </span>
   ) : (
     img
   );
 
+  const shellClass = cn(
+    "inline-flex shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+    className,
+  );
+
+  if (nested) {
+    return <span className={shellClass}>{inner}</span>;
+  }
+
   return (
-    <Link
-      to={to}
-      className={cn(
-        "inline-flex shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-        className,
-      )}
-      aria-label="Endebeto home"
-    >
+    <Link to={to} className={shellClass} aria-label="Endebeto home">
       {inner}
     </Link>
   );

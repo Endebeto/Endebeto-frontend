@@ -4,12 +4,15 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useInfiniteQuery, useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  AlertTriangle,
   ArrowLeft,
   BookOpen,
+  CalendarDays,
+  History,
   Loader2,
+  Sparkles,
   Star,
   XCircle,
-  AlertTriangle,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { MY_BOOKINGS_REVIEW_BANNER_QUERY_KEY } from "@/components/ReviewPendingBanner";
@@ -37,7 +40,7 @@ import { Label } from "@/components/ui/label";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 
 /** Page size for GET /bookings/me — use Load more for additional pages */
-const BOOKINGS_PAGE_SIZE = 20;
+const BOOKINGS_PAGE_SIZE = 10;
 
 function formatDate(iso?: string) {
   if (!iso) return "—";
@@ -408,7 +411,7 @@ function BookingCard({ booking, userId, userRole }: { booking: Booking; userId?:
           onClose={() => setShowCancel(false)}
         />
       )}
-      <li className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-surface-container-low dark:bg-zinc-800 rounded-xl border border-transparent hover:border-outline-variant/20 transition-colors">
+      <li className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5 sm:p-4 bg-surface-container-low dark:bg-zinc-800 rounded-xl sm:rounded-xl border border-outline-variant/10 dark:border-zinc-700/60 hover:border-outline-variant/25 transition-colors shadow-sm">
         {showSuspensionNotice && (
           <div className="w-full order-first flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
@@ -446,14 +449,15 @@ function BookingCard({ booking, userId, userRole }: { booking: Booking; userId?:
             </span>
           </div>
         </Link>
-        <div className="flex items-center justify-end sm:justify-center gap-2 shrink-0 border-t border-outline-variant/10 sm:border-t-0 pt-2 sm:pt-0">
+        <div className="flex items-center justify-end sm:justify-center gap-2 shrink-0 border-t border-outline-variant/10 sm:border-t-0 pt-3 sm:pt-0">
           <ReviewCell booking={booking} userId={userId} userRole={userRole} />
           {canCancel && (
             <button
+              type="button"
               onClick={() => setShowCancel(true)}
-              className="flex items-center gap-1 text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 border border-red-200/70 dark:border-red-800/50 px-2.5 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+              className="flex items-center justify-center gap-1.5 min-h-11 min-w-[5.5rem] text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 border border-red-200/70 dark:border-red-800/50 px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors active:scale-[0.98]"
             >
-              <XCircle className="h-3.5 w-3.5" />
+              <XCircle className="h-4 w-4 shrink-0" />
               Cancel
             </button>
           )}
@@ -502,50 +506,58 @@ export default function MyBookings() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="pt-14 pb-16 max-w-3xl mx-auto px-4">
+      <main className="pt-14 pb-20 max-w-3xl mx-auto px-3 sm:px-4">
         <Link
           to="/profile"
-          className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:opacity-80 mt-6 mb-4"
+          className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:opacity-80 mt-5 sm:mt-6 mb-3 sm:mb-4 min-h-11 sm:min-h-0 -ml-1 px-1 rounded-lg active:bg-primary/5"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4 shrink-0" />
           Back to profile
         </Link>
 
-        <div className="bg-white dark:bg-[#2d3133] rounded-2xl p-6 shadow-sm">
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div>
-              <h1 className="font-headline font-extrabold text-2xl text-primary">My Bookings</h1>
-              <p className="text-on-surface-variant text-sm mt-1">
+        <div className="bg-white dark:bg-[#2d3133] rounded-2xl p-4 sm:p-6 shadow-sm border border-outline-variant/10 dark:border-zinc-600/40">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-5 sm:mb-6">
+            <div className="min-w-0">
+              <h1 className="font-headline font-extrabold text-xl sm:text-2xl text-primary tracking-tight">
+                My Bookings
+              </h1>
+              <p className="text-on-surface-variant text-sm mt-1.5 leading-snug">
                 {total === 0
                   ? "You have no bookings yet."
                   : `You have ${total} booking${total === 1 ? "" : "s"}.`}
                 {total > 0 && loadedCount < total && (
-                  <span className="block text-[11px] mt-1 opacity-90">
-                    Showing {loadedCount} of {total} — use &quot;Load more&quot; for older bookings.
+                  <span className="block text-[11px] mt-2 opacity-90 leading-relaxed">
+                    Showing {loadedCount} of {total} — tap &quot;Load more&quot; for older bookings.
                   </span>
                 )}
               </p>
             </div>
             <Link
               to="/experiences"
-              className="shrink-0 text-sm font-bold text-primary hover:underline"
+              className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-primary/25 bg-primary/5 dark:bg-primary/10 px-4 py-3 sm:py-2 text-sm font-bold text-primary hover:bg-primary/10 dark:hover:bg-primary/15 transition-colors min-h-11 sm:min-h-0 w-full sm:w-auto text-center active:scale-[0.99]"
             >
+              <Sparkles className="h-4 w-4 shrink-0 opacity-80" />
               Browse experiences
             </Link>
           </div>
 
           {bookings.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-6 text-center">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5 sm:mb-6">
               {(
                 [
-                  ["Upcoming", upcoming.length, "text-sky-600 dark:text-sky-400", "bg-sky-50 dark:bg-sky-900/20"],
-                  ["Past", past.length, "text-zinc-600 dark:text-zinc-300", "bg-zinc-100 dark:bg-zinc-800"],
-                  ["Total", total, "text-primary dark:text-green-400", "bg-primary/5 dark:bg-primary/10"],
+                  ["Upcoming", upcoming.length, "text-sky-600 dark:text-sky-400", "bg-sky-50 dark:bg-sky-900/25 border-sky-200/50 dark:border-sky-800/40"],
+                  ["Past", past.length, "text-zinc-700 dark:text-zinc-200", "bg-zinc-100 dark:bg-zinc-800/80 border-zinc-200/60 dark:border-zinc-600/50"],
+                  ["Total", total, "text-primary dark:text-green-400", "bg-primary/5 dark:bg-primary/15 border-primary/15 dark:border-primary/25"],
                 ] as const
               ).map(([label, value, color, bg]) => (
-                <div key={label} className={`${bg} rounded-xl p-3 col-span-1`}>
-                  <p className={`text-xl font-headline font-black ${color}`}>{value}</p>
-                  <p className="text-[10px] text-on-surface-variant font-semibold mt-0.5">{label}</p>
+                <div
+                  key={label}
+                  className={`${bg} rounded-xl sm:rounded-2xl px-2 py-2.5 sm:p-3 text-center border shadow-sm`}
+                >
+                  <p className={`text-lg sm:text-xl font-headline font-black tabular-nums ${color}`}>{value}</p>
+                  <p className="text-[9px] sm:text-[10px] text-on-surface-variant font-bold uppercase tracking-wide mt-1 leading-tight">
+                    {label}
+                  </p>
                 </div>
               ))}
             </div>
@@ -564,26 +576,59 @@ export default function MyBookings() {
           )}
 
           {!isLoading && !isError && bookings.length === 0 && (
-            <div className="text-center py-12 text-on-surface-variant">
-              <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-40" />
-              <p className="font-semibold text-on-surface">No bookings yet</p>
-              <p className="text-sm mt-1">Book an experience to see it here.</p>
+            <div className="text-center py-14 sm:py-12 px-2 text-on-surface-variant">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/8 dark:bg-primary/15">
+                <BookOpen className="h-8 w-8 text-primary opacity-70" />
+              </div>
+              <p className="font-headline font-bold text-base text-on-surface dark:text-white">No bookings yet</p>
+              <p className="text-sm mt-2 max-w-xs mx-auto leading-relaxed">
+                When you book an experience, it will show up here with upcoming and past views.
+              </p>
             </div>
           )}
 
           {!isLoading && !isError && bookings.length > 0 && (
             <Tabs defaultValue="upcoming" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4 h-auto p-1 bg-muted/60">
-                <TabsTrigger value="upcoming" className="text-xs sm:text-sm py-2.5">
-                  Upcoming ({upcoming.length})
+              <TabsList
+                className="grid h-auto w-full grid-cols-2 gap-1 rounded-2xl border border-outline-variant/20 bg-surface-container-low/90 p-1 shadow-inner dark:border-zinc-600/50 dark:bg-zinc-900/60"
+                aria-label="Booking timeframe"
+              >
+                <TabsTrigger
+                  value="upcoming"
+                  className="touch-manipulation relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2.5 text-muted-foreground transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-sky-700 data-[state=active]:shadow-md dark:data-[state=active]:bg-zinc-700 dark:data-[state=active]:text-sky-300 sm:min-h-[48px] sm:flex-row sm:gap-2 sm:py-3"
+                >
+                  <CalendarDays className="h-5 w-5 shrink-0 opacity-90 sm:h-4 sm:w-4" aria-hidden />
+                  <span className="font-headline text-[13px] font-bold leading-tight sm:text-sm">
+                    Upcoming
+                  </span>
+                  <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[11px] font-bold tabular-nums text-sky-700 dark:text-sky-300 data-[state=active]:bg-sky-500/25 dark:data-[state=active]:bg-sky-400/20">
+                    {upcoming.length}
+                  </span>
                 </TabsTrigger>
-                <TabsTrigger value="past" className="text-xs sm:text-sm py-2.5">
-                  Past ({past.length})
+                <TabsTrigger
+                  value="past"
+                  className="touch-manipulation relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2.5 text-muted-foreground transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-md dark:data-[state=active]:bg-zinc-700 dark:data-[state=active]:text-zinc-100 sm:min-h-[48px] sm:flex-row sm:gap-2 sm:py-3"
+                >
+                  <History className="h-5 w-5 shrink-0 opacity-90 sm:h-4 sm:w-4" aria-hidden />
+                  <span className="font-headline text-[13px] font-bold leading-tight sm:text-sm">
+                    Past
+                  </span>
+                  <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-[11px] font-bold tabular-nums text-zinc-600 dark:text-zinc-300 data-[state=active]:bg-zinc-500/15 dark:data-[state=active]:bg-zinc-500/25">
+                    {past.length}
+                  </span>
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="upcoming" className="mt-0 outline-none">
+              <TabsContent value="upcoming" className="mt-4 outline-none sm:mt-5">
                 {upcoming.length === 0 ? (
-                  <p className="text-sm text-on-surface-variant text-center py-10">No upcoming bookings.</p>
+                  <div className="rounded-2xl border border-dashed border-outline-variant/35 bg-surface-container-low/40 px-4 py-12 text-center dark:border-zinc-600/40 dark:bg-zinc-900/30">
+                    <CalendarDays className="mx-auto mb-3 h-10 w-10 text-sky-500/70 dark:text-sky-400/70" />
+                    <p className="font-headline text-sm font-bold text-on-surface dark:text-white">
+                      Nothing upcoming
+                    </p>
+                    <p className="mt-1.5 text-xs text-on-surface-variant max-w-[260px] mx-auto leading-relaxed">
+                      Your confirmed bookings will appear here before the experience date.
+                    </p>
+                  </div>
                 ) : (
                   <ul className="space-y-3">
                     {upcoming.map((b) => (
@@ -597,9 +642,17 @@ export default function MyBookings() {
                   </ul>
                 )}
               </TabsContent>
-              <TabsContent value="past" className="mt-0 outline-none">
+              <TabsContent value="past" className="mt-4 outline-none sm:mt-5">
                 {past.length === 0 ? (
-                  <p className="text-sm text-on-surface-variant text-center py-10">No past bookings yet.</p>
+                  <div className="rounded-2xl border border-dashed border-outline-variant/35 bg-surface-container-low/40 px-4 py-12 text-center dark:border-zinc-600/40 dark:bg-zinc-900/30">
+                    <History className="mx-auto mb-3 h-10 w-10 text-zinc-400 dark:text-zinc-500" />
+                    <p className="font-headline text-sm font-bold text-on-surface dark:text-white">
+                      No past bookings yet
+                    </p>
+                    <p className="mt-1.5 text-xs text-on-surface-variant max-w-[260px] mx-auto leading-relaxed">
+                      Completed, cancelled, or expired payments show here after they leave Upcoming.
+                    </p>
+                  </div>
                 ) : (
                   <ul className="space-y-3">
                     {past.map((b) => (
@@ -617,11 +670,11 @@ export default function MyBookings() {
           )}
 
           {!isLoading && !isError && bookings.length > 0 && hasNextPage && (
-            <div className="mt-6 flex flex-col items-center gap-2">
+            <div className="mt-6 flex flex-col items-center gap-2 px-1">
               <Button
                 type="button"
                 variant="outline"
-                className="min-w-[200px]"
+                className="min-h-11 w-full max-w-sm sm:min-w-[220px] sm:w-auto rounded-xl font-bold"
                 onClick={() => fetchNextPage()}
                 disabled={isFetchingNextPage}
               >
@@ -634,19 +687,12 @@ export default function MyBookings() {
                   `Load more (${loadedCount} / ${total})`
                 )}
               </Button>
-              {loadedCount < total && (
-                <p className="text-[10px] text-on-surface-variant text-center max-w-sm">
-                  Upcoming / Past counts include every booking loaded above, not only the current tab.
-                </p>
-              )}
             </div>
           )}
 
           {!isLoading && !isError && bookings.length > 0 && user?.role === "user" && (
             <p className="text-[11px] text-on-surface-variant mt-6 leading-relaxed border-t border-outline-variant/10 pt-4">
-              <strong>Reviews:</strong> After a completed experience, you can leave a review within {REVIEW_WINDOW_DAYS}{" "}
-              days (same rule as the server). Only travelers with role <code className="text-[10px]">user</code> can post
-              reviews.
+              After your experience, you can leave a review within {REVIEW_WINDOW_DAYS} days from this page.
             </p>
           )}
         </div>

@@ -20,8 +20,10 @@ export interface PlatformStats {
   pendingApplications: number;
   draftExperiences: number;
   pendingExperiences: number;
-  /** Approved & publicly visible (not suspended) */
+  /** Approved, not suspended, next run still in the future (catalog “live”) */
   liveExperiences: number;
+  /** Approved, not suspended, no future run (past or unset date) */
+  expiredExperiences: number;
   suspendedExperiences: number;
 
   /* Money — all cents */
@@ -171,7 +173,6 @@ export interface AdminExperience {
     hostStory?: string;
     hostStatus?: "pending" | "approved" | "rejected" | "none" | null;
     createdAt?: string;
-    bio?: string;
   };
   price: number;
   duration: number | string;
@@ -282,7 +283,7 @@ export interface AdminWithdrawal {
   };
   amountCents: number;
   amountETB?: number;
-  status: "pending_transfer" | "paid" | "failed";
+  status: "pending_transfer" | "paid" | "failed" | "canceled";
   destination?: {
     bankName?: string;
     accountName?: string;
@@ -465,10 +466,26 @@ export const adminService = {
   deleteUser: (id: string) => api.delete(`/users/${id}`),
 
   /* Withdrawals / Payouts */
-  getWithdrawals: (params?: { status?: string }) =>
+  getWithdrawals: (params?: {
+    tab?: "pending" | "history";
+    page?: number;
+    limit?: number;
+    q?: string;
+    status?: string;
+  }) =>
     api.get<{
       status: string;
       results: number;
+      total: number;
+      page: number;
+      limit: number;
+      pages: number;
+      dashboardTotals: {
+        pendingCount: number;
+        pendingAmountCents: number;
+        failedCount: number;
+        paidTotalCents: number;
+      };
       data: { withdrawals: AdminWithdrawal[] };
     }>("/admin/payouts/withdrawals", { params }),
   markWithdrawalPaid: (id: string, paymentReceiptUrl: string) =>

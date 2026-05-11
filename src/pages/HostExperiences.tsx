@@ -27,8 +27,8 @@ const fmtDate = (iso?: string) => {
 };
 
 /* ─── types ──────────────────────────────────────────── */
-type ExpStatus = "approved" | "pending" | "rejected" | "draft";
-type TabFilter = "all" | ExpStatus;
+/** Host tabs: Live = approved with a future run; Expired = approved but past/unset run */
+type TabFilter = "all" | "approved" | "expired" | "draft";
 
 /** Mount modals here (see index.html `#modal-root`) so they sit above #root, cards, and host chrome. */
 function getHostModalContainer(): Element {
@@ -474,27 +474,35 @@ export default function HostExperiences() {
     },
   });
 
-  const counts = {
-    all:      exps.length,
-    approved: exps.filter((e) => e.status === "approved").length,
-    livePublic: exps.filter((e) => e.status === "approved" && !e.suspended).length,
-    suspended: exps.filter((e) => e.status === "approved" && e.suspended).length,
-    pending:  exps.filter((e) => e.status === "pending").length,
-    rejected: exps.filter((e) => e.status === "rejected").length,
-    draft:    exps.filter((e) => e.status === "draft").length,
+  const counts: Record<TabFilter, number> = {
+    all: exps.length,
+    approved: exps.filter((e) => e.status === "approved" && !isExpired(e)).length,
+    expired: exps.filter((e) => e.status === "approved" && isExpired(e)).length,
+    draft: exps.filter((e) => e.status === "draft").length,
   };
 
   const filtered = exps.filter((e) => {
-    const matchTab    = tab === "all" || e.status === tab;
-    const q           = search.toLowerCase();
-    const matchSearch = !q || e.title.toLowerCase().includes(q) || e.location.toLowerCase().includes(q);
+    let matchTab = true;
+    if (tab === "all") matchTab = true;
+    else if (tab === "approved")
+      matchTab = e.status === "approved" && !isExpired(e);
+    else if (tab === "expired")
+      matchTab = e.status === "approved" && isExpired(e);
+    else if (tab === "draft") matchTab = e.status === "draft";
+
+    const q = search.toLowerCase();
+    const matchSearch =
+      !q ||
+      e.title.toLowerCase().includes(q) ||
+      e.location.toLowerCase().includes(q);
     return matchTab && matchSearch;
   });
 
   const tabs: { key: TabFilter; label: string }[] = [
-    { key: "all",      label: "All" },
+    { key: "all", label: "All" },
     { key: "approved", label: "Live" },
-    { key: "draft",    label: "Drafts" },
+    { key: "expired", label: "Expired" },
+    { key: "draft", label: "Drafts" },
   ];
 
   return (
@@ -555,8 +563,8 @@ export default function HostExperiences() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { label: "Total",  value: counts.all,      color: "text-primary dark:text-green-400",       c1: "rgba(0,82,52,0.12)",   c2: "rgba(0,82,52,0.07)" },
-            { label: "Live on site", value: counts.livePublic, color: "text-emerald-600 dark:text-green-400", c1: "rgba(5,150,105,0.15)", c2: "rgba(5,150,105,0.08)" },
-            { label: "Suspended", value: counts.suspended, color: "text-amber-700 dark:text-amber-400", c1: "rgba(180,83,9,0.12)", c2: "rgba(180,83,9,0.06)" },
+            { label: "Live on site", value: exps.filter((e) => e.status === "approved" && !e.suspended && !isExpired(e)).length, color: "text-emerald-600 dark:text-green-400", c1: "rgba(5,150,105,0.15)", c2: "rgba(5,150,105,0.08)" },
+            { label: "Suspended", value: exps.filter((e) => e.status === "approved" && e.suspended).length, color: "text-amber-700 dark:text-amber-400", c1: "rgba(180,83,9,0.12)", c2: "rgba(180,83,9,0.06)" },
             { label: "Drafts", value: counts.draft,    color: "text-zinc-500 dark:text-zinc-400",       c1: "rgba(100,116,139,0.12)", c2: "rgba(100,116,139,0.07)" },
           ].map((s) => (
             <div key={s.label} className="relative bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-outline-variant/10 dark:border-zinc-700 shadow-sm overflow-hidden group">
@@ -584,7 +592,7 @@ export default function HostExperiences() {
                     ? "bg-primary/10 text-primary dark:bg-green-400/15 dark:text-green-400"
                     : "bg-outline-variant/20 dark:bg-zinc-700 text-on-surface-variant dark:text-zinc-400"
                 }`}>
-                  {counts[t.key as keyof typeof counts] ?? 0}
+                  {counts[t.key]}
                 </span>
               </button>
             ))}
@@ -620,9 +628,17 @@ export default function HostExperiences() {
             </div>
             <p className="font-headline font-bold text-on-surface dark:text-white mb-1">No experiences found</p>
             <p className="text-sm text-on-surface-variant dark:text-zinc-400 mb-6">
-              {search ? "Try a different search term" : `You have no ${tab === "all" ? "" : tab} experiences yet.`}
+              {search
+                ? "Try a different search term."
+                : tab === "all"
+                  ? "You haven't added any experiences yet."
+                  : tab === "approved"
+                    ? "No live listings with an upcoming date — check Expired or drafts."
+                    : tab === "expired"
+                      ? "No expired listings. Past or unset dates appear in this tab."
+                      : "No draft experiences yet."}
             </p>
-            {!search && (
+            {!search && tab !== "expired" && (
               listingLocked ? (
                 <p className="text-xs text-on-surface-variant dark:text-zinc-500">New experiences can&apos;t be created while listing changes are limited.</p>
               ) : (

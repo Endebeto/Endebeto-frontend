@@ -21,7 +21,7 @@ import { adminService, type AdminWithdrawal } from "@/services/admin.service";
 import { adminQueryKeys } from "@/lib/adminQueryKeys";
 
 /* ─── types ──────────────────────────────────────────────── */
-type PayoutStatus = "pending_transfer" | "paid" | "failed";
+type PayoutStatus = "pending_transfer" | "paid" | "failed" | "canceled";
 
 /* ─── status styles ──────────────────────────────────────── */
 const STATUS: Record<
@@ -43,9 +43,24 @@ const STATUS: Record<
     dot: "bg-error",
     label: "Failed",
   },
+  canceled: {
+    pill: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
+    dot: "bg-zinc-400",
+    label: "Cancelled",
+  },
 };
 
 const PAGE_SIZE = 10;
+
+function visiblePages(current: number, total: number, max = 7): number[] {
+  if (total <= 0) return [1];
+  if (total <= max) return Array.from({ length: total }, (_, i) => i + 1);
+  const half = Math.floor(max / 2);
+  let start = Math.max(1, current - half);
+  const end = Math.min(total, start + max - 1);
+  start = Math.max(1, end - max + 1);
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+}
 
 function initials(name: string) {
   return (
@@ -91,31 +106,22 @@ function isValidHttpUrl(s: string): boolean {
   }
 }
 
-function matchesWithdrawalSearch(w: AdminWithdrawal, q: string) {
-  if (!q.trim()) return true;
-  const s = q.toLowerCase();
-  return (
-    (w.host?.name ?? "").toLowerCase().includes(s) ||
-    (w.bankName ?? "").toLowerCase().includes(s)
-  );
-}
-
-function sortHistoryDesc(a: AdminWithdrawal, b: AdminWithdrawal) {
-  const ta = new Date(a.processedAt ?? a.createdAt).getTime();
-  const tb = new Date(b.processedAt ?? b.createdAt).getTime();
-  return tb - ta;
-}
-
 function MarkPaidModal({
   wr,
   onClose,
   onConfirm,
   loading,
+  revealedFullAccount,
+  revealingAccount,
+  onRevealAccount,
 }: {
   wr: AdminWithdrawal;
   onClose: () => void;
   onConfirm: (id: string, paymentReceiptUrl: string) => void;
   loading?: boolean;
+  revealedFullAccount?: string;
+  revealingAccount?: boolean;
+  onRevealAccount: () => void | Promise<void>;
 }) {
   const [receiptUrl, setReceiptUrl] = useState("");
   const bank = bankDetailsForPayout(wr);
@@ -161,11 +167,34 @@ function MarkPaidModal({
                 {bank.accountName}
               </span>
             </p>
-            <p>
-              <span className="text-on-surface-variant">Account no.: </span>
-              <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">
-                {bank.accountNumber}
+            <p className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
+              <span className="text-on-surface-variant shrink-0">
+                Account no.:{" "}
               </span>
+              <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400 break-all">
+                {revealedFullAccount ?? bank.accountNumber}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  void onRevealAccount();
+                }}
+                disabled={revealingAccount}
+                title={
+                  revealedFullAccount
+                    ? "Hide account number"
+                    : "Reveal full account number (audit logged)"
+                }
+                className="shrink-0 inline-flex p-0.5 rounded text-on-surface-variant hover:text-primary transition-colors disabled:opacity-40 align-middle"
+              >
+                {revealingAccount ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : revealedFullAccount ? (
+                  <EyeOff className="h-3.5 w-3.5" />
+                ) : (
+                  <Eye className="h-3.5 w-3.5" />
+                )}
+              </button>
             </p>
           </div>
           <div>
@@ -186,8 +215,7 @@ function MarkPaidModal({
               </p>
             )}
             <p className="text-[10px] text-on-surface-variant dark:text-zinc-500 mt-2 leading-relaxed">
-              Hosts will see this link in their wallet after you confirm. Use a
-              stable URL (e.g. uploaded receipt or bank portal screenshot).
+              Hosts will see this in their wallet after you confirm. Use a link to a receipt image or other payment proof.
             </p>
           </div>
         </div>
@@ -323,57 +351,72 @@ export default function AdminPayouts() {
   >({});
   const [revealingId, setRevealingId] = useState<string | null>(null);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: adminQueryKeys.withdrawals(),
-    queryFn: () =>
-      adminService.getWithdrawals({}).then((r) => r.data.data.withdrawals),
-    staleTime: 30_000,
-  });
+  const searchTrim = search.trim();
 
-  const withdrawals: AdminWithdrawal[] = data ?? [];
+  const { data: historyApi, isLoading: historyLoading, isError: historyErr } =
+    useQuery({
+      queryKey: adminQueryKeys.withdrawals({
+        tab: "history",
+        page: historyPage,
+        search: searchTrim,
+      }),
+      queryFn: () =>
+        adminService
+          .getWithdrawals({
+            tab: "history",
+            page: historyPage,
+            limit: PAGE_SIZE,
+            q: searchTrim || undefined,
+          })
+          .then((r) => r.data),
+      staleTime: 30_000,
+    });
 
-  const historyRows = withdrawals
-    .filter((w) => w.status === "paid" || w.status === "failed")
-    .filter((w) => matchesWithdrawalSearch(w, search))
-    .sort(sortHistoryDesc);
+  const { data: pendingApi, isLoading: pendingLoading, isError: pendingErr } =
+    useQuery({
+      queryKey: adminQueryKeys.withdrawals({
+        tab: "pending",
+        page: pendingPage,
+        search: searchTrim,
+      }),
+      queryFn: () =>
+        adminService
+          .getWithdrawals({
+            tab: "pending",
+            page: pendingPage,
+            limit: PAGE_SIZE,
+            q: searchTrim || undefined,
+          })
+          .then((r) => r.data),
+      staleTime: 30_000,
+    });
 
-  const pendingRows = withdrawals
-    .filter((w) => w.status === "pending_transfer")
-    .filter((w) => matchesWithdrawalSearch(w, search))
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
+  const isLoading = historyLoading || pendingLoading;
+  const isError = historyErr || pendingErr;
 
-  const historyTotalPages = Math.max(
-    1,
-    Math.ceil(historyRows.length / PAGE_SIZE),
-  );
-  const pendingTotalPages = Math.max(
-    1,
-    Math.ceil(pendingRows.length / PAGE_SIZE),
-  );
-  const historyPaginated = historyRows.slice(
-    (historyPage - 1) * PAGE_SIZE,
-    historyPage * PAGE_SIZE,
-  );
-  const pendingPaginated = pendingRows.slice(
-    (pendingPage - 1) * PAGE_SIZE,
-    pendingPage * PAGE_SIZE,
-  );
+  const dashboardTotals =
+    pendingApi?.dashboardTotals ??
+    historyApi?.dashboardTotals ?? {
+      pendingCount: 0,
+      pendingAmountCents: 0,
+      failedCount: 0,
+      paidTotalCents: 0,
+    };
 
-  const pendingItems = withdrawals.filter(
-    (w) => w.status === "pending_transfer",
-  );
-  const pendingCount = pendingItems.length;
-  const pendingAmount = pendingItems.reduce(
-    (s, w) => s + (w.amountCents ?? 0),
-    0,
-  );
-  const failedCount = withdrawals.filter((w) => w.status === "failed").length;
-  const paidTotal = withdrawals
-    .filter((w) => w.status === "paid")
-    .reduce((s, w) => s + (w.amountCents ?? 0), 0);
+  const paidTotal = fmtETB(dashboardTotals.paidTotalCents ?? 0);
+  const pendingCount = dashboardTotals.pendingCount ?? 0;
+  const pendingAmount = fmtETB(dashboardTotals.pendingAmountCents ?? 0);
+  const failedCount = dashboardTotals.failedCount ?? 0;
+
+  const historyWithdrawals: AdminWithdrawal[] =
+    historyApi?.data.withdrawals ?? [];
+  const historyTotal = historyApi?.total ?? 0;
+  const historyTotalPages = Math.max(1, historyApi?.pages ?? 1);
+
+  const pendingWithdrawals: AdminWithdrawal[] =
+    pendingApi?.data.withdrawals ?? [];
+  const pendingTotal = pendingApi?.total ?? 0;
+  const pendingTotalPages = Math.max(1, pendingApi?.pages ?? 1);
 
   const markPaidMutation = useMutation({
     mutationFn: ({
@@ -498,7 +541,7 @@ export default function AdminPayouts() {
                 <Wallet className="h-4 w-4 text-primary/60" /> Total Paid Out
               </p>
               <p className="font-headline font-extrabold text-2xl text-primary tracking-tight">
-                {isLoading ? "–" : fmtETB(paidTotal)}{" "}
+                {isLoading ? "–" : paidTotal}{" "}
                 <span className="text-base font-semibold text-primary/60">
                   ETB
                 </span>
@@ -527,7 +570,7 @@ export default function AdminPayouts() {
                   {isLoading ? "–" : pendingCount}
                 </p>
                 <span className="text-xs text-on-surface-variant font-medium">
-                  / {isLoading ? "–" : fmtETB(pendingAmount)} ETB
+                  / {isLoading ? "–" : pendingAmount} ETB
                 </span>
               </div>
               <p className="text-[10px] text-on-surface-variant/70 mt-1">
@@ -603,7 +646,7 @@ export default function AdminPayouts() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/8">
-                      {historyPaginated.length === 0 ? (
+                      {historyWithdrawals.length === 0 ? (
                         <tr>
                           <td
                             colSpan={6}
@@ -613,7 +656,7 @@ export default function AdminPayouts() {
                           </td>
                         </tr>
                       ) : (
-                        historyPaginated.map((wr) => {
+                        historyWithdrawals.map((wr) => {
                           const st = (wr.status ??
                             "pending_transfer") as PayoutStatus;
                           const bank = bankDetailsForPayout(wr);
@@ -736,17 +779,17 @@ export default function AdminPayouts() {
                   <p className="text-xs text-on-surface-variant">
                     Showing{" "}
                     <span className="font-bold text-primary">
-                      {historyRows.length === 0
+                      {historyTotal === 0
                         ? 0
                         : Math.min(
                             (historyPage - 1) * PAGE_SIZE + 1,
-                            historyRows.length,
+                            historyTotal,
                           )}
-                      –{Math.min(historyPage * PAGE_SIZE, historyRows.length)}
+                      –{Math.min(historyPage * PAGE_SIZE, historyTotal)}
                     </span>{" "}
                     of{" "}
                     <span className="font-bold text-primary">
-                      {historyRows.length}
+                      {historyTotal}
                     </span>{" "}
                     completed
                   </p>
@@ -759,10 +802,7 @@ export default function AdminPayouts() {
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
-                    {Array.from(
-                      { length: historyTotalPages },
-                      (_, i) => i + 1,
-                    ).map((n) => (
+                    {visiblePages(historyPage, historyTotalPages).map((n) => (
                       <button
                         key={n}
                         type="button"
@@ -818,7 +858,7 @@ export default function AdminPayouts() {
             ) : (
               <>
                 <div className="w-full max-w-full overflow-x-auto">
-                  <table className="w-full min-w-[960px] text-left">
+                  <table className="w-full min-w-[1000px] text-left">
                     <thead className="bg-surface-container-low/30">
                       <tr>
                         {[
@@ -827,12 +867,11 @@ export default function AdminPayouts() {
                           "Status",
                           "Requested",
                           "Bank / account",
-                          "Receipt",
                           "Actions",
                         ].map((h, i) => (
                           <th
                             key={h}
-                            className={`px-5 py-3 text-[9px] font-bold uppercase tracking-widest text-on-surface-variant ${i === 6 ? "text-right" : ""}`}
+                            className={`px-5 py-3 text-[9px] font-bold uppercase tracking-widest text-on-surface-variant ${i === 5 ? "text-right" : ""} ${i === 4 ? "min-w-[320px]" : ""}`}
                           >
                             {h}
                           </th>
@@ -840,17 +879,17 @@ export default function AdminPayouts() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/8">
-                      {pendingPaginated.length === 0 ? (
+                      {pendingWithdrawals.length === 0 ? (
                         <tr>
                           <td
-                            colSpan={7}
+                            colSpan={6}
                             className="px-5 py-12 text-center text-sm text-on-surface-variant"
                           >
                             No pending withdrawal requests.
                           </td>
                         </tr>
                       ) : (
-                        pendingPaginated.map((wr) => {
+                        pendingWithdrawals.map((wr) => {
                           const st = (wr.status ??
                             "pending_transfer") as PayoutStatus;
                           const isPaying =
@@ -903,14 +942,14 @@ export default function AdminPayouts() {
                               <td className="px-5 py-4 text-xs text-on-surface-variant whitespace-nowrap">
                                 {new Date(wr.createdAt).toLocaleString()}
                               </td>
-                              <td className="px-5 py-4 align-top max-w-[220px]">
+                              <td className="px-5 py-4 align-top min-w-[320px]">
                                 <p className="text-xs font-semibold text-primary leading-tight">
                                   {bank.bank}
                                 </p>
                                 <p className="text-[10px] text-on-surface-variant mt-0.5">
                                   {bank.accountName}
                                 </p>
-                                <div className="flex items-center gap-1 mt-0.5">
+                                <div className="flex items-center gap-0.5 mt-1 flex-wrap">
                                   <p className="text-[10px] font-mono text-on-surface break-all">
                                     {revealedAccounts[wr._id] ??
                                       bank.accountNumber}
@@ -937,11 +976,6 @@ export default function AdminPayouts() {
                                     )}
                                   </button>
                                 </div>
-                              </td>
-                              <td className="px-5 py-4 align-top max-w-[140px]">
-                                <span className="text-[10px] text-outline-variant">
-                                  —
-                                </span>
                               </td>
                               <td className="px-5 py-4 text-right whitespace-nowrap">
                                 <div className="flex items-center gap-2 justify-end">
@@ -980,17 +1014,17 @@ export default function AdminPayouts() {
                   <p className="text-xs text-on-surface-variant">
                     Showing{" "}
                     <span className="font-bold text-primary">
-                      {pendingRows.length === 0
+                      {pendingTotal === 0
                         ? 0
                         : Math.min(
                             (pendingPage - 1) * PAGE_SIZE + 1,
-                            pendingRows.length,
+                            pendingTotal,
                           )}
-                      –{Math.min(pendingPage * PAGE_SIZE, pendingRows.length)}
+                      –{Math.min(pendingPage * PAGE_SIZE, pendingTotal)}
                     </span>{" "}
                     of{" "}
                     <span className="font-bold text-primary">
-                      {pendingRows.length}
+                      {pendingTotal}
                     </span>{" "}
                     pending
                   </p>
@@ -1003,10 +1037,7 @@ export default function AdminPayouts() {
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
-                    {Array.from(
-                      { length: pendingTotalPages },
-                      (_, i) => i + 1,
-                    ).map((n) => (
+                    {visiblePages(pendingPage, pendingTotalPages).map((n) => (
                       <button
                         key={n}
                         type="button"
@@ -1084,6 +1115,9 @@ export default function AdminPayouts() {
         <MarkPaidModal
           wr={paidTarget}
           loading={markPaidMutation.isPending}
+          revealedFullAccount={revealedAccounts[paidTarget._id]}
+          revealingAccount={revealingId === paidTarget._id}
+          onRevealAccount={() => handleReveal(paidTarget._id)}
           onClose={() => setPaidTarget(null)}
           onConfirm={(id, paymentReceiptUrl) =>
             markPaidMutation.mutate({ id, paymentReceiptUrl })

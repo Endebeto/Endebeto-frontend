@@ -1,3 +1,11 @@
+/** Normalize stored OAuth URLs (e.g. protocol-relative `//lh3...`) for `<img src>`. */
+export function normalizeProfilePhotoSrc(raw: string): string {
+  const s = raw.trim();
+  if (!s) return s;
+  if (s.startsWith("//")) return `https:${s}`;
+  return s;
+}
+
 /** True when `photo` is a URL the browser can load (OAuth avatars, Cloudinary, etc.). */
 export function isDisplayableProfilePhotoUrl(raw: string | undefined | null): boolean {
   if (raw == null || typeof raw !== "string") return false;

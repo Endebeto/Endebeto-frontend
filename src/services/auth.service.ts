@@ -22,8 +22,7 @@ export interface User {
   name: string;
   email: string;
   photo?: string;
-  bio?: string;
-  /** Short “gist” shown on your experience pages (approved hosts). */
+  /** Short introduction guests see on your experience pages (approved hosts). */
   hostStory?: string;
   phone?: string;
   role: "user" | "admin";
@@ -80,7 +79,7 @@ export const authService = {
     data:
       | FormData
       | Partial<
-          Pick<User, "name" | "email" | "photo" | "bio" | "phone" | "hostStory">
+          Pick<User, "name" | "email" | "photo" | "phone" | "hostStory">
         >,
   ) =>
     api.patch<{ status: string; data: { user: User } }>(

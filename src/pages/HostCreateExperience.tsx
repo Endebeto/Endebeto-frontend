@@ -13,6 +13,8 @@ import { useAuth } from "@/context/AuthContext";
 import { experiencesService, type Experience } from "@/services/experiences.service";
 import { normalizeApiList } from "@/lib/normalizeApiList";
 import { getFriendlyErrorMessage } from "@/lib/errors";
+import { EXPERIENCE_DESCRIPTION_FORMAT_HINT } from "@/components/ExperienceDescriptionMarkdown";
+import { HostExperienceDescriptionToolbar } from "@/components/HostExperienceDescriptionToolbar";
 
 /* ─── types ──────────────────────────────────────────── */
 interface FormData {
@@ -106,6 +108,7 @@ export default function HostCreateExperience() {
 
   const coverRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   const set = (k: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((p) => ({ ...p, [k]: e.target.value }));
@@ -326,14 +329,25 @@ export default function HostCreateExperience() {
                   <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">
                     Full Description <span className="text-error">*</span>
                   </label>
+                  <HostExperienceDescriptionToolbar
+                    textareaRef={descriptionRef}
+                    value={form.description}
+                    onChange={(next) =>
+                      setForm((p) => ({ ...p, description: next }))
+                    }
+                  />
                   <textarea
-                    rows={6}
+                    ref={descriptionRef}
+                    rows={8}
                     placeholder="Describe the soul of your experience. What will guests smell, see, and feel?"
                     value={form.description}
                     onChange={set("description")}
-                    className={`${inputCls} resize-none`}
+                    className={`${inputCls} resize-y min-h-[140px]`}
                   />
                   <p className="mt-1.5 text-xs text-on-surface-variant dark:text-zinc-400">{form.description.length} characters</p>
+                  <p className="mt-1.5 text-[11px] text-on-surface-variant dark:text-zinc-500 leading-snug">
+                    {EXPERIENCE_DESCRIPTION_FORMAT_HINT}
+                  </p>
                 </div>
               </div>
             </section>

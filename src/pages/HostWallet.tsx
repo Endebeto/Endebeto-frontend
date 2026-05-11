@@ -374,11 +374,8 @@ function WithdrawModal({
                   )
                 ) : (
                   <>
-                    The account holder name should match your{" "}
-                    <strong>approved host application full name</strong> (your
-                    profile display name may differ). If this box did not fill
-                    automatically, refresh the page or open your dashboard once
-                    so your application data can sync.
+                    Use the same full name as on your approved host application (your display name can differ).
+                    If this field is empty, refresh the page and try again.
                   </>
                 )}
               </p>
@@ -426,14 +423,11 @@ function WithdrawModal({
           <div className="flex items-start gap-2.5 p-3 bg-surface-container-low dark:bg-zinc-800 rounded-xl">
             <Info className="h-4 w-4 text-on-surface-variant dark:text-zinc-400 shrink-0 mt-0.5" />
             <p className="text-[11px] text-on-surface-variant dark:text-zinc-400 leading-relaxed">
-              The requested amount is <strong>immediately deducted</strong> from
-              your available balance and moved to pending payout. Endebeto's 15%
-              platform fee has already been applied to your balance.{" "}
+              When you submit a request, we move that amount from your available balance into payout processing.
+              Your balance already reflects Endebeto&apos;s platform fee.{" "}
               <strong className="text-on-surface dark:text-zinc-300">
-                You can submit one new payout request every 7 days
-              </strong>{" "}
-              (retrying the same in-flight request keeps the same reference and
-              does not open a new weekly slot).
+                You can submit one new payout request every 7 days.
+              </strong>
             </p>
           </div>
         </div>
@@ -598,6 +592,59 @@ function EarningRowComponent({ row }: { row: EarningRow }) {
   );
 }
 
+/** Pagination footer for host withdrawal tables (matches earnings footer styling). */
+function WithdrawalsPager({
+  page,
+  totalPages,
+  total,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  onPageChange: (p: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="px-8 py-5 border-t border-outline-variant/10 dark:border-zinc-700 flex items-center justify-between">
+      <span className="text-xs text-on-surface-variant dark:text-zinc-400">
+        Page {page} of {totalPages} · {total} total
+      </span>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          disabled={page === 1}
+          onClick={() => onPageChange(page - 1)}
+          className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-primary dark:text-green-400 hover:bg-surface-container-low dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" /> Previous
+        </button>
+        {Array.from(
+          { length: Math.min(totalPages, 5) },
+          (_, i) => i + 1,
+        ).map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onPageChange(p)}
+            className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${p === page ? "bg-primary text-white dark:bg-green-600" : "text-on-surface-variant dark:text-zinc-400 hover:bg-surface-container-low dark:hover:bg-zinc-800"}`}
+          >
+            {p}
+          </button>
+        ))}
+        <button
+          type="button"
+          disabled={page === totalPages}
+          onClick={() => onPageChange(page + 1)}
+          className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-primary dark:text-green-400 hover:bg-surface-container-low dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          Next <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── main component ─────────────────────────────────── */
 export default function HostWallet() {
   const { user, refreshUser } = useAuth();
@@ -610,8 +657,10 @@ export default function HostWallet() {
     "earnings",
   );
   const [earningsPage, setEarningsPage] = useState(1);
+  const [pendingWithdrawalsPage, setPendingWithdrawalsPage] = useState(1);
+  const [historyWithdrawalsPage, setHistoryWithdrawalsPage] = useState(1);
 
-  const WITHDRAWALS_FETCH_LIMIT = 200;
+  const withdrawalsSearch = search.trim();
 
   const { data: walletData, isLoading: walletLoading } = useQuery({
     queryKey: ["my-wallet"],
@@ -619,10 +668,27 @@ export default function HostWallet() {
     staleTime: 30_000,
   });
 
-  const { data: withdrawalsData, isLoading: withdrawalsLoading } = useQuery({
-    queryKey: ["my-withdrawals"],
+  const { data: pendingWData, isLoading: pendingWLoading } = useQuery({
+    queryKey: ["my-withdrawals", "pending", pendingWithdrawalsPage, withdrawalsSearch],
     queryFn: () =>
-      walletService.getWithdrawals({ page: 1, limit: WITHDRAWALS_FETCH_LIMIT }),
+      walletService.getWithdrawals({
+        tab: "pending",
+        page: pendingWithdrawalsPage,
+        limit: PAGE_SIZE,
+        ...(withdrawalsSearch ? { q: withdrawalsSearch } : {}),
+      }),
+    staleTime: 30_000,
+  });
+
+  const { data: historyWData, isLoading: historyWLoading } = useQuery({
+    queryKey: ["my-withdrawals", "history", historyWithdrawalsPage, withdrawalsSearch],
+    queryFn: () =>
+      walletService.getWithdrawals({
+        tab: "history",
+        page: historyWithdrawalsPage,
+        limit: PAGE_SIZE,
+        ...(withdrawalsSearch ? { q: withdrawalsSearch } : {}),
+      }),
     staleTime: 30_000,
   });
 
@@ -634,30 +700,25 @@ export default function HostWallet() {
   });
 
   const wallet = walletData?.data.data.wallet;
-  const withdrawals: WithdrawalRequest[] =
-    withdrawalsData?.data.data.withdrawals ?? [];
-  const totalW = withdrawalsData?.data.total ?? withdrawals.length;
+
+  const pendingWithdrawalsRows: WithdrawalRequest[] =
+    pendingWData?.data.data.withdrawals ?? [];
+  const pendingWithdrawalsTotal = pendingWData?.data.total ?? 0;
+  const pendingWithdrawalsPages = pendingWData?.data.pages ?? 1;
+
+  const historyWithdrawalsRows: WithdrawalRequest[] =
+    historyWData?.data.data.withdrawals ?? [];
+  const historyWithdrawalsTotal = historyWData?.data.total ?? 0;
+  const historyWithdrawalsPages = historyWData?.data.pages ?? 1;
+
+  const totalWithdrawalsCount =
+    pendingWithdrawalsTotal + historyWithdrawalsTotal;
 
   const earnings: EarningRow[] = earningsData?.data.data.earnings ?? [];
   const totalE = earningsData?.data.total ?? 0;
   const totalEPages = Math.ceil(totalE / PAGE_SIZE);
 
   const availableETB = wallet ? wallet.availableBalanceCents / 100 : 0;
-
-  const withdrawalMatchesSearch = (w: WithdrawalRequest, qRaw: string) => {
-    const q = qRaw.trim().toLowerCase();
-    if (!q) return true;
-    const dest = w.destination;
-    return (
-      w._id.toLowerCase().includes(q) ||
-      (dest?.bankName ?? "").toLowerCase().includes(q) ||
-      (dest?.accountName ?? "").toLowerCase().includes(q)
-    );
-  };
-
-  const pendingWithdrawals = withdrawals.filter(
-    (w) => w.status === "pending_transfer",
-  );
 
   // §1.5 — 7-day cooldown: compute whether the host is allowed to submit a new request.
   const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
@@ -668,26 +729,36 @@ export default function HostWallet() {
     ? new Date(lastPayoutAt.getTime() + COOLDOWN_MS)
     : null;
   const cooldownActive = nextAvailableAt ? nextAvailableAt > new Date() : false;
-  const hasPendingWithdrawal = pendingWithdrawals.length > 0;
+  const hasPendingWithdrawal = pendingWithdrawalsTotal > 0;
   // Button is enabled only when: enough balance, no active cooldown, no pending request already in flight.
   const canWithdraw =
     availableETB >= 10 && !cooldownActive && !hasPendingWithdrawal;
-  const historyWithdrawals = withdrawals.filter(
-    (w) =>
-      w.status === "paid" || w.status === "failed" || w.status === "canceled",
-  );
 
-  const filteredPending = search
-    ? pendingWithdrawals.filter((w) => withdrawalMatchesSearch(w, search))
-    : pendingWithdrawals;
-  const filteredHistory = search
-    ? historyWithdrawals.filter((w) => withdrawalMatchesSearch(w, search))
-    : historyWithdrawals;
+  const withdrawalsLoading = pendingWLoading || historyWLoading;
 
   const invalidateAll = () => {
     void queryClient.invalidateQueries({ queryKey: ["my-wallet"] });
     void queryClient.invalidateQueries({ queryKey: ["my-withdrawals"] });
     void queryClient.invalidateQueries({ queryKey: ["my-earnings"] });
+  };
+
+  const resetWithdrawalPaging = () => {
+    setPendingWithdrawalsPage(1);
+    setHistoryWithdrawalsPage(1);
+  };
+
+  const walletActivityRef = useRef<HTMLDivElement>(null);
+
+  const scrollToStatement = () => {
+    setActiveTab("earnings");
+    setSearch("");
+    resetWithdrawalPaging();
+    requestAnimationFrame(() => {
+      walletActivityRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
   };
 
   const legalHostName = (user?.hostApplicationData?.fullName ?? "").trim();
@@ -791,7 +862,11 @@ export default function HostWallet() {
                 <ArrowDownToLine className="h-4 w-4" />
                 Withdraw Funds
               </button>
-              <button className="px-6 py-3 border border-white/20 hover:bg-white/10 transition-colors rounded-xl font-bold text-sm flex items-center gap-2">
+              <button
+                type="button"
+                onClick={scrollToStatement}
+                className="px-6 py-3 border border-white/20 hover:bg-white/10 transition-colors rounded-xl font-bold text-sm flex items-center gap-2"
+              >
                 <FileText className="h-4 w-4 opacity-70" />
                 View Statement
               </button>
@@ -882,7 +957,11 @@ export default function HostWallet() {
         </div>
 
         {/* ── History Tabs ──────────────────────────────── */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-outline-variant/10 dark:border-zinc-700 overflow-hidden">
+        <div
+          ref={walletActivityRef}
+          id="wallet-activity"
+          className="scroll-mt-28 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-outline-variant/10 dark:border-zinc-700 overflow-hidden"
+        >
           {/* Tab bar */}
           <div className="px-8 py-0 flex items-center justify-between border-b border-outline-variant/10 dark:border-zinc-700">
             <div className="flex">
@@ -910,9 +989,9 @@ export default function HostWallet() {
                     <span className="flex items-center gap-1.5">
                       <ArrowUpFromLine className="h-3.5 w-3.5" />
                       Withdrawals{" "}
-                      {totalW > 0 && (
+                      {totalWithdrawalsCount > 0 && (
                         <span className="bg-primary/10 dark:bg-green-900/40 text-primary dark:text-green-400 rounded-full px-1.5 py-0.5 text-[9px]">
-                          {totalW}
+                          {totalWithdrawalsCount}
                         </span>
                       )}
                     </span>
@@ -928,7 +1007,10 @@ export default function HostWallet() {
                 <input
                   type="text"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    resetWithdrawalPaging();
+                  }}
                   placeholder="Search withdrawals…"
                   className="pl-8 pr-3 py-1.5 bg-surface-container-low dark:bg-zinc-800 rounded-lg text-xs border-0 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white placeholder:text-on-surface-variant/50 dark:placeholder:text-zinc-500 w-48"
                 />
@@ -1019,10 +1101,9 @@ export default function HostWallet() {
           {activeTab === "withdrawals" && (
             <>
               <p className="px-8 py-3 text-[11px] text-on-surface-variant dark:text-zinc-500 border-b border-outline-variant/10 dark:border-zinc-700 leading-relaxed">
-                Each payout request is kept on file. Requesting a new withdrawal
-                adds a row — it does not replace completed or failed payouts.{" "}
+                Past and pending payouts are listed below.{" "}
                 <span className="text-on-surface dark:text-zinc-400 font-medium">
-                  You may start one new payout request every 7 days.
+                  You can start one new payout request every 7 days.
                 </span>
               </p>
 
@@ -1034,7 +1115,7 @@ export default function HostWallet() {
                 <>
                   <div className="px-8 py-3 bg-amber-50/70 dark:bg-amber-950/25 border-b border-outline-variant/10 dark:border-zinc-800">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-amber-900 dark:text-amber-400">
-                      Pending requests ({filteredPending.length})
+                      Pending requests ({pendingWithdrawalsTotal})
                     </h3>
                     <p className="text-[10px] text-on-surface-variant dark:text-zinc-500 mt-0.5">
                       In queue for bank transfer
@@ -1054,7 +1135,7 @@ export default function HostWallet() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-outline-variant/10 dark:divide-zinc-800">
-                        {filteredPending.length === 0 ? (
+                        {pendingWithdrawalsRows.length === 0 ? (
                           <tr>
                             <td
                               colSpan={7}
@@ -1066,17 +1147,23 @@ export default function HostWallet() {
                             </td>
                           </tr>
                         ) : (
-                          filteredPending.map((w) => (
+                          pendingWithdrawalsRows.map((w) => (
                             <TxRow key={w._id} w={w} />
                           ))
                         )}
                       </tbody>
                     </table>
                   </div>
+                  <WithdrawalsPager
+                    page={pendingWithdrawalsPage}
+                    totalPages={pendingWithdrawalsPages}
+                    total={pendingWithdrawalsTotal}
+                    onPageChange={setPendingWithdrawalsPage}
+                  />
 
                   <div className="px-8 py-3 bg-surface-container-low/60 dark:bg-zinc-800/40 border-t border-b border-outline-variant/10 dark:border-zinc-800">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-primary dark:text-green-400">
-                      Withdrawal history ({filteredHistory.length})
+                      Withdrawal history ({historyWithdrawalsTotal})
                     </h3>
                     <p className="text-[10px] text-on-surface-variant dark:text-zinc-500 mt-0.5">
                       Paid, failed, or cancelled — permanent record
@@ -1096,7 +1183,7 @@ export default function HostWallet() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-outline-variant/10 dark:divide-zinc-800">
-                        {filteredHistory.length === 0 ? (
+                        {historyWithdrawalsRows.length === 0 ? (
                           <tr>
                             <td
                               colSpan={7}
@@ -1108,7 +1195,7 @@ export default function HostWallet() {
                             </td>
                           </tr>
                         ) : (
-                          filteredHistory.map((w) => (
+                          historyWithdrawalsRows.map((w) => (
                             <TxRow key={w._id} w={w} />
                           ))
                         )}
@@ -1116,13 +1203,12 @@ export default function HostWallet() {
                     </table>
                   </div>
 
-                  {totalW > WITHDRAWALS_FETCH_LIMIT && (
-                    <p className="px-8 py-3 text-[10px] text-amber-700 dark:text-amber-400 border-t border-outline-variant/10 dark:border-zinc-700">
-                      Showing the {WITHDRAWALS_FETCH_LIMIT} most recent of{" "}
-                      {totalW} requests. Ask support if you need a full
-                      statement.
-                    </p>
-                  )}
+                  <WithdrawalsPager
+                    page={historyWithdrawalsPage}
+                    totalPages={historyWithdrawalsPages}
+                    total={historyWithdrawalsTotal}
+                    onPageChange={setHistoryWithdrawalsPage}
+                  />
                 </>
               )}
             </>

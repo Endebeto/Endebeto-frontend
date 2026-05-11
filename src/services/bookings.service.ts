@@ -36,10 +36,18 @@ export interface Booking {
 // §3.17: canonical paginated shape — { status, results, total, page, limit, pages, data: T[] }
 export interface BookingListResponse {
   status: string;
-  /** Count of items in the current page. */
+  /** True when using dashboard snapshot mode (aggregates + recent rows only). */
+  dashboard?: boolean;
+  /** Count of items in the current page (or recent rows when dashboard). */
   results: number;
-  /** Total count across all pages. */
+  /** Total count across all pages (matches current filters). For dashboard: recent row count. */
   total: number;
+  /** Host bookings: total rows for this host ignoring tab/search (stats strip). */
+  totalBookings?: number;
+  /** Dashboard: sum of guest quantities for stored-status upcoming bookings. */
+  upcomingGuestsTotal?: number;
+  /** Dashboard: booking counts grouped by experience id. */
+  bookingCountByExperience?: { experienceId: string; count: number }[];
   page: number;
   limit: number;
   pages: number;
@@ -79,8 +87,15 @@ export const bookingsService = {
   getMyBookings: (params?: { page?: number; limit?: number }) =>
     api.get<BookingListResponse>("/bookings/me", { params }),
 
-  getHostBookings: (params?: { page?: number; limit?: number }) =>
-    api.get<BookingListResponse>("/bookings/host/bookings", { params }),
+  getHostBookings: (params?: {
+    page?: number;
+    limit?: number;
+    tab?: "upcoming" | "completed" | "paymentExpired" | "cancelled";
+    q?: string;
+    /** Lightweight dashboard snapshot: aggregates + up to `recentLimit` recent bookings (default 5). */
+    dashboard?: boolean;
+    recentLimit?: number;
+  }) => api.get<BookingListResponse>("/bookings/host/bookings", { params }),
 
   getAllBookings: (params?: { page?: number; limit?: number; status?: string }) =>
     api.get<BookingListResponse>("/bookings", { params }),

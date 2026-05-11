@@ -17,6 +17,7 @@ import {
 import { normalizeApiList } from "@/lib/normalizeApiList";
 import { adminQueryKeys } from "@/lib/adminQueryKeys";
 import { getFriendlyErrorMessage } from "@/lib/errors";
+import { ExperienceDescriptionMarkdown } from "@/components/ExperienceDescriptionMarkdown";
 
 type ExpStatus = "pending" | "approved" | "rejected" | "draft";
 type TabKey = "live" | "expired" | "suspended" | "draft";
@@ -714,7 +715,10 @@ function DetailPanel({
             <p className="text-xs font-semibold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wide mb-1.5">
               Description
             </p>
-            <p className="text-sm text-on-surface-variant dark:text-zinc-300 leading-relaxed">{exp.description}</p>
+            <ExperienceDescriptionMarkdown
+              markdown={exp.description}
+              className="text-sm [&_p]:text-sm [&_li]:text-sm"
+            />
           </div>
         )}
 

@@ -47,10 +47,10 @@ export default function HostDashboard() {
   const listingLocked =
     user?.hostStatus === "approved" && user?.hostListingSuspended === true;
 
-  /* Fetch last 50 bookings so we have enough to build performance stats */
+  /* Dashboard snapshot: aggregates + five most recent bookings (no large list). */
   const { data: bookingsData, isLoading: bLoading, isError: bError } = useQuery({
     queryKey: ["host-bookings-dashboard"],
-    queryFn: () => bookingsService.getHostBookings({ limit: 50 }),
+    queryFn: () => bookingsService.getHostBookings({ dashboard: true, recentLimit: 5 }),
   });
 
   const { data: expData, isLoading: eLoading } = useQuery({
@@ -64,29 +64,32 @@ export default function HostDashboard() {
     staleTime: 30_000,
   });
 
-  const allBookings: Booking[] = bookingsData?.data.data ?? [];
-  const summary                = bookingsData?.data.summary ?? { upcoming: 0, completed: 0, paymentExpired: 0 };
+  const dash = bookingsData?.data;
+  const recentBookings: Booking[] = dash?.data ?? [];
+  const summary = dash?.summary ?? {
+    upcoming: 0,
+    completed: 0,
+    paymentExpired: 0,
+    cancelled: 0,
+  };
 
   const wallet = walletData?.data.data.wallet;
   const availableBalanceCents = wallet?.availableBalanceCents ?? 0;
   const totalEarnedCents      = wallet?.totalEarnedCents ?? 0;
 
-  // Total confirmed guests across all upcoming bookings (sum of quantity, not booking count)
-  const upcomingGuestCount = allBookings
-    .filter(b => b.status === "upcoming")
-    .reduce((sum, b) => sum + (b.quantity ?? 1), 0);
+  const upcomingGuestCount = dash?.upcomingGuestsTotal ?? 0;
   const etb = (cents: number) => (cents / 100).toLocaleString("en-ET", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const recentBookings         = allBookings.slice(0, 5);
 
   const allExperiences: Experience[] = normalizeApiList<Experience>(expData?.data).items;
   const activeCount = allExperiences.filter((e) => e.status === "approved").length;
 
-  /* ── Build per-experience booking stats from the fetched list ── */
-  const expBookingMap = new Map<string, number>();
-  allBookings.forEach((b) => {
-    const expId = typeof b.experience === "string" ? b.experience : b.experience?._id;
-    if (expId) expBookingMap.set(expId, (expBookingMap.get(expId) ?? 0) + 1);
-  });
+  /* ── Build per-experience booking stats from dashboard aggregates ── */
+  const expBookingMap = new Map<string, number>(
+    (dash?.bookingCountByExperience ?? []).map((row) => [
+      row.experienceId,
+      row.count,
+    ]),
+  );
 
   const performances = allExperiences
     .filter((e) => e.status === "approved")
@@ -202,13 +205,21 @@ export default function HostDashboard() {
               </div>
             </div>
 
-            {/* Upcoming Bookings */}
-            <div className="bg-white dark:bg-zinc-900 p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,53,39,0.06)] flex flex-col justify-between border border-outline-variant/10 dark:border-zinc-800">
+            {/* Guest spots on upcoming bookings (sum of quantities) — not the same as booking count */}
+            <div
+              className="bg-white dark:bg-zinc-900 p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,53,39,0.06)] flex flex-col justify-between border border-outline-variant/10 dark:border-zinc-800"
+              title="Large number = total guests (qty) across reservations still marked upcoming. Smaller line = how many separate bookings that is."
+            >
               <div>
                 <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-secondary-container/40 dark:bg-emerald-900/30 flex items-center justify-center mb-2 md:mb-4">
                   <CalendarDays className="h-3.5 w-3.5 md:h-5 md:w-5 text-primary dark:text-green-400" />
                 </div>
-                <p className="text-[8px] md:text-[10px] font-bold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wider leading-tight">Upcoming Bookings</p>
+                <p className="text-[8px] md:text-[10px] font-bold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wider leading-tight">
+                  Upcoming guests
+                </p>
+                <p className="text-[8px] md:text-[10px] text-on-surface-variant/80 dark:text-zinc-500 mt-0.5 leading-snug">
+                  Guest spots
+                </p>
               </div>
               <div className="mt-2 md:mt-4">
                 {isLoading ? (
@@ -216,21 +227,27 @@ export default function HostDashboard() {
                 ) : (
                   <>
                     <h3 className="text-2xl md:text-4xl font-headline font-bold text-primary dark:text-green-400">{upcomingGuestCount}</h3>
-                    <p className="text-[9px] md:text-xs text-on-surface-variant dark:text-zinc-400 mt-1 font-medium">
-                      {summary.upcoming} booking{summary.upcoming !== 1 ? "s" : ""}
+                    <p className="text-[9px] md:text-xs text-on-surface-variant dark:text-zinc-400 mt-1 font-medium leading-snug">
+                      Across {summary.upcoming} upcoming booking
+                      {summary.upcoming !== 1 ? "s" : ""}
                     </p>
                   </>
                 )}
               </div>
             </div>
 
-            {/* Active Experiences */}
-            <div className="bg-white dark:bg-zinc-900 p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,53,39,0.06)] flex flex-col justify-between border border-outline-variant/10 dark:border-zinc-800">
+            {/* Approved experience documents — not the same as “on Explore today” */}
+            <div
+              className="bg-white dark:bg-zinc-900 p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,53,39,0.06)] flex flex-col justify-between border border-outline-variant/10 dark:border-zinc-800"
+              title="Count of your experiences with Approved status. Drafts, pending review, and rejected listings are not included. Guests still need a future scheduled date to book."
+            >
               <div>
                 <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-secondary-container/40 dark:bg-emerald-900/30 flex items-center justify-center mb-2 md:mb-4">
                   <Compass className="h-3.5 w-3.5 md:h-5 md:w-5 text-primary dark:text-green-400" />
                 </div>
-                <p className="text-[8px] md:text-[10px] font-bold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wider leading-tight">Live Experiences</p>
+                <p className="text-[8px] md:text-[10px] font-bold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wider leading-tight">
+                  Approved listings
+                </p>
               </div>
               <div className="mt-2 md:mt-4">
                 {isLoading ? (
@@ -238,7 +255,9 @@ export default function HostDashboard() {
                 ) : (
                   <>
                     <h3 className="text-2xl md:text-4xl font-headline font-bold text-primary dark:text-green-400">{activeCount}</h3>
-                    <p className="text-[9px] md:text-xs text-on-surface-variant dark:text-zinc-400 mt-1 font-medium">Open for booking</p>
+                    <p className="text-[9px] md:text-xs text-on-surface-variant dark:text-zinc-400 mt-1 font-medium leading-snug">
+                      Need a future date to show in Explore
+                    </p>
                   </>
                 )}
               </div>
@@ -396,7 +415,10 @@ export default function HostDashboard() {
 
             {/* Experience Performance */}
             <div className="bg-white dark:bg-zinc-900 p-6 md:p-8 rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,53,39,0.06)] border border-outline-variant/10 dark:border-zinc-800">
-              <h3 className="text-xl font-headline font-bold text-primary dark:text-green-400 mb-6">Experience Performance</h3>
+              <h3 className="text-xl font-headline font-bold text-primary dark:text-green-400">Experience Performance</h3>
+              <p className="text-[11px] text-on-surface-variant dark:text-zinc-500 mt-1 mb-6 leading-relaxed">
+                Bars compare total booking count per approved listing (all statuses). Wider bar = more bookings on that experience.
+              </p>
 
               {eLoading ? (
                 <div className="flex items-center justify-center py-8">

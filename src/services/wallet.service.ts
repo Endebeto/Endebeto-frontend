@@ -65,13 +65,19 @@ export const walletService = {
   getEarnings: (params?: { page?: number; limit?: number }) =>
     api.get<EarningsListResponse>("/wallet/earnings", { params }),
 
-  getWithdrawals: (params?: { page?: number; limit?: number }) =>
+  getWithdrawals: (params?: {
+    page?: number;
+    limit?: number;
+    tab?: "pending" | "history";
+    q?: string;
+  }) =>
     api.get<{
       status: string;
       results: number;
       total: number;
       page: number;
       limit: number;
+      pages: number;
       data: { withdrawals: WithdrawalRequest[] };
     }>("/withdrawals", { params }),
 

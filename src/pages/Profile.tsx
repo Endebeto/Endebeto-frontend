@@ -371,7 +371,6 @@ function ProfileContent({
 
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
-  const [bio, setBio] = useState(user?.bio ?? "");
   const [hostStory, setHostStory] = useState(user?.hostStory ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -387,7 +386,6 @@ function ProfileContent({
     if (!user) return;
     setName(user.name);
     setEmail(user.email);
-    setBio(user.bio ?? "");
     setHostStory(user.hostStory ?? "");
     setPhone(user.phone ?? "");
   }, [user]);
@@ -415,7 +413,6 @@ function ProfileContent({
       const res = await authService.updateMe({
         name: name.trim(),
         email: email.trim(),
-        bio: bio.trim(),
         phone: phone.trim(),
         ...(user.hostStatus === "approved" ? { hostStory: hostStory.trim() } : {}),
       });
@@ -575,35 +572,23 @@ function ProfileContent({
                   </div>
                   <p className="text-[11px] text-on-surface-variant mt-1">Use international format, e.g. +251912345678</p>
                 </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-on-surface-variant mb-1.5">Bio</label>
-                  <textarea
-                    value={bio}
-                    onChange={(ev) => setBio(ev.target.value.slice(0, 500))}
-                    rows={4}
-                    maxLength={500}
-                    placeholder="Tell others a bit about you…"
-                    className="w-full text-sm bg-surface-container-low border-none rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
-                  />
-                  <p className="text-[11px] text-on-surface-variant mt-1">{bio.length}/500</p>
-                </div>
                 {user?.hostStatus === "approved" && (
                   <div className="md:col-span-2">
                     <label className="block text-xs font-semibold text-on-surface-variant mb-1.5">
-                      Host story <span className="font-normal text-on-surface-variant/80">(gist)</span>
+                      About you <span className="font-normal text-on-surface-variant/80">(guests see this on your listings)</span>
                     </label>
                     <p className="text-[11px] text-on-surface-variant mb-2 leading-relaxed">
-                      A short, personal blurb guests see on your experience pages—why you host, what you love sharing. Keep it authentic and concise.
+                      Share why you host and what guests can expect—a short introduction shown on your experience pages.
                     </p>
                     <textarea
                       value={hostStory}
-                      onChange={(ev) => setHostStory(ev.target.value.slice(0, 400))}
-                      rows={3}
-                      maxLength={400}
+                      onChange={(ev) => setHostStory(ev.target.value.slice(0, 500))}
+                      rows={4}
+                      maxLength={500}
                       placeholder="e.g. I grew up in Addis and want every guest to taste real home-style injera and hear the stories behind each dish…"
                       className="w-full text-sm bg-surface-container-low border-none rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
                     />
-                    <p className="text-[11px] text-on-surface-variant mt-1">{hostStory.length}/400</p>
+                    <p className="text-[11px] text-on-surface-variant mt-1">{hostStory.length}/500</p>
                   </div>
                 )}
               </div>
@@ -691,8 +676,7 @@ function ProfileContent({
               <div>
                 <h2 className="font-headline font-extrabold text-lg text-red-600 mb-0.5">Deactivate account</h2>
                 <p className="text-on-surface-variant text-xs">
-                  Your account is hidden and you won&apos;t be able to sign in again. Some records may be kept for legal
-                  or operational reasons (soft delete).
+                  Your profile will be hidden and you won&apos;t be able to sign in again. We may keep certain records where required by law.
                 </p>
               </div>
               {!deleteConfirm ? (
@@ -728,7 +712,7 @@ function ProfileContent({
             </div>
             <p className="mt-3 text-[11px] text-red-600/80 dark:text-red-400/90 flex items-start gap-1">
               <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
-              This calls the server to mark your account inactive. You will be signed out immediately.
+              You&apos;ll be signed out immediately after deactivation.
             </p>
           </section>
         </>

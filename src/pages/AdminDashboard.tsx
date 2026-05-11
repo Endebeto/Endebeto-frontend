@@ -113,6 +113,7 @@ const EMPTY_STATS: PlatformStats = {
   draftExperiences: 0,
   pendingExperiences: 0,
   liveExperiences: 0,
+  expiredExperiences: 0,
   suspendedExperiences: 0,
 
   grossRevenueCents: 0,
@@ -560,6 +561,7 @@ export default function AdminDashboard() {
   const expMix = [
     { name: "Live", value: stats.liveExperiences, color: "#005234" },
     { name: "Pending", value: stats.pendingExperiences, color: "#0ea5e9" },
+    { name: "Expired", value: stats.expiredExperiences, color: "#78716c" },
     { name: "Suspended", value: stats.suspendedExperiences, color: "#b45309" },
     { name: "Drafts", value: stats.draftExperiences, color: "#64748b" },
   ].filter((d) => d.value > 0);
@@ -773,6 +775,11 @@ export default function AdminDashboard() {
               accent="text-emerald-600"
             >
               <p className="text-[11px] text-on-surface-variant">
+                Expired:{" "}
+                <span className="font-bold text-stone-600 dark:text-stone-400">
+                  {fmtNum(stats.expiredExperiences)}
+                </span>
+                {" · "}
                 Suspended:{" "}
                 <span className="font-bold text-amber-700">
                   {fmtNum(stats.suspendedExperiences)}
@@ -933,7 +940,8 @@ export default function AdminDashboard() {
                   Experience listings
                 </h2>
                 <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
-                  Current catalog composition — live, pending approval, suspended, or draft.
+                  Catalog composition — live (scheduled), pending, expired (past or unset date),
+                  suspended, and drafts.
                 </p>
               </div>
               <div className="h-[260px] w-full min-h-[200px]">

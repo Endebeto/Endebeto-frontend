@@ -26,6 +26,10 @@ const HostBookings = lazy(() => import("./pages/HostBookings"));
 const Profile = lazy(() => import("./pages/Profile"));
 const MyBookings = lazy(() => import("./pages/MyBookings"));
 const BecomeHost = lazy(() => import("./pages/BecomeHost"));
+const AboutPage = lazy(() => import("./pages/AboutPage"));
+const SafetyPage = lazy(() => import("./pages/SafetyPage"));
+const TermsPage = lazy(() => import("./pages/TermsPage"));
+const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const HostApply = lazy(() => import("./pages/HostApply"));
 const HostApplicationStatus = lazy(() => import("./pages/HostApplicationStatus"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
@@ -116,6 +120,10 @@ const AppRoutes = () => (
     <Route path="/verify-email/:token" element={<VerifyEmail />} />
     <Route path="/oauth-success" element={<OAuthSuccess />} />
     <Route path="/become-host" element={<BecomeHost />} />
+    <Route path="/about" element={<AboutPage />} />
+    <Route path="/safety" element={<SafetyPage />} />
+    <Route path="/terms" element={<TermsPage />} />
+    <Route path="/privacy" element={<PrivacyPage />} />
 
     {/* Authenticated */}
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

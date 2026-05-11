@@ -16,7 +16,7 @@ import AdminLayout from "@/components/AdminLayout";
 import { adminService, type AdminReview } from "@/services/admin.service";
 import { adminQueryKeys } from "@/lib/adminQueryKeys";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 function fmtDate(iso: string) {
   try {
@@ -67,7 +67,7 @@ function ConfirmDeleteModal({
           Delete this review?
         </h3>
         <p className="text-sm text-on-surface-variant mb-2">
-          This cannot be undone. The experience’s average rating will be recalculated.
+          This cannot be undone.
         </p>
         <p className="text-xs text-on-surface line-clamp-3 bg-surface-container-low rounded-lg p-2 mb-6 border border-outline-variant/10">
           {review.review}

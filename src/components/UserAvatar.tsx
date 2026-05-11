@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { getUserInitials, isDisplayableProfilePhotoUrl } from "@/lib/profilePhoto";
+import {
+  getUserInitials,
+  isDisplayableProfilePhotoUrl,
+  normalizeProfilePhotoSrc,
+} from "@/lib/profilePhoto";
 
 type UserAvatarProps = {
   name: string | undefined | null;
@@ -26,7 +30,11 @@ export function UserAvatar({
   alt,
 }: UserAvatarProps) {
   const [imgFailed, setImgFailed] = useState(false);
-  const urlOk = isDisplayableProfilePhotoUrl(photo) && !imgFailed;
+  const src =
+    photo != null && typeof photo === "string"
+      ? normalizeProfilePhotoSrc(photo)
+      : "";
+  const urlOk = isDisplayableProfilePhotoUrl(src) && !imgFailed;
 
   useEffect(() => {
     setImgFailed(false);
@@ -36,13 +44,18 @@ export function UserAvatar({
     <div className={`flex items-center justify-center shrink-0 overflow-hidden ${className}`}>
       {urlOk ? (
         <img
-          src={photo!.trim()}
+          src={src}
           alt={alt ?? name ?? ""}
           className={imgClassName}
+          /** Google (and some OAuth) CDNs omit or block images when a referrer is sent from another origin */
+          referrerPolicy="no-referrer"
+          decoding="async"
           onError={() => setImgFailed(true)}
         />
       ) : (
-        <span className={`font-headline font-bold select-none ${initialsClassName}`}>
+        <span
+          className={`font-headline font-semibold select-none leading-none tracking-tight scale-[0.92] ${initialsClassName}`}
+        >
           {getUserInitials(name)}
         </span>
       )}

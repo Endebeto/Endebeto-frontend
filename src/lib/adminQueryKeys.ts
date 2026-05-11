@@ -25,7 +25,11 @@ export const adminQueryKeys = {
     ["admin", "reviews", filters] as const,
   reviewsPrefix: ["admin", "reviews"] as const,
 
-  withdrawals: () => ["admin", "withdrawals"] as const,
+  withdrawals: (filters: {
+    tab: "pending" | "history";
+    page: number;
+    search: string;
+  }) => ["admin", "withdrawals", filters] as const,
   withdrawalsPrefix: ["admin", "withdrawals"] as const,
 
   hostApplications: (status: string) => ["admin", "host-applications", status] as const,
