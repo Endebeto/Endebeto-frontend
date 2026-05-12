@@ -143,7 +143,12 @@ function ExperienceBrowseCard({ exp }: { exp: Experience }) {
         </div>
         <p className="text-on-surface-variant text-xs mb-1.5 flex items-center gap-1">
           <MapPin className="h-3 w-3 shrink-0" />
-          {exp.location} &bull; {exp.duration}
+          {exp.city &&
+          exp.city.trim() &&
+          !exp.location.toLowerCase().includes(exp.city.toLowerCase().trim())
+            ? `${exp.location} · ${exp.city}`
+            : exp.location}{" "}
+          &bull; {exp.duration}
         </p>
         {exp.nextOccurrenceAt && (
           <p className="text-[10px] text-on-surface-variant mb-1 flex items-center gap-1">

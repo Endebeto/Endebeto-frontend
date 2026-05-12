@@ -30,6 +30,7 @@ export interface Experience {
     hostStory?: string;
   };
   location: string;
+  city?: string | null;
   address?: string;
   latitude?: number | null;
   longitude?: number | null;

@@ -1,10 +1,11 @@
 import { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FileEdit, Banknote, ImageIcon, MapPin, Upload, X,
   CheckCircle2, Circle, Star, MessageCircle, ArrowLeft,
-  ShieldCheck, Plus, Lock, AlertCircle, Save,
+  ShieldCheck, Plus, Lock, AlertCircle, Save, Info,
 } from "lucide-react";
 import HostLayout from "@/components/HostLayout";
 import LocationPicker, { type PinLocation } from "@/components/LocationPicker";
@@ -32,34 +33,51 @@ interface FormData {
 
 const STEPS = ["Info", "Schedule", "Media", "Location"];
 
+/** Mount above host layout + Leaflet (see index.html `#modal-root`, z-index in index.css). */
+function getHostModalContainer(): HTMLElement {
+  return document.getElementById("modal-root") ?? document.body;
+}
+
 /* ─── success modal ──────────────────────────────────── */
 function SuccessModal({ onDashboard, onPreview }: { onDashboard: () => void; onPreview: () => void }) {
-  return (
-    <div className="fixed inset-0 z-[60] bg-primary/20 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-zinc-900 max-w-md w-full rounded-2xl p-8 text-center shadow-2xl border border-outline-variant/10 dark:border-zinc-700">
-        <div className="w-20 h-20 bg-secondary-container/50 dark:bg-emerald-900/40 text-primary rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 className="h-10 w-10 text-primary dark:text-green-400" />
-        </div>
-        <h2 className="text-3xl font-headline font-extrabold text-primary dark:text-green-400 mb-3">Pending Approval</h2>
-        <p className="text-on-surface-variant dark:text-zinc-400 mb-8 leading-relaxed">
-          Your experience has been submitted! Our editorial team will review the details and notify you within 48 hours.
-        </p>
-        <div className="space-y-3">
-          <button
-            onClick={onDashboard}
-            className="w-full py-4 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold transition-colors"
-          >
-            Go to Dashboard
-          </button>
-          <button
-            onClick={onPreview}
-            className="w-full py-4 text-primary dark:text-green-400 font-bold hover:bg-surface dark:hover:bg-zinc-800 rounded-xl transition-colors"
-          >
-            View My Experiences
-          </button>
+  return createPortal(
+    (
+      <div
+        className="fixed inset-0 bg-primary/20 backdrop-blur-sm flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="host-create-success-title"
+      >
+        <div className="bg-white dark:bg-zinc-900 max-w-md w-full rounded-2xl p-8 text-center shadow-2xl border border-outline-variant/10 dark:border-zinc-700">
+          <div className="w-20 h-20 bg-secondary-container/50 dark:bg-emerald-900/40 text-primary rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 className="h-10 w-10 text-primary dark:text-green-400" />
+          </div>
+          <h2 id="host-create-success-title" className="text-3xl font-headline font-extrabold text-primary dark:text-green-400 mb-3">
+            Pending Approval
+          </h2>
+          <p className="text-on-surface-variant dark:text-zinc-400 mb-8 leading-relaxed">
+            Your experience has been submitted! Our editorial team will review the details and notify you within 48 hours.
+          </p>
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={onDashboard}
+              className="w-full py-4 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold transition-colors"
+            >
+              Go to Dashboard
+            </button>
+            <button
+              type="button"
+              onClick={onPreview}
+              className="w-full py-4 text-primary dark:text-green-400 font-bold hover:bg-surface dark:hover:bg-zinc-800 rounded-xl transition-colors"
+            >
+              View My Experiences
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    ),
+    getHostModalContainer(),
   );
 }
 
@@ -530,6 +548,15 @@ export default function HostCreateExperience() {
                     onChange={set("address")}
                     className={`${inputCls} resize-none`}
                   />
+                </div>
+
+                <div className="flex gap-3 rounded-xl border border-primary/20 dark:border-green-500/25 bg-primary/5 dark:bg-emerald-950/35 px-4 py-3 text-sm text-on-surface-variant dark:text-zinc-300 leading-relaxed">
+                  <Info className="h-5 w-5 shrink-0 text-primary dark:text-green-400 mt-0.5" aria-hidden />
+                  <p>
+                    <span className="font-semibold text-on-surface dark:text-zinc-100">Use the map</span>
+                    {" — "}
+                    Search for your meetup spot or tap the map to drop a pin. We use those coordinates (not just the text above) to place your listing on the map and set the city guests can search by.
+                  </p>
                 </div>
 
                 <LocationPicker

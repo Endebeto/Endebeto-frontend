@@ -67,11 +67,17 @@ export function ContactHostButton({ host, experienceTitle, booked, compact = fal
 
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className={`absolute z-50 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/20 dark:border-zinc-700 p-4 w-64 ${
-            compact ? "left-0 top-full mt-2" : "right-0 top-full mt-2"
-          }`}>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant dark:text-zinc-400 mb-3">
+          <div className="fixed inset-0 z-40 bg-black/20 sm:bg-transparent" onClick={() => setOpen(false)} aria-hidden />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Contact host"
+            className={`z-50 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/20 dark:border-zinc-700 p-4 min-w-0
+              max-sm:fixed max-sm:left-4 max-sm:right-4 max-sm:top-[42%] max-sm:-translate-y-1/2 max-sm:w-auto max-sm:max-h-[min(28rem,calc(100vh-5rem))] max-sm:overflow-y-auto
+              sm:w-64 sm:absolute sm:max-w-[min(16rem,calc(100vw-1.5rem))]
+              ${compact ? "sm:left-0 sm:top-full sm:mt-2" : "sm:right-0 sm:top-full sm:mt-2"}`}
+          >
+            <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant dark:text-zinc-400 mb-3 break-words">
               Contact {host?.name?.split(" ")[0] ?? "Host"} via
             </p>
 
@@ -87,14 +93,14 @@ export function ContactHostButton({ host, experienceTitle, booked, compact = fal
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-[#25D366]/10 transition-colors mb-2 group"
+                className="flex items-center gap-3 w-full min-w-0 p-3 rounded-xl hover:bg-[#25D366]/10 transition-colors mb-2 group"
               >
                 <div className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center shrink-0">
                   <MessageCircle className="h-4 w-4 text-white" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-on-surface dark:text-white group-hover:text-[#128C7E]">WhatsApp</p>
-                  <p className="text-[11px] text-on-surface-variant dark:text-zinc-400">Opens WhatsApp with pre-filled message</p>
+                  <p className="text-[11px] text-on-surface-variant dark:text-zinc-400 break-words">Opens WhatsApp with pre-filled message</p>
                 </div>
               </a>
             )}
@@ -103,19 +109,19 @@ export function ContactHostButton({ host, experienceTitle, booked, compact = fal
               <a
                 href={mailtoLink}
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-primary/5 transition-colors group"
+                className="flex items-center gap-3 w-full min-w-0 p-3 rounded-xl hover:bg-primary/5 transition-colors group"
               >
                 <div className="w-9 h-9 rounded-full bg-primary/10 dark:bg-green-900/30 flex items-center justify-center shrink-0">
                   <Mail className="h-4 w-4 text-primary dark:text-green-400" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-on-surface dark:text-white group-hover:text-primary dark:group-hover:text-green-400">Email</p>
-                  <p className="text-[11px] text-on-surface-variant dark:text-zinc-400">Opens your email client</p>
+                  <p className="text-[11px] text-on-surface-variant dark:text-zinc-400 break-words">Opens your email client</p>
                 </div>
               </a>
             )}
 
-            <p className="text-[10px] text-on-surface-variant/60 dark:text-zinc-500 mt-3 leading-relaxed">
+            <p className="text-[10px] text-on-surface-variant/60 dark:text-zinc-500 mt-3 leading-relaxed break-words">
               Contact info is only visible because you have a booking for this experience.
             </p>
           </div>

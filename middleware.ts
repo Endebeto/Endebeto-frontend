@@ -1,5 +1,35 @@
 import { next } from "@vercel/edge";
 
+/** Same-origin API proxy (Netlify: public/_redirects; Vercel: this middleware). */
+function getSpaProxyOrigin(): string {
+  const raw = (process.env.SPA_PROXY_API_ORIGIN || process.env.NETLIFY_API_ORIGIN || "").trim();
+  return raw.replace(/\/$/, "");
+}
+
+/** Forward /api/* to Render (or other API host). Keeps JWT cookies on the Vercel origin (Brave-friendly). */
+async function proxyApiToOrigin(request: Request, proxyOrigin: string): Promise<Response> {
+  const url = new URL(request.url);
+  const targetUrl = `${proxyOrigin}${url.pathname}${url.search}`;
+
+  const headers = new Headers(request.headers);
+  headers.delete("host");
+  headers.delete("connection");
+
+  const method = request.method;
+  const init: RequestInit & { duplex?: string } = {
+    method,
+    headers,
+    redirect: "manual",
+  };
+
+  if (method !== "GET" && method !== "HEAD" && request.body) {
+    init.body = request.body;
+    init.duplex = "half";
+  }
+
+  return fetch(targetUrl, init);
+}
+
 /** Match common link-preview fetchers; omit generic Googlebot so crawl stays on the SPA. */
 const CRAWLER_UA =
   /facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|Pinterest|vkShare|Embedly|redditbot|Applebot/i;
@@ -29,16 +59,26 @@ function absoluteImageUrl(image: string | undefined, requestUrl: string): string
 }
 
 export const config = {
-  matcher: ["/experiences/:id"],
+  matcher: ["/experiences/:id", "/api/:path*"],
 };
 
 export default async function middleware(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const proxyOrigin = getSpaProxyOrigin();
+
+  if (
+    proxyOrigin &&
+    /^https:\/\//i.test(proxyOrigin) &&
+    url.pathname.startsWith("/api/")
+  ) {
+    return proxyApiToOrigin(request, proxyOrigin);
+  }
+
   const ua = request.headers.get("user-agent") ?? "";
   if (!CRAWLER_UA.test(ua)) {
     return next();
   }
 
-  const url = new URL(request.url);
   const segments = url.pathname.split("/").filter(Boolean);
   if (segments.length !== 2 || segments[0] !== "experiences") {
     return next();

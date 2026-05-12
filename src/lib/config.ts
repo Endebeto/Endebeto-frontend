@@ -6,7 +6,7 @@
 
 const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
 
-if (import.meta.env.PROD && !apiUrl) {
+if (import.meta.env.PROD && !apiUrl?.trim()) {
   // Fail loudly in production so a misconfigured deployment is caught
   // immediately rather than silently hitting localhost.
   throw new Error(
@@ -14,4 +14,9 @@ if (import.meta.env.PROD && !apiUrl) {
   );
 }
 
-export const API_BASE_URL = apiUrl ?? "http://localhost:3000/api/v1";
+/**
+ * Production: set VITE_API_URL (full API base, or /api/v1 with SPA_PROXY_API_ORIGIN on the host).
+ * Dev: defaults to /api/v1 (Vite proxy).
+ */
+export const API_BASE_URL =
+  import.meta.env.PROD ? apiUrl!.trim() : apiUrl?.trim() || "/api/v1";

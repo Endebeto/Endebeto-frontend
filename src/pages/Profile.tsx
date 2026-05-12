@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -34,6 +32,7 @@ import { authService } from "@/services/auth.service";
 import type { User as AuthUser } from "@/services/auth.service";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import { getFriendlyErrorMessage } from "@/lib/errors";
+import { API_BASE_URL } from "@/lib/config";
 
 /* ─── types ─────────────────────────────────────────────── */
 type Tab = "personal" | "security" | "notifications" | "bookings";
@@ -644,7 +643,7 @@ function ProfileContent({
                 </div>
               ) : (
                 <a
-                  href={`${API_BASE}/auth/google`}
+                  href={`${API_BASE_URL}/auth/google`}
                   className="inline-flex items-center gap-2.5 border border-outline-variant/40 px-4 py-2.5 rounded-xl text-sm font-headline font-semibold text-on-surface hover:bg-surface-container transition-colors"
                 >
                   <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">

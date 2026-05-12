@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import authSideImage from "@/assets/hero-coffee.jpg";
 import { useAuth } from "@/context/AuthContext";
 import { getFriendlyErrorMessage } from "@/lib/errors";
+import { API_BASE_URL } from "@/lib/config";
 import { BrandLogo } from "@/components/BrandLogo";
 
 const Login = () => {
@@ -165,7 +166,7 @@ const Login = () => {
 
           <div className="space-y-2.5">
             <a
-              href={`${import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1"}/auth/google`}
+              href={`${API_BASE_URL}/auth/google`}
               className="flex items-center justify-center gap-2.5 w-full py-2.5 border border-outline-variant/50 rounded-xl text-sm font-headline font-semibold text-on-surface-variant hover:bg-surface-container transition-colors"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24">
