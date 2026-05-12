@@ -177,7 +177,12 @@ export function useExperiencesBrowse() {
     ],
   );
 
-  const { data: listRes, isLoading, isFetching, isPlaceholderData } = useQuery({
+  const {
+    data: listRes,
+    isLoading,
+    isFetching,
+    isPlaceholderData,
+  } = useQuery({
     queryKey: ["experiences", "browse", listParams] as const,
     queryFn: () => experiencesService.getAll(listParams),
     placeholderData: keepPreviousData,
@@ -185,9 +190,8 @@ export function useExperiencesBrowse() {
   });
 
   const listBody = listRes?.data;
-  const { items: pageItems, total: totalCount } = normalizeApiList<Experience>(
-    listBody,
-  );
+  const { items: pageItems, total: totalCount } =
+    normalizeApiList<Experience>(listBody);
 
   const locationActive = locationQ.trim() !== "";
   const priceActive =
@@ -213,8 +217,7 @@ export function useExperiencesBrowse() {
     setPage(1);
   }, [catalogMax]);
 
-  const totalPages =
-    Math.ceil(totalCount / EXPERIENCES_BROWSE_PAGE_SIZE) || 1;
+  const totalPages = Math.ceil(totalCount / EXPERIENCES_BROWSE_PAGE_SIZE) || 1;
 
   useEffect(() => {
     if (totalCount <= 0) return;

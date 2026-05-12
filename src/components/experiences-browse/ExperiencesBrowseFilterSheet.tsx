@@ -1,6 +1,11 @@
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import type { ExperiencesBrowseVM } from "@/hooks/useExperiencesBrowse";
 
@@ -46,8 +51,12 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
         )}
       >
         <SheetHeader className="space-y-0 border-b border-outline-variant/20 px-4 pb-3 pt-4 text-left">
-          <SheetTitle className="font-headline text-lg text-primary">Filters</SheetTitle>
-          <p className="pt-1 text-xs text-muted-foreground">Refine listings, then view results.</p>
+          <SheetTitle className="font-headline text-lg text-primary">
+            Filters
+          </SheetTitle>
+          <p className="pt-1 text-xs text-muted-foreground">
+            Refine listings, then view results.
+          </p>
         </SheetHeader>
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
           <div>
@@ -100,7 +109,8 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
               </div>
             </div>
             <p className="mt-2 text-center text-xs text-on-surface-variant">
-              {minPrice.toLocaleString()} – {maxPriceFilter.toLocaleString()} ETB
+              {minPrice.toLocaleString()} – {maxPriceFilter.toLocaleString()}{" "}
+              ETB
             </p>
           </div>
           <div>
@@ -186,7 +196,12 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
         </div>
         <div className="flex gap-2 border-t border-outline-variant/20 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {showSummaryBar ? (
-            <Button type="button" variant="outline" className="font-headline" onClick={clearAll}>
+            <Button
+              type="button"
+              variant="outline"
+              className="font-headline"
+              onClick={clearAll}
+            >
               Clear all
             </Button>
           ) : null}
@@ -197,7 +212,10 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
           >
             {isFetching ? (
               <>
-                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                <Loader2
+                  className="h-4 w-4 shrink-0 animate-spin"
+                  aria-hidden
+                />
                 <span>Loading results…</span>
               </>
             ) : (

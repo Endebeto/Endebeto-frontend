@@ -12,7 +12,10 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import DestinationCard from "@/components/DestinationCard";
-import { experiencesService, type Experience } from "@/services/experiences.service";
+import {
+  experiencesService,
+  type Experience,
+} from "@/services/experiences.service";
 import { normalizeApiList } from "@/lib/normalizeApiList";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -368,9 +371,7 @@ const Index = () => {
         />
 
         {/* SVG dashed path decoration */}
-        <svg
-          className="pointer-events-none absolute inset-0 z-[2] h-full w-full"
-        >
+        <svg className="pointer-events-none absolute inset-0 z-[2] h-full w-full">
           <path
             d="M 300,200 Q 420,360 520,410 T 730,570"
             stroke="white"
