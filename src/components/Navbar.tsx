@@ -12,10 +12,8 @@ import {
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
-import {
-  ReviewPendingBanner,
-  REVIEW_BANNER_HEIGHT_PX,
-} from "@/components/ReviewPendingBanner";
+import { ReviewPendingBanner } from "@/components/ReviewPendingBanner";
+import { REVIEW_BANNER_HEIGHT_PX } from "@/components/reviewPendingBannerConstants";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/BrandLogo";
 

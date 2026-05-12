@@ -153,7 +153,6 @@ export default function HostApplicationStatus() {
               const done    = i < activeStage;
               const active  = i === activeStage;
               const failed  = isRejected && i === STAGES.length - 1;
-              const future  = i > activeStage;
 
               return (
                 <div key={stage.key} className="flex items-start flex-1">

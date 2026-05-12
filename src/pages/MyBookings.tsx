@@ -15,7 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { MY_BOOKINGS_REVIEW_BANNER_QUERY_KEY } from "@/components/ReviewPendingBanner";
+import { MY_BOOKINGS_REVIEW_BANNER_QUERY_KEY } from "@/components/reviewPendingBannerConstants";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import { experiencesService } from "@/services/experiences.service";
 import { reviewsService } from "@/services/reviews.service";

@@ -234,8 +234,11 @@ export interface AdminBooking {
 
 export interface SuspendExperienceNotifications {
   hostEmailed: boolean;
+  /** Guest count for upcoming bookings (emails may be sent after the HTTP response). */
   guestsEmailed: number;
   emailConfigured: boolean;
+  /** When true, notification emails are dispatched after the response returns. */
+  emailQueued?: boolean;
 }
 
 /* ─── Admin Users ────────────────────────────────────────── */
@@ -402,7 +405,11 @@ export const adminService = {
       status: string;
       data: {
         data: AdminExperience;
-        notifications: { guestsEmailed: number; emailConfigured: boolean };
+        notifications: {
+          guestsEmailed: number;
+          emailConfigured: boolean;
+          emailQueued?: boolean;
+        };
       };
     }>(`/experiences/${id}/reinstate`),
 
@@ -449,7 +456,11 @@ export const adminService = {
       status: string;
       data: {
         data: AdminUser;
-        notifications: { userEmailed: boolean; emailConfigured: boolean };
+        notifications: {
+          userEmailed: boolean;
+          emailConfigured: boolean;
+          emailQueued?: boolean;
+        };
       };
     }>(`/users/${id}/suspend`, { reason }),
   reinstateUser: (id: string) =>
@@ -457,7 +468,11 @@ export const adminService = {
       status: string;
       data: {
         data: AdminUser;
-        notifications: { userEmailed: boolean; emailConfigured: boolean };
+        notifications: {
+          userEmailed: boolean;
+          emailConfigured: boolean;
+          emailQueued?: boolean;
+        };
       };
     }>(`/users/${id}/reinstate`),
 
@@ -466,7 +481,11 @@ export const adminService = {
       status: string;
       data: {
         data: AdminUser;
-        notifications: { userEmailed: boolean; emailConfigured: boolean };
+        notifications: {
+          userEmailed: boolean;
+          emailConfigured: boolean;
+          emailQueued?: boolean;
+        };
       };
     }>(`/users/${id}/suspend-host-listings`, { reason }),
 
@@ -475,7 +494,11 @@ export const adminService = {
       status: string;
       data: {
         data: AdminUser;
-        notifications: { userEmailed: boolean; emailConfigured: boolean };
+        notifications: {
+          userEmailed: boolean;
+          emailConfigured: boolean;
+          emailQueued?: boolean;
+        };
       };
     }>(`/users/${id}/reinstate-host-listings`),
 

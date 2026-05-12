@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FileEdit, Banknote, ImageIcon, MapPin, Upload, X,
-  CheckCircle2, Circle, Star, MessageCircle, ArrowLeft,
+  CheckCircle2, Circle, Star, MessageCircle,
   ShieldCheck, Plus, Lock, AlertCircle, Save, Info,
 } from "lucide-react";
 import HostLayout from "@/components/HostLayout";

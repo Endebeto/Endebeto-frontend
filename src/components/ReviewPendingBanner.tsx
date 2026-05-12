@@ -3,6 +3,10 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { X, Star } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import {
+  MY_BOOKINGS_REVIEW_BANNER_QUERY_KEY,
+  REVIEW_BANNER_HEIGHT_PX,
+} from "@/components/reviewPendingBannerConstants";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import {
   canOfferReview,
@@ -11,9 +15,6 @@ import {
 } from "@/lib/reviewEligibility";
 
 const DISMISS_KEY_PREFIX = "endebeto_dismissReviewBanner:";
-
-export const REVIEW_BANNER_HEIGHT_PX = 44;
-export const MY_BOOKINGS_REVIEW_BANNER_QUERY_KEY = ["my-bookings", "review-banner"] as const;
 
 function isDismissedInStorage(experienceId: string): boolean {
   try {
@@ -43,7 +44,9 @@ export function ReviewPendingBanner({
   onVisibleChange?: (visible: boolean) => void;
 }) {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const [dismissVersion, setDismissVersion] = useState(0);
+  const [sessionDismissed, setSessionDismissed] = useState<Record<string, true>>(
+    {},
+  );
 
   const showAsGuest =
     isAuthenticated && !authLoading && user?.role === "user";
@@ -64,11 +67,12 @@ export function ReviewPendingBanner({
       if (!canOfferReview(b)) continue;
       if (b.userHasReviewed === true) continue;
       const exId = getExperienceId(b);
+      if (sessionDismissed[exId]) continue;
       if (isDismissedInStorage(exId)) continue;
       return { booking: b, experienceId: exId };
     }
     return null;
-  }, [data, dismissVersion]);
+  }, [data, sessionDismissed]);
 
   const visible = Boolean(showAsGuest && !isLoading && pending);
 
@@ -78,7 +82,7 @@ export function ReviewPendingBanner({
 
   const handleDismiss = (experienceId: string) => {
     dismissInStorage(experienceId);
-    setDismissVersion((v) => v + 1);
+    setSessionDismissed((d) => ({ ...d, [experienceId]: true }));
   };
 
   if (!showAsGuest || isLoading || !pending) return null;
