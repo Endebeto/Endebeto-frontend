@@ -18,5 +18,10 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts"]
+  "include": [
+    "vite.config.ts",
+    "middleware.ts",
+    "src/edge-shared/**/*.ts",
+    "netlify/edge-functions/**/*.ts"
+  ]
 }

@@ -2,7 +2,9 @@
  * Netlify: writes public/_redirects before vite build.
  * If SPA_PROXY_API_ORIGIN (or legacy NETLIFY_API_ORIGIN) is https://api-host, proxies /api/* there
  * so the browser stays same-origin (strict cookie browsers). Else SPA fallback only.
- * Pair with VITE_API_URL=/api/v1. Vercel uses middleware.ts with the same env vars.
+ * Pair with VITE_API_URL=/api/v1. Vercel uses middleware.ts; Netlify uses
+ * netlify/edge-functions/experience-link-preview.ts — set EXPERIENCE_META_API_URL
+ * (same as .env.example) so link previews fetch the backend from Edge.
  */
 import fs from "node:fs";
 import path from "node:path";
