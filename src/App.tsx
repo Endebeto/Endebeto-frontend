@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import AdminRouteLayout from "@/components/AdminRouteLayout";
+import HostRouteLayout from "@/components/HostRouteLayout";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -131,21 +133,32 @@ const AppRoutes = () => (
     <Route path="/host/apply" element={<ProtectedRoute><HostApply /></ProtectedRoute>} />
     <Route path="/host/application-status" element={<ProtectedRoute><HostApplicationStatus /></ProtectedRoute>} />
 
-    {/* Host (approved hosts + admins) */}
-    <Route path="/host-dashboard" element={<ProtectedRoute allowedRoles={["host"]}><HostDashboard /></ProtectedRoute>} />
-    <Route path="/host/wallet" element={<ProtectedRoute allowedRoles={["host"]}><HostWallet /></ProtectedRoute>} />
-    <Route path="/host/experiences" element={<ProtectedRoute allowedRoles={["host"]}><HostExperiences /></ProtectedRoute>} />
-    <Route path="/host/experiences/create" element={<ProtectedRoute allowedRoles={["host"]}><HostCreateExperience /></ProtectedRoute>} />
-    <Route path="/host/experiences/:id/edit" element={<ProtectedRoute allowedRoles={["host"]}><HostEditExperience /></ProtectedRoute>} />
-    <Route path="/host/bookings" element={<ProtectedRoute allowedRoles={["host"]}><HostBookings /></ProtectedRoute>} />
+    {/* Host dashboard shell: layout stays mounted; lazy leaf chunks suspend inside Suspense */}
+    <Route element={<ProtectedRoute allowedRoles={["host"]}><HostRouteLayout /></ProtectedRoute>}>
+      <Route path="/host-dashboard" element={<HostDashboard />} />
+      <Route path="/host/wallet" element={<HostWallet />} />
+      <Route path="/host/experiences" element={<HostExperiences />} />
+      <Route path="/host/experiences/create" element={<HostCreateExperience />} />
+      <Route path="/host/experiences/:id/edit" element={<HostEditExperience />} />
+      <Route path="/host/bookings" element={<HostBookings />} />
+    </Route>
 
-    {/* Admin */}
-    <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
-    <Route path="/admin/experiences" element={<ProtectedRoute allowedRoles={["admin"]}><AdminExperiences /></ProtectedRoute>} />
-    <Route path="/admin/host-applications" element={<ProtectedRoute allowedRoles={["admin"]}><AdminHostApplications /></ProtectedRoute>} />
-    <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["admin"]}><AdminUsers /></ProtectedRoute>} />
-    <Route path="/admin/payouts" element={<ProtectedRoute allowedRoles={["admin"]}><AdminPayouts /></ProtectedRoute>} />
-    <Route path="/admin/reviews" element={<ProtectedRoute allowedRoles={["admin"]}><AdminReviews /></ProtectedRoute>} />
+    {/* Admin: nested under /admin so outlet + Suspense wrap lazy pages */}
+    <Route
+      path="/admin"
+      element={
+        <ProtectedRoute allowedRoles={["admin"]}>
+          <AdminRouteLayout />
+        </ProtectedRoute>
+      }
+    >
+      <Route index element={<AdminDashboard />} />
+      <Route path="users" element={<AdminUsers />} />
+      <Route path="experiences" element={<AdminExperiences />} />
+      <Route path="host-applications" element={<AdminHostApplications />} />
+      <Route path="payouts" element={<AdminPayouts />} />
+      <Route path="reviews" element={<AdminReviews />} />
+    </Route>
 
     <Route path="*" element={<NotFound />} />
   </Routes>

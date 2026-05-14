@@ -6,7 +6,6 @@ interface DestinationCardProps {
   image: string;
   location: string;
   title: string;
-  description: string;
   reviewCount: number;
 }
 
@@ -15,12 +14,11 @@ const DestinationCard = ({
   image,
   location,
   title,
-  description,
   reviewCount,
 }: DestinationCardProps) => {
   return (
     <Link to={`/experiences/${id}`} className="group block">
-      <div className="relative overflow-hidden rounded-2xl h-[400px] shadow-lg hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300">
+      <div className="relative overflow-hidden rounded-2xl h-[340px] shadow-lg hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300">
         {/* Full-bleed image */}
         <img
           src={image}
@@ -40,18 +38,15 @@ const DestinationCard = ({
 
         {/* Bottom content */}
         <div className="absolute bottom-0 left-0 right-0 p-5">
-          <div className="flex items-center gap-1 text-white/70 text-xs mb-2">
-            <MapPin className="h-3 w-3" />
-            <span>{location}</span>
+          <div className="mb-2 flex items-center gap-1 text-xs text-white/70">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="line-clamp-1">{location}</span>
           </div>
-          <h3 className="font-headline font-bold text-white text-xl leading-snug mb-1">
+          <h3 className="mb-3 line-clamp-2 font-headline text-lg font-bold leading-snug text-white sm:text-xl">
             {title}
           </h3>
-          <p className="text-white/65 text-sm leading-relaxed line-clamp-2 mb-4">
-            {description}
-          </p>
           <div className="flex items-center justify-between">
-            <span className="text-white/70 text-xs">
+            <span className="text-xs text-white/70">
               {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
             </span>
             <div className="w-8 h-8 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/25 group-hover:bg-accent group-hover:border-accent transition-colors duration-300">

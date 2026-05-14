@@ -1,5 +1,4 @@
 import { Leaf } from "lucide-react";
-import AdminLayout from "@/components/AdminLayout";
 import { AdminUserDrawer } from "@/components/admin-users/AdminUserDrawer";
 import { AdminUsersConfirmDialog } from "@/components/admin-users/AdminUsersConfirmDialog";
 import { AdminUsersPageHeader } from "@/components/admin-users/AdminUsersPageHeader";
@@ -7,16 +6,19 @@ import { AdminUsersTableCard } from "@/components/admin-users/AdminUsersTableCar
 import { SuspendHostListingsDialog } from "@/components/admin-users/SuspendHostListingsDialog";
 import { SuspendUserDialog } from "@/components/admin-users/SuspendUserDialog";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
+import { useSyncAdminHeader } from "@/hooks/useSyncAdminHeader";
 
 export default function AdminUsers() {
   const admin = useAdminUsers();
 
+  useSyncAdminHeader({
+    searchPlaceholder: "Search users by name or email...",
+    searchValue: admin.search,
+    onSearch: admin.onSearch,
+  });
+
   return (
-    <AdminLayout
-      searchPlaceholder="Search users by name or email..."
-      searchValue={admin.search}
-      onSearch={admin.onSearch}
-    >
+    <>
       <div className="flex-1 overflow-y-auto">
         <main className="p-6">
           <div className="max-w-7xl mx-auto space-y-6">
@@ -128,6 +130,6 @@ export default function AdminUsers() {
           </span>
         </div>
       </div>
-    </AdminLayout>
+    </>
   );
 }

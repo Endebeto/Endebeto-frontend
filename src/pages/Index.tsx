@@ -24,6 +24,7 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
 import TestimonialSlider from "@/components/TestimonialSlider";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
 
 /* ─── static data ─────────────────────────────────────── */
 
@@ -49,13 +50,13 @@ const heroSlides = [
       "Follow local guides across open grasslands in Maasai lands, with heritage, beadwork, and stories carried for generations.",
   },
   {
-    image: "/imgs/hero-2.jpg",
+    image: "/imgs/hero-2.png",
     title: "Stand inside living tradition",
     subtitle:
       "Circle dances, colour, and community, with experiences that put you at the heart of the celebration, not on the sidelines.",
   },
   {
-    image: "/imgs/hero-3.jpg",
+    image: "/imgs/hero-3.png",
     title: "Addis after dark. Modern Ethiopia, still unmistakably home",
     subtitle:
       "From lit towers to garden paths, discover city stays and urban experiences that pair energy with Ethiopian warmth.",
@@ -173,6 +174,12 @@ function StatItem({
 /* ─── page ─────────────────────────────────────────────── */
 
 const Index = () => {
+  const { user } = useAuth();
+  /** Landing CTA is for guests / non-hosts; hide for admins and approved hosts */
+  const showBecomeHostCta = !(
+    user?.role === "admin" || user?.hostStatus === "approved"
+  );
+
   const [current, setCurrent] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(
     () =>
@@ -325,7 +332,7 @@ const Index = () => {
             <img
               src={heroSlides[current].image}
               alt={heroSlides[current].title}
-              className="h-full w-full object-cover object-[center_30%] md:object-center"
+              className="h-full w-full object-cover object-[center_35%] lg:object-[26%_center]"
               loading="eager"
               decoding="async"
               sizes="100vw"
@@ -336,7 +343,7 @@ const Index = () => {
                 src={heroSlides[baseIdx].image}
                 alt=""
                 aria-hidden
-                className="absolute inset-0 z-0 h-full w-full object-cover object-[center_30%] md:object-center"
+                className="absolute inset-0 z-0 h-full w-full object-cover object-[center_35%] lg:object-[26%_center]"
                 loading={baseIdx === 0 ? "eager" : "lazy"}
                 decoding="async"
                 sizes="100vw"
@@ -347,7 +354,7 @@ const Index = () => {
                 alt=""
                 aria-hidden
                 className={cn(
-                  "absolute inset-0 z-10 h-full w-full object-cover object-[center_30%] md:object-center ease-in-out motion-reduce:transition-none",
+                  "absolute inset-0 z-10 h-full w-full object-cover object-[center_35%] lg:object-[26%_center] ease-in-out motion-reduce:transition-none",
                   overlayVisible ? "opacity-100" : "opacity-0",
                 )}
                 style={{
@@ -370,23 +377,9 @@ const Index = () => {
           aria-hidden
         />
 
-        {/* SVG dashed path decoration */}
-        <svg className="pointer-events-none absolute inset-0 z-[2] h-full w-full">
-          <path
-            d="M 300,200 Q 420,360 520,410 T 730,570"
-            stroke="white"
-            strokeWidth="2"
-            strokeDasharray="10,10"
-            fill="none"
-            opacity="0.35"
-          />
-          <circle cx="300" cy="200" r="8" fill="#f69f0d" opacity="0.8" />
-          <circle cx="730" cy="570" r="8" fill="#f69f0d" opacity="0.8" />
-        </svg>
-
         <div className="relative z-10 flex min-h-[100svh] w-full flex-col justify-center pt-[calc(var(--header-stack)+0.75rem)] pb-8 md:min-h-[118vh] md:pb-12">
           <div className="container w-full">
-            <div className="mx-auto max-w-2xl text-center text-white">
+            <div className="mx-auto max-w-2xl text-center text-white lg:mx-0 lg:max-w-3xl lg:text-left">
               <div
                 className={cn(
                   "motion-reduce:transform-none motion-reduce:transition-none",
@@ -405,17 +398,27 @@ const Index = () => {
                 <h1 className="mb-4 font-headline text-3xl font-extrabold leading-[1.08] tracking-tight sm:text-4xl md:mb-5 md:text-5xl lg:text-6xl xl:text-7xl">
                   {heroSlides[heroCopyIdx].title}
                 </h1>
-                <p className="mb-6 max-w-xl text-sm leading-relaxed text-white/88 sm:mx-auto sm:text-base md:mb-8 md:text-lg">
+                <p className="mb-6 max-w-xl font-body text-sm leading-relaxed text-white/90 sm:mx-auto sm:text-base md:mb-8 md:text-lg lg:mx-0">
                   {heroSlides[heroCopyIdx].subtitle}
                 </p>
               </div>
-              <div className="flex justify-center">
-                <Link to="/experiences">
-                  <Button className="h-auto gap-2 rounded-2xl bg-accent px-7 py-3.5 font-headline text-sm font-bold text-accent-foreground hover:bg-accent/90 sm:text-base md:px-9 md:py-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center justify-center lg:justify-start">
+                <Link to="/experiences" className="group w-full sm:w-auto">
+                  <Button className="h-auto w-full gap-2 rounded-2xl bg-accent px-7 py-3.5 font-headline text-sm font-bold text-accent-foreground shadow-md shadow-black/10 transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:bg-accent hover:shadow-lg active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-md sm:w-auto sm:text-base md:px-9 md:py-4">
                     Browse Experiences{" "}
-                    <ArrowRight className="h-4 w-4 md:h-5 md:w-5" />
+                    <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0 md:h-5 md:w-5" />
                   </Button>
                 </Link>
+                {showBecomeHostCta && (
+                  <Link to="/become-host" className="w-full sm:w-auto">
+                    <Button
+                      variant="ghost"
+                      className="h-auto w-full rounded-2xl border border-white/45 bg-white/15 px-8 py-3.5 font-headline text-sm font-normal text-white shadow-sm shadow-black/20 backdrop-blur-md ring-1 ring-inset ring-white/25 transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-white/45 hover:bg-white/15 hover:text-white hover:ring-white/25 hover:shadow-lg active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:w-auto sm:text-base md:px-10 md:py-4"
+                    >
+                      Become a Host
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -608,8 +611,7 @@ const Index = () => {
               Featured experiences
             </h2>
             <p className="mx-auto max-w-2xl text-lg leading-relaxed text-on-surface-variant md:text-xl">
-              Hand-picked bookable experiences from our community. Browse by
-              place, pace, and passion, then lock in a date that works for you.
+              Top-rated experiences you can book today.
             </p>
           </div>
           <div
@@ -622,7 +624,7 @@ const Index = () => {
               Array.from({ length: 4 }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-[400px] rounded-2xl bg-surface-container animate-pulse"
+                  className="h-[340px] rounded-2xl bg-surface-container animate-pulse"
                 />
               ))
             ) : featuredExperiences.length > 0 ? (
@@ -633,7 +635,6 @@ const Index = () => {
                   image={exp.imageCover}
                   location={exp.location}
                   title={exp.title}
-                  description={exp.summary || exp.description}
                   reviewCount={exp.ratingsQuantity}
                 />
               ))
@@ -684,42 +685,46 @@ const Index = () => {
         </div>
       </section>
 
-      {/* ── Become a Host CTA ── */}
-      <section className="py-20 md:py-28">
-        <div className="container">
-          <div
-            ref={ctaReveal.ref}
-            className={`relative overflow-hidden rounded-3xl bg-primary-container p-8 text-center reveal sm:p-12 md:rounded-[3rem] md:p-20 lg:p-24 ${
-              ctaReveal.isVisible ? "visible" : ""
-            }`}
-          >
-            <div className="absolute inset-0">
-              <img
-                src={ctaBg}
-                alt=""
-                className="w-full h-full object-cover opacity-40"
-                loading="lazy"
-                decoding="async"
-              />
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary/60 to-black/70" />
+      {showBecomeHostCta && (
+        <>
+          {/* ── Become a Host CTA ── */}
+          <section className="py-20 md:py-28">
+            <div className="container">
+              <div
+                ref={ctaReveal.ref}
+                className={`relative overflow-hidden rounded-3xl bg-primary-container p-8 text-center reveal sm:p-12 md:rounded-[3rem] md:p-20 lg:p-24 ${
+                  ctaReveal.isVisible ? "visible" : ""
+                }`}
+              >
+                <div className="absolute inset-0">
+                  <img
+                    src={ctaBg}
+                    alt=""
+                    className="w-full h-full object-cover opacity-40"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary/60 to-black/70" />
+                </div>
+                <div className="relative z-10 mx-auto max-w-3xl">
+                  <h2 className="mb-4 font-headline text-3xl font-extrabold text-primary-foreground sm:text-4xl md:mb-6 md:text-5xl lg:text-6xl">
+                    Have a Story to Tell?
+                  </h2>
+                  <p className="mb-7 text-base text-on-primary-container sm:text-lg md:mb-10 md:text-xl">
+                    Share your heritage, guide travelers through your city, and
+                    earn by hosting unique experiences on Endebeto.
+                  </p>
+                  <Link to="/become-host">
+                    <Button className="h-auto rounded-2xl bg-tertiary-fixed px-8 py-4 font-headline text-base font-normal text-on-tertiary-fixed shadow-lg shadow-black/15 transition-shadow hover:bg-tertiary-fixed hover:text-on-tertiary-fixed hover:shadow-xl md:px-10 md:py-5 md:text-lg">
+                      Become a Host
+                    </Button>
+                  </Link>
+                </div>
+              </div>
             </div>
-            <div className="relative z-10 mx-auto max-w-3xl">
-              <h2 className="mb-4 font-headline text-3xl font-extrabold text-primary-foreground sm:text-4xl md:mb-6 md:text-5xl lg:text-6xl">
-                Have a Story to Tell?
-              </h2>
-              <p className="mb-7 text-base text-on-primary-container sm:text-lg md:mb-10 md:text-xl">
-                Share your heritage, guide travelers through your city, and earn
-                by hosting unique experiences on Endebeto.
-              </p>
-              <Link to="/become-host">
-                <Button className="h-auto rounded-2xl bg-tertiary-fixed px-8 py-4 font-headline text-base font-bold text-on-tertiary-fixed shadow-lg shadow-black/15 transition-all hover:scale-105 md:px-10 md:py-5 md:text-lg">
-                  Become a Host
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+          </section>
+        </>
+      )}
 
       <Footer />
     </div>

@@ -34,7 +34,6 @@ export function useProfileContent(
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(user?.name ?? "");
-  const [email, setEmail] = useState(user?.email ?? "");
   const [hostStory, setHostStory] = useState(user?.hostStory ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -49,7 +48,6 @@ export function useProfileContent(
   useEffect(() => {
     if (!user) return;
     setName(user.name);
-    setEmail(user.email);
     setHostStory(user.hostStory ?? "");
     setPhone(user.phone ?? "");
   }, [user]);
@@ -76,7 +74,6 @@ export function useProfileContent(
     try {
       const res = await authService.updateMe({
         name: name.trim(),
-        email: email.trim(),
         phone: phone.trim(),
         ...(user.hostStatus === "approved" ? { hostStory: hostStory.trim() } : {}),
       });
@@ -157,8 +154,6 @@ export function useProfileContent(
     fileInputRef,
     name,
     setName,
-    email,
-    setEmail,
     hostStory,
     setHostStory,
     phone,

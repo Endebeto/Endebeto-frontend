@@ -6,6 +6,7 @@ import {
   Menu,
   X,
   LogOut,
+  LogIn,
   LayoutDashboard,
   Compass,
 } from "lucide-react";
@@ -25,12 +26,18 @@ const Navbar = () => {
   const { user, isAuthenticated, loading, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [reviewBannerVisible, setReviewBannerVisible] = useState(false);
+  const isLanding = location.pathname === "/";
+  const [navFilled, setNavFilled] = useState(!isLanding);
   const onReviewBannerVisible = useCallback((visible: boolean) => {
     setReviewBannerVisible(visible);
   }, []);
 
-  const isAdmin = user?.role === "admin";
-  const isHost = user?.hostStatus === "approved" || isAdmin;
+  // Role must follow server-confirmed auth only — cached `user` from localStorage
+  // must not drive host/admin nav links until GET /users/me succeeds (§3.5).
+  const isAdmin = isAuthenticated && user?.role === "admin";
+  const isHost =
+    isAuthenticated &&
+    (user?.hostStatus === "approved" || user?.role === "admin");
 
   /* close menu on route change */
   useEffect(() => {
@@ -55,6 +62,21 @@ const Navbar = () => {
 
   /** Main nav row height — keep in sync with outer `container` min-height. */
   const NAV_ROW_HEIGHT_PX = 52;
+  /** Show nav background after this many px of vertical scroll */
+  const SCROLL_Y_FOR_NAV_BG = 48;
+
+  useEffect(() => {
+    if (!isLanding) {
+      setNavFilled(true);
+      return;
+    }
+    const onScroll = () => {
+      setNavFilled(window.scrollY >= SCROLL_Y_FOR_NAV_BG);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isLanding]);
 
   useLayoutEffect(() => {
     const px =
@@ -77,8 +99,8 @@ const Navbar = () => {
 
   /* ── nav links change based on role ── */
   const navLinks = [
+    { to: "/", label: "Home" },
     { to: "/experiences", label: "Experiences" },
-    // Only show for non-host, non-admin users (or unauthenticated)
     ...(!isAuthenticated || (!isHost && !isAdmin)
       ? [{ to: "/become-host", label: "Become a Host" }]
       : []),
@@ -90,22 +112,20 @@ const Navbar = () => {
 
   return (
     <>
-      <header className="fixed top-0 w-full z-50">
-        <nav className="w-full bg-transparent" aria-label="Main">
+      <header className="fixed top-0 z-50 w-full bg-transparent">
+        <nav
+          className={cn(
+            "w-full transition-[background-color,backdrop-filter,box-shadow,border-color] duration-300 ease-out",
+            navFilled &&
+              "border-b border-white/45 bg-white/40 shadow-sm shadow-slate-900/5 backdrop-blur-xl backdrop-saturate-150 dark:border-white/10 dark:bg-zinc-900/70 dark:shadow-black/25",
+          )}
+          aria-label="Main"
+        >
           <div
             className="container flex items-center"
             style={{ minHeight: NAV_ROW_HEIGHT_PX }}
           >
-            <div
-              className={cn(
-                "flex h-10 w-full min-w-0 items-center justify-between gap-3.5 sm:h-11 sm:gap-4",
-                "rounded-2xl px-3.5 sm:px-5",
-                "border border-white/50 bg-white/40 shadow-sm shadow-slate-900/5",
-                "backdrop-blur-xl backdrop-saturate-150",
-                "dark:border-white/10 dark:bg-zinc-900/80 dark:shadow-black/20",
-                "ring-1 ring-black/[0.04] dark:ring-white/5",
-              )}
-            >
+            <div className="flex h-10 w-full min-w-0 items-center justify-between gap-2 sm:h-11 sm:gap-3">
               <BrandLogo className="drop-shadow-sm" />
 
               <div className="hidden min-w-0 items-center gap-1 md:flex md:gap-1 lg:gap-1.5 font-headline text-[0.8125rem] sm:text-sm font-semibold tracking-tight">
@@ -114,10 +134,15 @@ const Navbar = () => {
                     key={to}
                     to={to}
                     className={cn(
-                      "shrink-0 rounded-lg px-3 py-2 font-bold transition-colors",
+                      "shrink-0 rounded-lg px-3 py-2 font-semibold transition-colors",
+                      !navFilled && "drop-shadow-sm",
                       isActive(to)
-                        ? "text-primary"
-                        : "text-slate-900/95 hover:bg-primary/10 hover:text-primary dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-primary",
+                        ? navFilled
+                          ? "text-primary"
+                          : "text-white"
+                        : navFilled
+                          ? "text-slate-900/95 hover:bg-primary/10 hover:text-primary dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-primary"
+                          : "text-white/90 hover:bg-white/10 hover:text-white",
                     )}
                   >
                     <span
@@ -135,7 +160,12 @@ const Navbar = () => {
               <div className="flex shrink-0 items-center gap-1">
                 <button
                   onClick={toggle}
-                  className="rounded-full p-2 text-slate-700 transition-colors drop-shadow-sm hover:bg-primary/10 hover:text-primary dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-primary"
+                  className={cn(
+                    "rounded-full p-2 transition-colors",
+                    navFilled
+                      ? "text-slate-700 hover:bg-primary/10 hover:text-primary dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-primary"
+                      : "text-white drop-shadow-sm hover:bg-white/10",
+                  )}
                   aria-label="Toggle dark mode"
                 >
                   {theme === "dark" ? (
@@ -145,12 +175,23 @@ const Navbar = () => {
                   )}
                 </button>
 
-                {!loading && (
+                {loading ? (
+                  <div
+                    className="hidden h-9 w-[7.25rem] animate-pulse rounded-xl bg-slate-200/70 dark:bg-zinc-700/70 md:block"
+                    aria-busy="true"
+                    aria-label="Loading session"
+                  />
+                ) : (
                   <div className="hidden items-center gap-2.5 md:flex">
                     {isAuthenticated && user ? (
                       <Link
                         to="/profile"
-                        className="group flex items-center gap-2 rounded-xl px-2 py-1 transition-colors hover:bg-primary/5 dark:hover:bg-white/5"
+                        className={cn(
+                          "group flex items-center gap-2 rounded-xl px-2 py-1 transition-colors",
+                          navFilled
+                            ? "hover:bg-primary/5 dark:hover:bg-white/5"
+                            : "text-white drop-shadow-sm hover:bg-white/10",
+                        )}
                         title={user.name}
                       >
                         <UserAvatar
@@ -161,15 +202,28 @@ const Navbar = () => {
                           imgClassName="h-full w-full rounded-full object-cover"
                           alt={user.name}
                         />
-                        <span className="max-w-[92px] truncate font-headline text-sm font-bold text-slate-800 transition-colors group-hover:text-primary dark:text-zinc-200 dark:group-hover:text-primary">
+                        <span
+                          className={cn(
+                            "max-w-[92px] truncate font-headline text-sm font-bold transition-colors",
+                            navFilled
+                              ? "text-slate-800 group-hover:text-primary dark:text-zinc-200 dark:group-hover:text-primary"
+                              : "text-white group-hover:text-white",
+                          )}
+                        >
                           {user.name?.split(" ")[0] ?? "Account"}
                         </span>
                       </Link>
                     ) : (
                       <Link
                         to="/login"
-                        className="rounded-xl bg-primary px-3.5 py-2 font-headline text-sm font-bold text-white shadow-sm shadow-primary/20 transition-opacity hover:opacity-90"
+                        className={cn(
+                          "inline-flex items-center justify-center gap-1.5 rounded-full font-headline text-sm font-semibold transition-[transform,box-shadow,background-color,border-color] duration-200",
+                          navFilled
+                            ? "bg-primary px-4 py-2 text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/92 hover:shadow-lg active:scale-[0.98]"
+                            : "border border-white/45 bg-white/15 px-4 py-2 text-white backdrop-blur-md ring-1 ring-inset ring-white/25 drop-shadow-sm hover:bg-white/25 hover:ring-white/35",
+                        )}
                       >
+                        <LogIn className="h-[0.9375rem] w-[0.9375rem] shrink-0 opacity-95" aria-hidden />
                         Sign In
                       </Link>
                     )}
@@ -178,7 +232,12 @@ const Navbar = () => {
 
                 <button
                   onClick={() => setMenuOpen((o) => !o)}
-                  className="rounded-full p-2 text-slate-700 transition-colors drop-shadow-sm hover:bg-primary/10 hover:text-primary dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-primary md:hidden"
+                  className={cn(
+                    "rounded-full p-2 transition-colors md:hidden",
+                    navFilled
+                      ? "text-slate-700 hover:bg-primary/10 hover:text-primary dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-primary"
+                      : "text-white drop-shadow-sm hover:bg-white/10",
+                  )}
                   aria-label={menuOpen ? "Close menu" : "Open menu"}
                 >
                   {menuOpen ? (
@@ -237,7 +296,7 @@ const Navbar = () => {
               <Link
                 key={to}
                 to={to}
-                className={`flex items-center gap-3 px-6 py-4 font-headline font-bold text-[0.9375rem] transition-colors ${
+                className={`flex items-center gap-3 px-6 py-4 font-headline font-semibold text-[0.9375rem] transition-colors ${
                   isActive(to)
                     ? "text-primary bg-primary/5"
                     : "text-on-surface-variant hover:text-primary hover:bg-surface-container"
@@ -249,7 +308,13 @@ const Navbar = () => {
 
             {/* Auth section */}
             <div className="border-t border-outline-variant/20 mt-2 pt-2">
-              {isAuthenticated && user ? (
+              {loading ? (
+                <div
+                  className="mx-4 mb-3 mt-1 h-12 animate-pulse rounded-xl bg-slate-200/70 dark:bg-zinc-700/70"
+                  aria-busy="true"
+                  aria-label="Loading session"
+                />
+              ) : isAuthenticated && user ? (
                 <>
                   <Link
                     to="/profile"
@@ -288,8 +353,9 @@ const Navbar = () => {
               ) : (
                 <Link
                   to="/login"
-                  className="flex items-center justify-center mx-4 mb-3 mt-1 px-4 py-3 bg-primary text-white font-headline font-bold text-[0.9375rem] rounded-xl transition-colors hover:opacity-90"
+                  className="mx-4 mb-3 mt-1 flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 font-headline text-[0.9375rem] font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-colors hover:bg-primary/92"
                 >
+                  <LogIn className="h-4 w-4 shrink-0" aria-hidden />
                   Sign In
                 </Link>
               )}

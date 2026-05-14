@@ -42,8 +42,6 @@ export function ProfileContentView({
     fileInputRef,
     name,
     setName,
-    email,
-    setEmail,
     hostStory,
     setHostStory,
     phone,
@@ -143,13 +141,16 @@ export function ProfileContentView({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-on-surface-variant mb-1.5">
-                    Email Address
+                    Email address
                   </label>
                   <input
                     type="email"
-                    value={email}
-                    onChange={(ev) => setEmail(ev.target.value)}
-                    className="w-full text-sm bg-surface-container-low border-none rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    readOnly
+                    value={user?.email ?? ""}
+                    autoComplete="email"
+                    aria-readonly="true"
+                    title="Email cannot be changed"
+                    className="w-full text-sm bg-surface-container-high/80 dark:bg-zinc-800/80 border-none rounded-xl px-3 py-2.5 text-on-surface-variant cursor-default"
                   />
                 </div>
                 <div>
@@ -157,7 +158,7 @@ export function ProfileContentView({
                     WhatsApp / Phone
                     {user?.hostStatus === "approved" && (
                       <span className="ml-1.5 text-[10px] font-normal text-primary dark:text-green-400">
-                        (shown to guests who book your experience)
+                        — shown to guests after they book
                       </span>
                     )}
                   </label>
@@ -175,27 +176,23 @@ export function ProfileContentView({
                     />
                   </div>
                   <p className="text-[11px] text-on-surface-variant mt-1">
-                    Use international format, e.g. +251912345678
+                    Use country code (e.g. +251912345678).
                   </p>
                 </div>
                 {user?.hostStatus === "approved" && (
                   <div className="md:col-span-2">
                     <label className="block text-xs font-semibold text-on-surface-variant mb-1.5">
-                      About you{" "}
-                      <span className="font-normal text-on-surface-variant/80">
-                        (guests see this on your listings)
+                      About you
+                      <span className="font-normal text-on-surface-variant/80 ml-1">
+                        — on your experience pages
                       </span>
                     </label>
-                    <p className="text-[11px] text-on-surface-variant mb-2 leading-relaxed">
-                      Share why you host and what guests can expect—a short introduction
-                      shown on your experience pages.
-                    </p>
                     <textarea
                       value={hostStory}
                       onChange={(ev) => setHostStory(ev.target.value.slice(0, 500))}
                       rows={4}
                       maxLength={500}
-                      placeholder="e.g. I grew up in Addis and want every guest to taste real home-style injera and hear the stories behind each dish…"
+                      placeholder="Short intro for guests—your background or hosting style."
                       className="w-full text-sm bg-surface-container-low border-none rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
                     />
                     <p className="text-[11px] text-on-surface-variant mt-1">

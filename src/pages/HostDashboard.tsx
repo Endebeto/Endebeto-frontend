@@ -6,7 +6,6 @@ import {
   Users, Leaf, Loader2, AlertCircle, Phone, X, Ban,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import HostLayout from "@/components/HostLayout";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/context/AuthContext";
 import { bookingsService, type Booking } from "@/services/bookings.service";
@@ -113,11 +112,7 @@ export default function HostDashboard() {
   const isLoading = bLoading || eLoading;
 
   return (
-    <HostLayout
-      hostName={user?.name ?? "Host"}
-      hostTitle="Host"
-    >
-      <main className="p-4 md:p-10 max-w-[1440px]">
+    <main className="p-4 md:p-10 max-w-[1440px]">
 
         {/* ── Welcome ──────────────────────────────────── */}
         <header className="mb-6 md:mb-12">
@@ -492,6 +487,5 @@ export default function HostDashboard() {
           </section>
         </div>
       </main>
-    </HostLayout>
   );
 }

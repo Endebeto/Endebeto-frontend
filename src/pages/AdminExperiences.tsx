@@ -1,9 +1,9 @@
-import AdminLayout from "@/components/AdminLayout";
 import { ExperienceCatalogSidebar } from "@/components/admin-experiences/ExperienceCatalogSidebar";
 import { ExperienceDetailPanel } from "@/components/admin-experiences/ExperienceDetailPanel";
 import { ExperienceSelectPlaceholder } from "@/components/admin-experiences/ExperienceSelectPlaceholder";
 import { SuspendModal } from "@/components/admin-experiences/SuspendModal";
 import { useAdminExperiences } from "@/hooks/useAdminExperiences";
+import { useSyncAdminHeader } from "@/hooks/useSyncAdminHeader";
 
 export default function AdminExperiences() {
   const {
@@ -27,12 +27,14 @@ export default function AdminExperiences() {
     reinstateMutation,
   } = useAdminExperiences();
 
+  useSyncAdminHeader({
+    searchPlaceholder: "Search title, host, or location…",
+    searchValue: searchInput,
+    onSearch: handleSearch,
+  });
+
   return (
-    <AdminLayout
-      searchPlaceholder="Search title, host, or location…"
-      searchValue={searchInput}
-      onSearch={handleSearch}
-    >
+    <>
       {suspendModalExp && (
         <SuspendModal
           exp={suspendModalExp}
@@ -81,6 +83,6 @@ export default function AdminExperiences() {
 
         {!selected && <ExperienceSelectPlaceholder />}
       </div>
-    </AdminLayout>
+    </>
   );
 }

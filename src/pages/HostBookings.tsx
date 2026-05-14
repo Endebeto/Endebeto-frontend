@@ -4,9 +4,7 @@ import {
   Search, Mail, Users, CalendarDays, Loader2, AlertCircle,
   ChevronLeft, ChevronRight, Filter,
 } from "lucide-react";
-import HostLayout from "@/components/HostLayout";
 import { UserAvatar } from "@/components/UserAvatar";
-import { useAuth } from "@/context/AuthContext";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 
 /* ─── helpers ──────────────────────────────────────────── */
@@ -134,7 +132,6 @@ function GuestRow({ booking, idx }: { booking: Booking; idx: number }) {
 
 /* ─── main component ──────────────────────────────────── */
 export default function HostBookings() {
-  const { user } = useAuth();
 
   const [search, setSearch]   = useState("");
   const [tab, setTab]         = useState<Tab>("all");
@@ -176,11 +173,7 @@ export default function HostBookings() {
   const handleSearch    = (v: string) => { setSearch(v); setPage(1); };
 
   return (
-    <HostLayout
-      hostName={user?.name ?? "Host"}
-      hostTitle="Host"
-    >
-      <main className="p-4 md:p-10 max-w-[1440px]">
+    <main className="p-4 md:p-10 max-w-[1440px]">
 
         {/* Header */}
         <header className="mb-8">
@@ -340,6 +333,5 @@ export default function HostBookings() {
           )}
         </div>
       </main>
-    </HostLayout>
   );
 }

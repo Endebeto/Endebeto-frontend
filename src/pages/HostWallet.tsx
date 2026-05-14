@@ -9,7 +9,6 @@ import {
   TrendingDown,
   Search,
 } from "lucide-react";
-import HostLayout from "@/components/HostLayout";
 import { UserAvatar } from "@/components/UserAvatar";
 import { WithdrawModal } from "@/components/host-wallet/WithdrawModal";
 import { WalletEarningRow } from "@/components/host-wallet/WalletEarningRow";
@@ -63,7 +62,7 @@ export default function HostWallet() {
   } = useHostWallet();
 
   return (
-    <HostLayout hostName={user?.name ?? "Host"} hostTitle="Host">
+    <>
       {showWithdraw && (
         <WithdrawModal
           key={withdrawModalKey}
@@ -477,6 +476,6 @@ export default function HostWallet() {
           )}
         </div>
       </main>
-    </HostLayout>
+    </>
   );
 }

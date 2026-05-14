@@ -33,7 +33,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // isAuthenticated is only true once the server confirms, preventing routes
   // and role-gated UI from rendering based on stale localStorage data alone.
   const [serverConfirmed, setServerConfirmed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // Only "loading" while we probe the server for a cached session — avoids hiding
+  // Sign In for guests on the first paint (initial true would blank the auth slot for everyone).
+  const [loading, setLoading] = useState(() => {
+    try {
+      return Boolean(localStorage.getItem("user"));
+    } catch {
+      return false;
+    }
+  });
 
   const refreshUser = useCallback(async () => {
     try {

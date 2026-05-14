@@ -1,5 +1,4 @@
 import { Download, Loader2 } from "lucide-react";
-import AdminLayout from "@/components/AdminLayout";
 import { FailModal } from "@/components/admin-payouts/FailModal";
 import { MarkPaidModal } from "@/components/admin-payouts/MarkPaidModal";
 import { PayoutFooterCards } from "@/components/admin-payouts/PayoutFooterCards";
@@ -7,6 +6,7 @@ import { PayoutHistoryPanel } from "@/components/admin-payouts/PayoutHistoryPane
 import { PayoutPendingPanel } from "@/components/admin-payouts/PayoutPendingPanel";
 import { PayoutSummaryCards } from "@/components/admin-payouts/PayoutSummaryCards";
 import { useAdminPayouts } from "@/hooks/useAdminPayouts";
+import { useSyncAdminHeader } from "@/hooks/useSyncAdminHeader";
 
 export default function AdminPayouts() {
   const {
@@ -41,12 +41,14 @@ export default function AdminPayouts() {
     markFailedMutation,
   } = useAdminPayouts();
 
+  useSyncAdminHeader({
+    searchPlaceholder: "Search hosts or transactions...",
+    searchValue: search,
+    onSearch,
+  });
+
   return (
-    <AdminLayout
-      searchPlaceholder="Search hosts or transactions..."
-      searchValue={search}
-      onSearch={onSearch}
-    >
+    <>
       <div className="flex-1 overflow-y-auto">
         <div className="p-6 max-w-7xl mx-auto space-y-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -81,19 +83,6 @@ export default function AdminPayouts() {
             failedCount={failedCount}
           />
 
-          <PayoutHistoryPanel
-            isLoading={isLoading}
-            isError={isError}
-            historyWithdrawals={historyWithdrawals}
-            historyTotal={historyTotal}
-            historyPage={historyPage}
-            setHistoryPage={setHistoryPage}
-            historyTotalPages={historyTotalPages}
-            revealedAccounts={revealedAccounts}
-            revealingId={revealingId}
-            onReveal={handleReveal}
-          />
-
           <PayoutPendingPanel
             isLoading={isLoading}
             isError={isError}
@@ -108,6 +97,19 @@ export default function AdminPayouts() {
             onMarkPaid={setPaidTarget}
             onMarkFailed={setFailTarget}
             markPaidMutation={markPaidMutation}
+          />
+
+          <PayoutHistoryPanel
+            isLoading={isLoading}
+            isError={isError}
+            historyWithdrawals={historyWithdrawals}
+            historyTotal={historyTotal}
+            historyPage={historyPage}
+            setHistoryPage={setHistoryPage}
+            historyTotalPages={historyTotalPages}
+            revealedAccounts={revealedAccounts}
+            revealingId={revealingId}
+            onReveal={handleReveal}
           />
 
           <PayoutFooterCards />
@@ -136,6 +138,6 @@ export default function AdminPayouts() {
           }
         />
       )}
-    </AdminLayout>
+    </>
   );
 }

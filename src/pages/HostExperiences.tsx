@@ -8,7 +8,6 @@ import {
   RefreshCw, AlertCircle, MegaphoneOff,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import HostLayout from "@/components/HostLayout";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { experiencesService, type Experience } from "@/services/experiences.service";
@@ -530,10 +529,7 @@ export default function HostExperiences() {
   ];
 
   return (
-    <HostLayout
-      hostName={user?.name ?? "Host"}
-      hostTitle="Host"
-    >
+    <>
       {rescheduleExp && (
         <RescheduleModal exp={rescheduleExp} onClose={() => setReschedule(null)} />
       )}
@@ -687,6 +683,6 @@ export default function HostExperiences() {
           </div>
         )}
       </main>
-    </HostLayout>
+    </>
   );
 }

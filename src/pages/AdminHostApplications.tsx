@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileText, X, ShieldCheck, ChevronRight, ChevronLeft, ZoomIn, Loader2, AlertCircle, Check } from "lucide-react";
 import { toast } from "sonner";
-import AdminLayout from "@/components/AdminLayout";
 import { UserAvatar } from "@/components/UserAvatar";
 import { adminService, type AdminHostApplication } from "@/services/admin.service";
 import { adminQueryKeys } from "@/lib/adminQueryKeys";
+import { useSyncAdminHeader } from "@/hooks/useSyncAdminHeader";
 
 /* ─── status styles ──────────────────────────────────────── */
 type Status = "pending" | "submitted" | "approved" | "rejected";
@@ -226,12 +226,14 @@ export default function AdminHostApplications() {
     { id: "rejected", label: `Rejected (${isLoading && data == null ? "…" : tabCounts.rejected})` },
   ];
 
+  useSyncAdminHeader({
+    searchPlaceholder: "Search applications...",
+    searchValue: searchInput,
+    onSearch: setSearchInput,
+  });
+
   return (
-    <AdminLayout
-      searchPlaceholder="Search applications..."
-      searchValue={searchInput}
-      onSearch={setSearchInput}
-    >
+    <>
       <div className="flex flex-1 overflow-hidden">
 
         {/* ── Table panel ── */}
@@ -579,6 +581,6 @@ export default function AdminHostApplications() {
           onConfirm={(reason) => rejectMutation.mutate({ id: selected._id, reason })}
         />
       )}
-    </AdminLayout>
+    </>
   );
 }

@@ -6,7 +6,6 @@ import {
   CheckCircle2, Circle, Star, MessageCircle, ArrowLeft,
   ShieldCheck, Plus, Lock, AlertTriangle, Loader2, Info,
 } from "lucide-react";
-import HostLayout from "@/components/HostLayout";
 import LocationPicker, { type PinLocation } from "@/components/LocationPicker";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
@@ -266,18 +265,16 @@ export default function HostEditExperience() {
   /* ── loading state ── */
   if (loading) {
     return (
-      <HostLayout hostName={user?.name ?? "Host"} hostTitle="Host">
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary dark:text-green-400" />
-        </div>
-      </HostLayout>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary dark:text-green-400" />
+      </div>
     );
   }
 
   if (!experience) return null;
 
   return (
-    <HostLayout hostName={user?.name ?? "Host"} hostTitle="Host">
+    <>
       {success && (
         <SuccessModal
           onDashboard={() => navigate("/host-dashboard")}
@@ -772,6 +769,6 @@ export default function HostEditExperience() {
           </div>
         </form>
       </main>
-    </HostLayout>
+    </>
   );
 }

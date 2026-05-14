@@ -79,7 +79,7 @@ export const authService = {
     data:
       | FormData
       | Partial<
-          Pick<User, "name" | "email" | "photo" | "phone" | "hostStory">
+          Pick<User, "name" | "photo" | "phone" | "hostStory">
         >,
   ) =>
     api.patch<{ status: string; data: { user: User } }>(

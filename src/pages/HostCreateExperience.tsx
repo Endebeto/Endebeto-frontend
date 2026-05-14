@@ -7,7 +7,6 @@ import {
   CheckCircle2, Circle, Star, MessageCircle,
   ShieldCheck, Plus, Lock, AlertCircle, Save, Info,
 } from "lucide-react";
-import HostLayout from "@/components/HostLayout";
 import LocationPicker, { type PinLocation } from "@/components/LocationPicker";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
@@ -216,7 +215,7 @@ export default function HostCreateExperience() {
   const inputCls = "w-full bg-white dark:bg-zinc-800 border border-outline-variant/40 dark:border-zinc-600 rounded-xl px-4 py-3 text-on-surface dark:text-white text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 dark:focus:border-green-400/50 transition-all placeholder:text-on-surface-variant/50 dark:placeholder:text-zinc-500";
 
   return (
-    <HostLayout hostName={user?.name ?? "Host"} hostTitle="Host">
+    <>
       {success && (
         <SuccessModal
           onDashboard={() => navigate("/host-dashboard")}
@@ -693,6 +692,6 @@ export default function HostCreateExperience() {
           </div>
         </form>
       </main>
-    </HostLayout>
+    </>
   );
 }

@@ -12,9 +12,9 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
-import AdminLayout from "@/components/AdminLayout";
 import { adminService, type AdminReview } from "@/services/admin.service";
 import { adminQueryKeys } from "@/lib/adminQueryKeys";
+import { useSyncAdminHeader } from "@/hooks/useSyncAdminHeader";
 
 const PAGE_SIZE = 10;
 
@@ -149,12 +149,14 @@ export default function AdminReviews() {
   const pages = data?.pages ?? 1;
   const currentPage = data?.page ?? page;
 
+  useSyncAdminHeader({
+    searchPlaceholder: "Search review text…",
+    searchValue: searchInput,
+    onSearch: setSearchInput,
+  });
+
   return (
-    <AdminLayout
-      searchPlaceholder="Search review text…"
-      searchValue={searchInput}
-      onSearch={setSearchInput}
-    >
+    <>
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="shrink-0 px-4 md:px-6 py-4 border-b border-outline-variant/10 bg-white/80 dark:bg-zinc-900/80">
           <h1 className="font-headline font-extrabold text-lg text-primary flex items-center gap-2">
@@ -303,6 +305,6 @@ export default function AdminReviews() {
           if (deleteTarget) deleteMutation.mutate(deleteTarget._id);
         }}
       />
-    </AdminLayout>
+    </>
   );
 }
