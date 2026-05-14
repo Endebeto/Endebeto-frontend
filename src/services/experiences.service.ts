@@ -39,7 +39,7 @@ export interface Experience {
   ratingsAverage: number;
   ratingsQuantity: number;
   status?: "draft" | "pending" | "approved" | "rejected";
-  /** When true, listing is hidden from the public catalog (platform suspension). */
+  /** When true, the listing is hidden from guests (platform suspension). */
   suspended?: boolean;
   suspensionReason?: string;
   suspendedAt?: string;
@@ -47,7 +47,7 @@ export interface Experience {
   reviews?: Review[];
   isSoldOut?: boolean;
   spotsLeft?: number | null;
-  /** From GET /experiences/mine — upcoming bookings with a future occurrence date (locks schedule changes). */
+  /** Upcoming bookings with a future date (used to lock schedule changes for hosts). */
   upcomingBookingsCount?: number;
 }
 
@@ -65,7 +65,6 @@ export interface ExperienceListResponse {
   data: Experience[];
 }
 
-// factory.getOne  → { status, data: { data: T } }
 export interface ExperienceResponse {
   status: string;
   data: { data: Experience };
@@ -83,8 +82,10 @@ export interface ExperienceFilters {
   limit?: number;
   sort?: string;
   location?: string;
-  /** Substring, case-insensitive search on `location` (public catalog) */
+  /** Free-text search (place, city, theme). */
   q?: string;
+  /** Exact theme filter, combined with other options. */
+  category?: string;
   dateFrom?: string;
   dateTo?: string;
   /** When true, exclude sold-out experiences (server applies booking counts + pagination) */
@@ -97,6 +98,11 @@ export interface ExperienceFilters {
 export interface CatalogPriceBoundsResponse {
   status: string;
   data: { data: { minPrice: number; maxPrice: number } };
+}
+
+export interface CatalogCategoriesResponse {
+  status: string;
+  data: { data: string[] };
 }
 
 /** Public browse sort options → GET /experiences `sort` param */
@@ -113,6 +119,7 @@ export function buildExperiencesBrowseParams(input: {
   limit: number;
   sortBy: string;
   locationQ: string;
+  category: string;
   minPrice: number;
   maxPriceFilter: number;
   catalogMaxPrice: number;
@@ -128,6 +135,9 @@ export function buildExperiencesBrowseParams(input: {
   };
   if (input.locationQ.trim()) {
     params.q = input.locationQ.trim();
+  }
+  if (input.category.trim()) {
+    params.category = input.category.trim();
   }
   if (input.minPrice > 0) {
     params["price[gte]"] = input.minPrice;
@@ -159,6 +169,9 @@ export const experiencesService = {
 
   getCatalogPriceBounds: () =>
     api.get<CatalogPriceBoundsResponse>("/experiences/catalog-price-bounds"),
+
+  getCatalogCategories: () =>
+    api.get<CatalogCategoriesResponse>("/experiences/catalog-categories"),
 
   getStats: () =>
     api.get("/experiences/experience-stats"),

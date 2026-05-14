@@ -36,9 +36,8 @@ export function SuspendUserDialog({
           </div>
         </div>
         <p className="text-xs text-on-surface-variant mb-3">
-          Suspending will block this user from logging in, signing up with the same
-          email, or using OAuth. They&apos;ll be notified by email if SMTP is
-          configured.
+          They won&apos;t be able to sign in again with this email, including any linked
+          Google account. We&apos;ll send an email when outgoing mail is available.
         </p>
         <label className="block text-xs font-bold text-primary mb-2">
           Reason (shown to the user){" "}

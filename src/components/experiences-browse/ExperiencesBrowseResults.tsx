@@ -1,6 +1,7 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowDown, Loader2 } from "lucide-react";
 import { ExperienceBrowseCard } from "@/components/experiences-browse/ExperienceBrowseCard";
 import { ExperiencesBrowseSkeletonCard } from "@/components/experiences-browse/ExperiencesBrowseSkeletonCard";
+import { Button } from "@/components/ui/button";
 import type { ExperiencesBrowseVM } from "@/hooks/useExperiencesBrowse";
 
 type Props = { browse: ExperiencesBrowseVM };
@@ -9,15 +10,14 @@ export function ExperiencesBrowseResults({ browse }: Props) {
   const {
     pageSize,
     pageItems,
-    page,
-    setPage,
     showListSkeletons,
     noMatches,
     unfilteredEmpty,
     showSummaryBar,
     clearAll,
-    totalPages,
-    paginationItems,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
   } = browse;
 
   return (
@@ -49,53 +49,29 @@ export function ExperiencesBrowseResults({ browse }: Props) {
         </div>
       )}
 
-      {totalPages > 1 && (
-        <nav className="mt-10 flex items-center justify-center gap-1.5">
-          <button
+      {!noMatches && hasNextPage ? (
+        <div className="mt-10 flex justify-center">
+          <Button
             type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="p-2 rounded-full bg-surface-container text-primary hover:bg-primary hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            variant="outline"
+            className="min-w-[12rem] gap-2 border-outline-variant/50 font-headline text-sm font-semibold"
+            disabled={isFetchingNextPage}
+            onClick={() => fetchNextPage()}
           >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-
-          <div className="flex items-center gap-1">
-            {paginationItems.map((n, i) =>
-              n === "..." ? (
-                <span
-                  key={`dots-${i}`}
-                  className="px-1 text-xs text-on-surface-variant"
-                >
-                  …
-                </span>
-              ) : (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setPage(n as number)}
-                  className={`w-8 h-8 rounded-full font-headline font-bold text-xs transition-all ${
-                    page === n
-                      ? "bg-primary text-white shadow-md"
-                      : "text-primary hover:bg-surface-container"
-                  }`}
-                >
-                  {n}
-                </button>
-              ),
+            {isFetchingNextPage ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Loading…
+              </>
+            ) : (
+              <>
+                Load more
+                <ArrowDown className="h-4 w-4 opacity-70" aria-hidden />
+              </>
             )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="p-2 rounded-full bg-surface-container text-primary hover:bg-primary hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </nav>
-      )}
+          </Button>
+        </div>
+      ) : null}
     </>
   );
 }

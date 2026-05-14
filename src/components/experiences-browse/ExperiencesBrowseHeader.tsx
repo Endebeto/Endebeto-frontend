@@ -3,8 +3,9 @@ import {
   Calendar,
   ChevronDown,
   ListFilter,
-  MapPin,
+  Search,
   Star,
+  Tag,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,8 @@ export function ExperiencesBrowseHeader({ browse }: Props) {
     sortRef,
     locationQ,
     setLocationQ,
+    category,
+    setCategory,
     minPrice,
     setMinPrice,
     maxPriceFilter,
@@ -32,11 +35,11 @@ export function ExperiencesBrowseHeader({ browse }: Props) {
     setDateFrom,
     dateTo,
     setDateTo,
-    setPage,
     setFiltersOpen,
     catalogMax,
     totalCount,
     locationActive,
+    categoryActive,
     priceActive,
     ratingActive,
     dateActive,
@@ -93,7 +96,6 @@ export function ExperiencesBrowseHeader({ browse }: Props) {
                   onClick={() => {
                     setSortBy(opt);
                     setSortOpen(false);
-                    setPage(1);
                   }}
                   className={`block w-full px-3 py-2 text-left font-headline text-xs font-semibold transition-colors ${
                     sortBy === opt
@@ -113,10 +115,19 @@ export function ExperiencesBrowseHeader({ browse }: Props) {
         <div className="mt-4 flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
           {locationActive ? (
             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-[10px] text-primary">
-              <MapPin className="h-2.5 w-2.5 shrink-0 opacity-90" aria-hidden />
+              <Search className="h-2.5 w-2.5 shrink-0 opacity-90" aria-hidden />
               {locationQ}
               <button type="button" onClick={() => setLocationQ("")}>
                 <X className="h-2.5 w-2.5" />
+              </button>
+            </span>
+          ) : null}
+          {categoryActive ? (
+            <span className="inline-flex max-w-[min(100%,14rem)] shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-[10px] text-primary">
+              <Tag className="h-2.5 w-2.5 shrink-0 opacity-90" aria-hidden />
+              <span className="truncate">{category}</span>
+              <button type="button" onClick={() => setCategory("")}>
+                <X className="h-2.5 w-2.5 shrink-0" />
               </button>
             </span>
           ) : null}

@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { experiencesService, type Experience } from "@/services/experiences.service";
 import { getFriendlyErrorMessage } from "@/lib/errors";
+import { HOST_EXPERIENCE_CATEGORY_OPTIONS } from "@/lib/hostExperienceCategories";
 import { EXPERIENCE_DESCRIPTION_FORMAT_HINT } from "@/components/ExperienceDescriptionMarkdown";
 import { HostExperienceDescriptionToolbar } from "@/components/HostExperienceDescriptionToolbar";
 
@@ -84,6 +85,8 @@ export default function HostEditExperience() {
   const { user } = useAuth();
 
   const approvedCategories = user?.approvedCategories ?? [];
+  const categorySelectOptions =
+    approvedCategories.length > 0 ? approvedCategories : [...HOST_EXPERIENCE_CATEGORY_OPTIONS];
 
   const [loading, setLoading] = useState(true);
   const [experience, setExperience] = useState<Experience | null>(null);
@@ -91,7 +94,7 @@ export default function HostEditExperience() {
   const [lockedReason, setLockedReason] = useState("");
 
   const [form, setForm] = useState<FormFields>({
-    title: "", summary: "", description: "", category: approvedCategories[0] ?? "",
+    title: "", summary: "", description: "", category: approvedCategories[0] ?? HOST_EXPERIENCE_CATEGORY_OPTIONS[0] ?? "",
     price: "", duration: "", maxGuests: "", nextOccurrenceAt: "",
     location: "", address: "",
   });
@@ -374,19 +377,23 @@ export default function HostEditExperience() {
                     <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface dark:text-white mb-2">
                       Category <Lock className="h-3 w-3 text-on-surface-variant dark:text-zinc-500" />
                     </label>
-                    {approvedCategories.length > 0 ? (
-                      <select
-                        value={form.category}
-                        onChange={set("category")}
-                        disabled={effectiveLocked}
-                        className={fieldCls(true)}
-                      >
-                        {approvedCategories.map((c) => <option key={c}>{c}</option>)}
-                      </select>
-                    ) : (
-                      <div className={`${lockedCls}`}>{form.category || "No approved categories"}</div>
-                    )}
-                    <p className="mt-1.5 text-xs text-on-surface-variant dark:text-zinc-400">Limited to your approved host categories.</p>
+                    <select
+                      value={form.category}
+                      onChange={set("category")}
+                      disabled={effectiveLocked}
+                      className={fieldCls(true)}
+                    >
+                      {categorySelectOptions.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1.5 text-xs text-on-surface-variant dark:text-zinc-400">
+                      {approvedCategories.length > 0
+                        ? "You can only publish in the themes approved for your host account."
+                        : "All standard themes are shown until your application lists approved themes."}
+                    </p>
                   </div>
                   <div>
                     <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface dark:text-white mb-2">

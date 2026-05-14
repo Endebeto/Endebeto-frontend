@@ -7,17 +7,17 @@ import {
   useState,
 } from "react";
 import { useSearchParams } from "react-router-dom";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
   EXPERIENCES_BROWSE_PAGE_SIZE,
   EXPERIENCES_BROWSE_SORT_OPTIONS,
 } from "@/components/experiences-browse/experiencesBrowseConstants";
-import { computeExperiencesBrowsePageNumbers } from "@/components/experiences-browse/experiencesBrowseUtils";
 import {
   experienceUrlStringEquals,
   parseExperiencesUrlSearch,
   serializeExperiencesUrl,
 } from "@/lib/experiencesBrowseUrl";
+import { mergeHostAndCatalogCategories } from "@/lib/hostExperienceCategories";
 import { normalizeApiList } from "@/lib/normalizeApiList";
 import {
   buildExperiencesBrowseParams,
@@ -35,12 +35,12 @@ export function useExperiencesBrowse() {
   const [sortBy, setSortBy] = useState("Newest First");
   const [sortOpen, setSortOpen] = useState(false);
   const [locationQ, setLocationQ] = useState("");
+  const [category, setCategory] = useState("");
   const [minPrice, setMinPrice] = useState(0);
   const [maxPriceFilter, setMaxPriceFilter] = useState(0);
   const [minRating, setMinRating] = useState(0);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterSheetSide, setFilterSheetSide] = useState<"bottom" | "right">(
     "bottom",
@@ -68,9 +68,9 @@ export function useExperiencesBrowse() {
 
   const applyUrlToState = useCallback((p: URLSearchParams) => {
     const s = parseExperiencesUrlSearch(p, 10_000);
-    setPage(s.page);
     setSortBy(s.sortBy);
     setLocationQ(s.locationQ);
+    setCategory(s.category);
     setMinPrice(s.minPrice);
     if (s.maxPrice > 0) {
       setMaxPriceFilter(s.maxPrice);
@@ -108,6 +108,20 @@ export function useExperiencesBrowse() {
     staleTime: 5 * 60_000,
   });
 
+  const { data: catalogCategoriesRes } = useQuery({
+    queryKey: ["experiences", "catalog-categories"],
+    queryFn: () => experiencesService.getCatalogCategories(),
+    staleTime: 5 * 60_000,
+  });
+
+  const categoryOptions = useMemo(() => {
+    const raw = catalogCategoriesRes?.data?.data?.data;
+    const base = mergeHostAndCatalogCategories(raw);
+    const c = category.trim();
+    if (c && !base.includes(c)) return [...base, c];
+    return base;
+  }, [catalogCategoriesRes, category]);
+
   const catalogMaxPrice = priceBoundsRes?.data?.data?.data?.maxPrice ?? 10_000;
   const catalogMax = catalogMaxPrice > 0 ? catalogMaxPrice : 10_000;
 
@@ -121,9 +135,9 @@ export function useExperiencesBrowse() {
     if (!urlSyncReady.current) return;
     const next = serializeExperiencesUrl(
       {
-        page,
         sortBy,
         locationQ,
+        category,
         minPrice,
         maxPrice: maxPriceFilter,
         minRating,
@@ -137,9 +151,9 @@ export function useExperiencesBrowse() {
     ignoreUrlParse.current += 1;
     setSearchParams(next, { replace: true });
   }, [
-    page,
     sortBy,
     locationQ,
+    category,
     minPrice,
     maxPriceFilter,
     minRating,
@@ -150,24 +164,23 @@ export function useExperiencesBrowse() {
     searchParams,
   ]);
 
-  const listParams = useMemo(
-    () =>
-      buildExperiencesBrowseParams({
-        page,
-        limit: EXPERIENCES_BROWSE_PAGE_SIZE,
-        sortBy,
-        locationQ,
-        minPrice,
-        maxPriceFilter,
-        catalogMaxPrice: catalogMax,
-        minRating,
-        dateFrom,
-        dateTo,
-      }),
-    [
-      page,
+  const browseFilterKey = useMemo(
+    () => ({
       sortBy,
       locationQ,
+      category,
+      minPrice,
+      maxPriceFilter,
+      catalogMax,
+      minRating,
+      dateFrom,
+      dateTo,
+      limit: EXPERIENCES_BROWSE_PAGE_SIZE,
+    }),
+    [
+      sortBy,
+      locationQ,
+      category,
       minPrice,
       maxPriceFilter,
       catalogMax,
@@ -178,30 +191,67 @@ export function useExperiencesBrowse() {
   );
 
   const {
-    data: listRes,
+    data: infiniteData,
     isLoading,
     isFetching,
-    isPlaceholderData,
-  } = useQuery({
-    queryKey: ["experiences", "browse", listParams] as const,
-    queryFn: () => experiencesService.getAll(listParams),
-    placeholderData: keepPreviousData,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["experiences", "browse", browseFilterKey] as const,
+    queryFn: ({ pageParam }) =>
+      experiencesService.getAll(
+        buildExperiencesBrowseParams({
+          page: pageParam,
+          limit: EXPERIENCES_BROWSE_PAGE_SIZE,
+          sortBy,
+          locationQ,
+          category,
+          minPrice,
+          maxPriceFilter,
+          catalogMaxPrice: catalogMax,
+          minRating,
+          dateFrom,
+          dateTo,
+        }),
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (lastResponse, allPages) => {
+      const { items, total } = normalizeApiList<Experience>(lastResponse.data);
+      const loaded = allPages.reduce(
+        (sum, pg) => sum + normalizeApiList<Experience>(pg.data).items.length,
+        0,
+      );
+      if (total === 0 || loaded >= total || items.length === 0) return undefined;
+      return allPages.length + 1;
+    },
     enabled: urlHydrationDone,
   });
 
-  const listBody = listRes?.data;
-  const { items: pageItems, total: totalCount } =
-    normalizeApiList<Experience>(listBody);
+  const pageItems = useMemo(
+    () =>
+      infiniteData?.pages.flatMap((p) =>
+        normalizeApiList<Experience>(p.data).items,
+      ) ?? [],
+    [infiniteData],
+  );
+
+  const totalCount = infiniteData?.pages[0]
+    ? normalizeApiList<Experience>(infiniteData.pages[0].data).total
+    : 0;
 
   const locationActive = locationQ.trim() !== "";
+  const categoryActive = category.trim() !== "";
   const priceActive =
     minPrice > 0 || (maxPriceFilter > 0 && maxPriceFilter < catalogMax);
   const ratingActive = minRating > 0;
   const dateActive = dateFrom !== "" || dateTo !== "";
-  const anyActive = locationActive || priceActive || ratingActive || dateActive;
+  const anyActive =
+    locationActive || categoryActive || priceActive || ratingActive || dateActive;
   const showSummaryBar = anyActive;
   const narrowFiltersCount = [
     locationActive,
+    categoryActive,
     priceActive,
     ratingActive,
     dateActive,
@@ -209,36 +259,17 @@ export function useExperiencesBrowse() {
 
   const clearAll = useCallback(() => {
     setLocationQ("");
+    setCategory("");
     setMinPrice(0);
     setMaxPriceFilter(catalogMax);
     setMinRating(0);
     setDateFrom("");
     setDateTo("");
-    setPage(1);
   }, [catalogMax]);
 
-  const totalPages = Math.ceil(totalCount / EXPERIENCES_BROWSE_PAGE_SIZE) || 1;
-
-  useEffect(() => {
-    if (totalCount <= 0) return;
-    if (page > 1) {
-      const maxPage = Math.max(
-        1,
-        Math.ceil(totalCount / EXPERIENCES_BROWSE_PAGE_SIZE),
-      );
-      if (page > maxPage) setPage(maxPage);
-    }
-  }, [page, totalCount]);
-
-  const showListSkeletons =
-    !urlHydrationDone || (isLoading && !isPlaceholderData);
+  const showListSkeletons = !urlHydrationDone || (isLoading && !infiniteData);
   const noMatches = !showListSkeletons && totalCount === 0;
   const unfilteredEmpty = noMatches && !anyActive;
-
-  const paginationItems = useMemo(
-    () => computeExperiencesBrowsePageNumbers(totalPages, page),
-    [totalPages, page],
-  );
 
   return {
     sortOptions: EXPERIENCES_BROWSE_SORT_OPTIONS,
@@ -250,6 +281,8 @@ export function useExperiencesBrowse() {
     sortRef,
     locationQ,
     setLocationQ,
+    category,
+    setCategory,
     minPrice,
     setMinPrice,
     maxPriceFilter,
@@ -260,8 +293,6 @@ export function useExperiencesBrowse() {
     setDateFrom,
     dateTo,
     setDateTo,
-    page,
-    setPage,
     filtersOpen,
     setFiltersOpen,
     filterSheetSide,
@@ -269,7 +300,11 @@ export function useExperiencesBrowse() {
     pageItems,
     totalCount,
     isFetching,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage: Boolean(hasNextPage),
     locationActive,
+    categoryActive,
     priceActive,
     ratingActive,
     dateActive,
@@ -277,11 +312,10 @@ export function useExperiencesBrowse() {
     showSummaryBar,
     narrowFiltersCount,
     clearAll,
-    totalPages,
     showListSkeletons,
     noMatches,
     unfilteredEmpty,
-    paginationItems,
+    categoryOptions,
   };
 }
 

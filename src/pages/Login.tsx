@@ -22,7 +22,7 @@ const Login = () => {
   useEffect(() => {
     const err = searchParams.get("error");
     if (err === "oauth_failed") {
-      setOauthError("OAuth sign-in failed. Please try again or use email & password.");
+      setOauthError("Google sign-in didn’t finish. Try again or use email and password.");
     } else if (err === "suspended") {
       setOauthError(
         "This account has been suspended by an administrator. Please contact support if you believe this is a mistake.",

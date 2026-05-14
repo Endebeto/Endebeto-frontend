@@ -331,6 +331,53 @@ html {
     -8px -8px 32px rgba(255, 255, 255, 0.03);
 }
 
+/* ── Landing page immersive animations ── */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+.icon-float {
+  animation: float 3s ease-in-out infinite;
+}
+.icon-float-delayed {
+  animation: float 3s ease-in-out 1.5s infinite;
+}
+
+/* Connector line for How It Works steps */
+.connector-line {
+  width: 0;
+  transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.connector-line.visible {
+  width: 100%;
+}
+
+/* How it works — slow background drift (honor reduced motion in markup) */
+@keyframes how-step-bg-drift {
+  0% {
+    transform: scale(1.12) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.18) translate(-1.5%, -1%);
+  }
+  100% {
+    transform: scale(1.12) translate(0.5%, 0.5%);
+  }
+}
+.how-step-bg-motion {
+  animation: how-step-bg-drift 28s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .how-step-bg-motion {
+    animation: none;
+  }
+}
+
 /* Dark: #064e3b is for fills; on-primary-container = green-400 for text-primary (host page accent) */
 @layer utilities {
   .dark .text-primary {

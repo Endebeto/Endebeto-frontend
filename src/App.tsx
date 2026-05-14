@@ -86,7 +86,7 @@ function ProtectedRoute({
       <div
         className="flex min-h-screen w-full items-center justify-center bg-background"
         role="status"
-        aria-label="Checking session"
+        aria-label="Checking sign-in"
       >
         <div className="h-9 w-9 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>

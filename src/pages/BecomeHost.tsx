@@ -20,39 +20,39 @@ import { cn } from "@/lib/utils";
 const benefits = [
   {
     icon: Landmark,
-    title: "Legacy building",
-    desc: "Ensure your family's history and architectural treasures are maintained through sustainable cultural tourism.",
+    title: "Legacy Building",
+    desc: "Preserve your family's history and architectural treasures by sharing them through sustainable cultural tourism.",
     offset: false,
   },
   {
     icon: UsersRound,
-    title: "Global connection",
-    desc: "Connect with discerning travelers who seek depth, respect, and authentic cultural exchange over standard luxury.",
+    title: "Global Connections",
+    desc: "Engage with discerning travelers who value depth, respect, and authentic cultural exchange above standard tourism.",
     offset: true,
   },
   {
     icon: Wallet,
-    title: "Financial autonomy",
-    desc: "Turn your heritage into a sustainable income stream, allowing for the restoration and upkeep of your ancestral property.",
+    title: "Financial Autonomy",
+    desc: "Transform your heritage into a sustainable income stream, enabling the restoration and ongoing care of your ancestral spaces.",
     offset: false,
   },
 ];
 
 const chapters = [
   {
-    kicker: "Chapter one",
-    title: "The calling",
-    body: "Document your story. List your space by detailing its history, its architectural soul, and the cultural experiences you can offer, from coffee ceremonies to mountain treks.",
-    hint: "Create your heritage listing",
+    kicker: "Chapter One",
+    title: "The Calling",
+    body: "Document your unique story. Detail the history and architectural soul of your space, alongside the cultural experiences you offer—from coffee ceremonies to mountain treks.",
+    hint: "Craft your heritage listing",
     hintIcon: PenLine,
     image: "/imgs/chapter1-host.jpg",
     imageAlt: "Ethiopian coffee roasting",
     imageOnRight: true,
   },
   {
-    kicker: "Chapter two",
-    title: "The gathering",
-    body: "Welcome guests not as tourists, but as students of your culture. Share the warmth of Ethiopian hospitality and let your home become a bridge between worlds.",
+    kicker: "Chapter Two",
+    title: "The Gathering",
+    body: "Welcome guests not merely as tourists, but as students of your culture. Share the profound warmth of Ethiopian hospitality and let your home bridge different worlds.",
     hint: "Welcome your first guests",
     hintIcon: DoorOpen,
     image: "/imgs/chapter2-host.jpg",
@@ -60,10 +60,10 @@ const chapters = [
     imageOnRight: false,
   },
   {
-    kicker: "Chapter three",
-    title: "The legacy",
-    body: "Receive secure payments that support your community and your heritage. Every stay contributes to the preservation of the culture you represent.",
-    hint: "Build your sustainable legacy",
+    kicker: "Chapter Three",
+    title: "The Legacy",
+    body: "Receive secure payments that uplift your community and sustain your heritage. Every booking actively contributes to the preservation of the culture you represent.",
+    hint: "Build a sustainable legacy",
     hintIcon: Wallet,
     image: "/imgs/chapter3-host.jpg",
     imageAlt: "Traditional clothes",
@@ -92,7 +92,7 @@ export default function BecomeHost() {
                 Become a curator
               </span>
               <h1 className="mb-8 font-headline text-4xl font-bold leading-[1.1] tracking-tight text-primary md:text-5xl lg:text-6xl">
-                Host a story,
+                Share a story,
                 <br />
                 preserve a{" "}
                 <span className="italic text-primary-container dark:text-primary">
@@ -102,8 +102,8 @@ export default function BecomeHost() {
               </h1>
               <p className="mb-12 max-w-md text-lg leading-relaxed text-muted-foreground">
                 Open your doors to the world and become a guardian of
-                Ethiopia&apos;s timeless traditions. Your home is more than a
-                stay, it&apos;s a chapter of history waiting to be shared.
+                Ethiopia&apos;s timeless traditions. Your space is more than just a
+                visit—it&apos;s a living chapter of history waiting to be experienced.
               </p>
               <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
                 <Button
@@ -178,14 +178,14 @@ export default function BecomeHost() {
             >
               <div className="max-w-2xl">
                 <h2 className="mb-6 font-headline text-3xl font-bold leading-tight text-primary md:text-4xl lg:text-[2.5rem] lg:leading-[3rem]">
-                  Beyond hospitality:
+                  Beyond Hospitality:
                   <br />
-                  cultural guardianship
+                  Cultural Guardianship
                 </h2>
                 <p className="text-lg leading-relaxed text-muted-foreground">
-                  Hosting on Endebeto isn&apos;t just about space. It&apos;s
-                  about the preservation of the soul. We empower you to protect
-                  and promote the heritage that makes your offering unique.
+                  Hosting on Endebeto isn&apos;t just about sharing a space. It&apos;s
+                  about preserving the soul of Ethiopia. We empower you to protect
+                  and celebrate the heritage that makes your offering truly unique.
                 </p>
               </div>
               <div className="hidden pb-2 md:block">
@@ -299,7 +299,7 @@ export default function BecomeHost() {
               )}
             >
               <h2 className="mb-4 font-headline text-3xl font-bold text-primary md:text-4xl lg:text-[2.5rem]">
-                The curator&apos;s journey
+                The Curator&apos;s Journey
               </h2>
               <div className="mx-auto h-px w-24 bg-accent" />
             </div>
@@ -406,7 +406,7 @@ export default function BecomeHost() {
               Ready to write your next chapter?
             </h2>
             <p className="mb-12 text-lg leading-relaxed text-muted-foreground">
-              Join a community of curators dedicated to the soul of Ethiopia.
+              Join a passionate community of curators dedicated to the soul of Ethiopia.
               Start your hosting journey today and help us preserve the heritage
               of tomorrow.
             </p>

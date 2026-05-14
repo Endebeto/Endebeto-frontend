@@ -1,7 +1,23 @@
 import type { ExperienceFilters } from "@/services/experiences.service";
 import { buildExperiencesBrowseParams } from "@/services/experiences.service";
 
-/** Short `sort` query values for shareable URLs */
+/** Filters and sort options stored in the browse URL. */
+export type ExperiencesBrowseUrlFilters = {
+  sortBy: string;
+  locationQ: string;
+  /** Theme filter; empty means any. */
+  category: string;
+  minPrice: number;
+  maxPrice: number;
+  minRating: number;
+  dateFrom: string;
+  dateTo: string;
+};
+
+/** Parsed browse URL including optional legacy `page`. */
+export type ExperiencesUrlState = ExperiencesBrowseUrlFilters & { page: number };
+
+/** Short codes for `sort` in the address bar */
 export const BROWSE_SORT_SLUG_TO_LABEL: Record<string, string> = {
   newest: "Newest First",
   soonest: "Soonest occurrence",
@@ -14,21 +30,11 @@ export const BROWSE_SORT_LABEL_TO_SLUG: Record<string, string> = Object.fromEntr
   Object.entries(BROWSE_SORT_SLUG_TO_LABEL).map(([slug, label]) => [label, slug]),
 );
 
-export type ExperiencesUrlState = {
-  page: number;
-  sortBy: string;
-  locationQ: string;
-  minPrice: number;
-  maxPrice: number;
-  minRating: number;
-  dateFrom: string;
-  dateTo: string;
-};
-
 const DEFAULT: ExperiencesUrlState = {
   page: 1,
   sortBy: "Newest First",
   locationQ: "",
+  category: "",
   minPrice: 0,
   maxPrice: 0,
   minRating: 0,
@@ -48,7 +54,7 @@ function parseFloatSafe(v: string | null, d: number): number {
   return Number.isNaN(n) ? d : n;
 }
 
-/** Parse the browse page’s shareable `?` params into UI/API-related fields. */
+/** Read browse `?` params into UI state. */
 export function parseExperiencesUrlSearch(
   p: URLSearchParams,
   _catalogMax: number = 10_000,
@@ -70,6 +76,7 @@ export function parseExperiencesUrlSearch(
     page,
     sortBy,
     locationQ: p.get("q")?.trim() ?? "",
+    category: p.get("category")?.trim() ?? "",
     minPrice,
     maxPrice,
     minRating,
@@ -82,14 +89,14 @@ export function parseExperiencesUrlSearch(
  * Build minimal query string for the browse page. Omits values that match defaults.
  */
 export function serializeExperiencesUrl(
-  s: ExperiencesUrlState,
+  s: ExperiencesBrowseUrlFilters,
   catalogMax: number,
 ): URLSearchParams {
   const p = new URLSearchParams();
-  if (s.page > 1) p.set("page", String(s.page));
   const slug = BROWSE_SORT_LABEL_TO_SLUG[s.sortBy] ?? "newest";
   if (slug !== "newest") p.set("sort", slug);
   if (s.locationQ.trim()) p.set("q", s.locationQ.trim());
+  if (s.category.trim()) p.set("category", s.category.trim());
   if (s.minPrice > 0) p.set("minPrice", String(s.minPrice));
   if (s.maxPrice > 0 && s.maxPrice < catalogMax) p.set("maxPrice", String(s.maxPrice));
   if (s.minRating > 0) p.set("rating", String(s.minRating));
@@ -113,7 +120,7 @@ export function experienceUrlStringEquals(
   return normalizeSearchParams(a) === normalizeSearchParams(b);
 }
 
-/** Map the browse page URL to the same `getAll` params the UI would send. */
+/** Map browse URL params to list request options. */
 export function buildApiParamsFromExperiencesUrl(
   p: URLSearchParams,
   catalogMax: number,
@@ -125,6 +132,7 @@ export function buildApiParamsFromExperiencesUrl(
     limit,
     sortBy: st.sortBy,
     locationQ: st.locationQ,
+    category: st.category,
     minPrice: st.minPrice,
     maxPriceFilter: st.maxPrice,
     catalogMaxPrice: catalogMax,

@@ -18,6 +18,9 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
     setSortBy,
     locationQ,
     setLocationQ,
+    category,
+    setCategory,
+    categoryOptions,
     minPrice,
     setMinPrice,
     maxPriceFilter,
@@ -28,7 +31,6 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
     setDateFrom,
     dateTo,
     setDateTo,
-    setPage,
     filtersOpen,
     setFiltersOpen,
     filterSheetSide,
@@ -61,18 +63,35 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
           <div>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-              Location
+              Search
             </p>
             <input
               type="text"
-              placeholder="e.g. Addis Ababa"
+              placeholder="Place, city, or type (e.g. Lalibela, heritage, food)"
               value={locationQ}
               onChange={(e) => {
                 setLocationQ(e.target.value);
-                setPage(1);
               }}
               className="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25"
+              autoComplete="off"
             />
+          </div>
+          <div>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+              Theme
+            </p>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full rounded-lg border border-outline-variant/40 bg-surface-container px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25"
+            >
+              <option value="">All themes</option>
+              {categoryOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
@@ -88,7 +107,6 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
                   value={minPrice}
                   onChange={(e) => {
                     setMinPrice(Number(e.target.value));
-                    setPage(1);
                   }}
                   className="mt-0.5 w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2 py-2 text-sm"
                 />
@@ -102,7 +120,6 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
                   value={maxPriceFilter}
                   onChange={(e) => {
                     setMaxPriceFilter(Number(e.target.value));
-                    setPage(1);
                   }}
                   className="mt-0.5 w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2 py-2 text-sm"
                 />
@@ -115,7 +132,7 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
           </div>
           <div>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-              Next session between
+              Date range
             </p>
             <div className="space-y-2">
               <div>
@@ -125,7 +142,6 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
                   value={dateFrom}
                   onChange={(e) => {
                     setDateFrom(e.target.value);
-                    setPage(1);
                   }}
                   className="mt-0.5 w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2 py-2 text-sm"
                 />
@@ -138,7 +154,6 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
                   min={dateFrom || undefined}
                   onChange={(e) => {
                     setDateTo(e.target.value);
-                    setPage(1);
                   }}
                   className="mt-0.5 w-full rounded-lg border border-outline-variant/40 bg-surface-container px-2 py-2 text-sm"
                 />
@@ -156,7 +171,6 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
                   type="button"
                   onClick={() => {
                     setMinRating(r);
-                    setPage(1);
                   }}
                   className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${
                     minRating === r
@@ -180,7 +194,6 @@ export function ExperiencesBrowseFilterSheet({ browse }: Props) {
                   type="button"
                   onClick={() => {
                     setSortBy(opt);
-                    setPage(1);
                   }}
                   className={`rounded-lg px-3 py-2.5 text-left font-headline text-sm font-semibold transition-colors ${
                     sortBy === opt

@@ -229,7 +229,7 @@ export function ProfileContentView({
             <p className="text-[11px] text-on-surface-variant mb-4 leading-relaxed">
               To <strong>link</strong> Google, use the button below and sign in with a
               provider that uses the <strong>same email</strong> as this account.
-              You&apos;ll return here with an updated session.
+              You&apos;ll return here after Google is linked.
             </p>
             <div className="flex flex-wrap gap-3">
               {googleLinked ? (
@@ -344,8 +344,8 @@ export function ProfileContentView({
             </div>
             {!canChangePassword ? (
               <p className="text-sm text-on-surface-variant max-w-md">
-                Password change is only available for accounts that use email and password.
-                OAuth accounts use your provider to sign in.
+                Passwords can only be changed when you sign in with email and password.
+                If you use Google or another linked account, manage access there instead.
               </p>
             ) : (
               <div className="space-y-3 max-w-sm">
@@ -439,11 +439,11 @@ export function ProfileContentView({
               <div className="flex items-center gap-2 opacity-55 pointer-events-none select-none">
                 <Laptop className="h-4 w-4 text-on-tertiary-container" />
                 <h2 className="font-headline font-extrabold text-lg text-primary">
-                  Active Sessions
+                  Signed-in devices
                 </h2>
               </div>
               <p className="text-xs text-on-surface-variant opacity-55 pointer-events-none select-none mb-2">
-                See where you&apos;re signed in and revoke access from other devices.
+                See where you&apos;re signed in and sign out elsewhere when we add this.
               </p>
               <div className="space-y-3 opacity-50 pointer-events-none select-none">
                 <div className="flex items-center justify-between p-3 bg-surface-container-low rounded-xl">
@@ -456,7 +456,7 @@ export function ProfileContentView({
                         This device — preview
                       </p>
                       <p className="text-[11px] text-on-surface-variant">
-                        Session list coming soon
+                        Device list coming soon
                       </p>
                     </div>
                   </div>

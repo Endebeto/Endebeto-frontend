@@ -37,40 +37,40 @@ const STEPS = [
 /* ─── Right-panel content per step ───────────────────── */
 const SIDE_CONTENT = [
   {
-    heading: "Why host with us?",
+    heading: "Why Host With Endebeto?",
     benefits: [
-      { icon: Heart,       title: "Preserve Culture",   desc: "Turn your ancestral knowledge into sustainable income while keeping traditions alive." },
-      { icon: DollarSign,  title: "Direct Revenue",     desc: "Keep 85% of every experience booking. We only take a small commission for platform support." },
-      { icon: ShieldCheck, title: "Host Protection",    desc: "Every guest is verified and every experience is covered by our Host Guarantee." },
+      { icon: Heart,       title: "Preserve Heritage",   desc: "Transform your cultural knowledge into sustainable income while safeguarding traditions for tomorrow." },
+      { icon: DollarSign,  title: "Empowering Revenue",  desc: "Retain 85% of your earnings. Our modest commission is reinvested entirely into platform and community support." },
+      { icon: ShieldCheck, title: "Peace of Mind",       desc: "Host with confidence. Every guest is verified, and our comprehensive Host Guarantee protects your peace of mind." },
     ],
-    insight: { label: "Heritage Insight", quote: "'Buna fetū' is more than drinking coffee; it's the heart of our community." },
+    insight: { label: "Cultural Insight", quote: "To host is to open a door not just to your home, but to your history." },
   },
   {
-    heading: "What makes a great host?",
+    heading: "The Art of Hosting",
     benefits: [
-      { icon: Star,   title: "Deep Local Knowledge", desc: "Guests book you because they want to see Ethiopia through your eyes, not a guidebook." },
-      { icon: Leaf,   title: "Storytelling Matters", desc: "The best hosts don't just show a place — they share its living, breathing story." },
-      { icon: Globe,  title: "Multilingual Edge",    desc: "Hosts who speak 2+ languages receive 40% more booking inquiries on average." },
+      { icon: Star,   title: "Authentic Perspectives", desc: "Travelers seek the unwritten. They book to experience Ethiopia through your personal lens, not a brochure." },
+      { icon: Leaf,   title: "Living Stories",         desc: "The most memorable hosts don't just guide; they weave narratives that breathe life into ancient landscapes." },
+      { icon: Globe,  title: "Bridge Worlds",          desc: "Embrace the multilingual advantage. Hosts fluent in multiple languages naturally invite more global connections." },
     ],
-    insight: { label: "Host Tip", quote: "Experiences with 4+ photos receive 2.5× more bookings than those with only one." },
+    insight: { label: "Curator Tip", quote: "Rich visual storytelling matters. Listings with diverse, high-quality images see significantly higher engagement." },
   },
   {
-    heading: "Almost there!",
+    heading: "Secure & Seamless",
     benefits: [
-      { icon: ShieldCheck, title: "Secure & Private",    desc: "Documents are encrypted and only used for ID verification — never shared with guests." },
-      { icon: Heart,       title: "Fast Review",         desc: "Our editorial team reviews applications within 48 hours and notifies you by email." },
-      { icon: Star,        title: "Superhost Programme", desc: "Top-performing hosts earn the Superhost badge and get promoted in search results." },
+      { icon: ShieldCheck, title: "Uncompromising Privacy", desc: "Your sensitive documents are securely encrypted and strictly utilized solely for identity verification." },
+      { icon: Heart,       title: "Dedicated Review",       desc: "Our curation team respectfully reviews every application within 48 hours, keeping you informed at every step." },
+      { icon: Star,        title: "Master Curator Path",    desc: "Excellence is rewarded. Top hosts unlock premium visibility and exclusive support through our Master Curator program." },
     ],
-    insight: { label: "What happens next?", quote: "After approval you can create your first experience and start earning within days." },
+    insight: { label: "Looking Ahead", quote: "Once approved, you are ready to craft your first experience and begin welcoming the world." },
   },
   {
-    heading: "One last check",
+    heading: "Finalizing Your Chapter",
     benefits: [
-      { icon: ClipboardCheck, title: "Review Everything",  desc: "Make sure all your details are accurate before submission — edits after approval require a support request." },
-      { icon: ShieldCheck,    title: "Identity Verified",  desc: "Your documents are already securely uploaded. Submission is instant." },
-      { icon: Heart,          title: "You're Almost In",   desc: "Hosts who complete their profiles fully are 3× more likely to be approved on first review." },
+      { icon: ClipboardCheck, title: "Precision Matters",    desc: "Ensure every detail reflects your true intent. Accurate applications move swiftly through our curation process." },
+      { icon: ShieldCheck,    title: "Identity Confirmed",   desc: "Your foundational documents are securely locked in. You are one step away from joining the community." },
+      { icon: Heart,          title: "Ready for the World",  desc: "Comprehensive, deeply personal profiles have the highest resonance with our editorial team." },
     ],
-    insight: { label: "Reminder", quote: "Once submitted, our editorial team will contact you within 48 hours with a decision." },
+    insight: { label: "The Next Step", quote: "Submit with confidence. Our team will reach out within 48 hours to welcome you aboard." },
   },
 ];
 

@@ -13,6 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import { experiencesService, type Experience } from "@/services/experiences.service";
 import { normalizeApiList } from "@/lib/normalizeApiList";
 import { getFriendlyErrorMessage } from "@/lib/errors";
+import { HOST_EXPERIENCE_CATEGORY_OPTIONS } from "@/lib/hostExperienceCategories";
 import { EXPERIENCE_DESCRIPTION_FORMAT_HINT } from "@/components/ExperienceDescriptionMarkdown";
 import { HostExperienceDescriptionToolbar } from "@/components/HostExperienceDescriptionToolbar";
 
@@ -89,12 +90,9 @@ export default function HostCreateExperience() {
   // Use only the categories the host was approved to offer.
   // Hosts approved before the approvedCategories field was introduced
   // have an empty array — fall back to the full list so they aren't blocked.
-  const ALL_CATEGORIES = [
-    'Cultural Heritage', 'Food & Cuisine', 'Nature & Wildlife',
-    'Adventure', 'History', 'Art & Craft', 'Music & Dance', 'Religion & Spirituality',
-  ];
   const approvedCategories = user?.approvedCategories ?? [];
-  const categoryOptions = approvedCategories.length > 0 ? approvedCategories : ALL_CATEGORIES;
+  const categoryOptions =
+    approvedCategories.length > 0 ? approvedCategories : [...HOST_EXPERIENCE_CATEGORY_OPTIONS];
   const defaultCategory = categoryOptions[0] ?? "";
 
   const [form, setForm] = useState<FormData>({

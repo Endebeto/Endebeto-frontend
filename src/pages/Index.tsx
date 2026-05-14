@@ -8,6 +8,8 @@ import {
   Globe,
   Users,
   Award,
+  Compass,
+  Star,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -39,76 +41,89 @@ const HERO_TEXT_SWAP_DELAY_MS = 170;
 const heroSlides = [
   {
     image: "/imgs/hero.jpg",
-    title: "The coffee ceremony, shared the Ethiopian way",
+    title: "The Ethiopian Coffee Ceremony",
     subtitle:
-      "Sit with hosts who pour from the jebena, weave conversation into every cup, and welcome you like family.",
+      "Sit with local hosts who pour from the traditional jebena. Weave conversation into every cup, and experience warmth like never before.",
   },
   {
     image: "/imgs/hero-1.jpg",
-    title: "Golden-hour walks with keepers of the savanna",
+    title: "Journey Across the Savanna",
     subtitle:
-      "Follow local guides across open grasslands in Maasai lands, with heritage, beadwork, and stories carried for generations.",
+      "Follow local guides across vast golden plains. Encounter breathtaking wildlife, deep heritage, and stories carried through generations.",
   },
   {
     image: "/imgs/hero-2.png",
-    title: "Stand inside living tradition",
+    title: "Deep Cultural Encounters",
     subtitle:
-      "Circle dances, colour, and community, with experiences that put you at the heart of the celebration, not on the sidelines.",
+      "Experience the profound heritage of Ethiopia's diverse communities. Share intimate moments and learn traditions passed down for centuries.",
   },
   {
     image: "/imgs/hero-3.png",
-    title: "Addis after dark. Modern Ethiopia, still unmistakably home",
+    title: "Addis Ababa After Dark",
     subtitle:
-      "From lit towers to garden paths, discover city stays and urban experiences that pair energy with Ethiopian warmth.",
+      "From dazzling city lights to hidden garden paths, discover urban stays and experiences that pair modern energy with authentic Ethiopian hospitality.",
   },
 ];
 
 const howItWorks = [
   {
     icon: TrendingUp,
-    title: "Discover",
-    desc: "Explore bookable experiences. Each listing shows schedule, group size, and what’s included before you commit.",
+    title: "Discover Unique Experiences",
+    desc: "Explore a curated list of authentic experiences. See exactly what's included, group sizes, and schedules before you decide.",
   },
   {
     icon: Calendar,
-    title: "Book",
-    desc: "Pick a date, pay securely, and get confirmation from your host so your spot is locked in.",
+    title: "Book with Confidence",
+    desc: "Choose your date, pay securely, and receive instant confirmation from your host to lock in your adventure.",
   },
   {
     icon: Sparkles,
-    title: "Experience",
-    desc: "Show up for the day you booked with culture, nature, food, or city, hosted by people who designed the experience.",
+    title: "Live the Moment",
+    desc: "Immerse yourself in culture, nature, and food, guided by passionate locals who crafted the perfect itinerary.",
   },
 ];
 
 const whyFeatures = [
   {
     icon: Globe,
-    title: "Experiences, not generic tours",
-    desc: "Every listing is a defined experience with clear duration, group size, and what you’ll do, so you book exactly what you want.",
+    title: "Beyond Generic Tours",
+    desc: "Every listing is a meticulously defined experience. Know the exact duration and activities, so you book exactly what resonates with you.",
   },
   {
     icon: Users,
-    title: "Hosts who live the story",
-    desc: "Learn from locals and specialists who host small groups and share culture, craft, and place with intention.",
+    title: "Passionate Local Hosts",
+    desc: "Learn from specialists and locals who host intimate groups, sharing their culture, craft, and stories with pure intention.",
   },
   {
     icon: Award,
-    title: "Built for authentic moments",
-    desc: "We spotlight heritage, food, ritual, and landscape experiences you can’t replicate from a brochure.",
+    title: "Authentic Connections",
+    desc: "We spotlight hidden gems—food, rituals, and breathtaking landscapes that you simply won't find in a standard brochure.",
   },
   {
     icon: Sparkles,
-    title: "Simple booking, real support",
-    desc: "Check availability, reserve your spot, and message your host for fewer surprises and more time enjoying the experience.",
+    title: "Seamless Journey",
+    desc: "Easily check availability and message your host. Spend less time planning and more time enjoying unforgettable moments.",
   },
 ];
 
+const featureImages = [
+  "/imgs/why-you-choose-us-4.jpg",
+  "/imgs/why-you-choose-us-3.jpg",
+  "/imgs/why-you-choose-us.jpg",
+  "/imgs/why-you-choose-us-2.jpg",
+];
+
+const stepImages = [
+  "/imgs/host-hero2.jpg",
+  "/imgs/host-hero3.jpg",
+  "/imgs/chapter3-host.jpg",
+];
+
 const statsData = [
-  { target: 12, suffix: "+", label: "Experiences" },
-  { target: 1, suffix: "+", label: "Countries" },
-  { target: 20, suffix: "+", label: "Happy Travelers" },
-  { target: 4.5, suffix: "", label: "Average Rating" },
+  { target: 12, suffix: "+", label: "Experiences", icon: Compass },
+  { target: 1, suffix: "+", label: "Countries", icon: Globe },
+  { target: 20, suffix: "+", label: "Happy Travelers", icon: Users },
+  { target: 4.5, suffix: "", label: "Average Rating", icon: Star },
 ];
 
 const testimonials = [
@@ -152,16 +167,19 @@ function StatItem({
   target,
   suffix,
   label,
+  icon: Icon,
   start,
 }: {
   target: number;
   suffix: string;
   label: string;
+  icon: React.ElementType;
   start: boolean;
 }) {
   const display = useCountUp(target, 1800, start);
   return (
     <div className="text-center">
+      <Icon className="mx-auto mb-2 h-6 w-6 text-accent/70" />
       <p className="font-headline text-4xl font-extrabold text-primary mb-2 sm:text-5xl md:text-6xl">
         {display}
         {suffix}
@@ -312,7 +330,6 @@ const Index = () => {
   // scroll reveal refs
   const howRef = useScrollReveal<HTMLDivElement>(0.1);
   const whyLeft = useScrollReveal<HTMLDivElement>(0.15);
-  const whyRight = useScrollReveal<HTMLDivElement>(0.15);
   const statsReveal = useScrollReveal<HTMLDivElement>(0.3);
   const featTitle = useScrollReveal<HTMLDivElement>(0.2);
   const featCards = useScrollReveal<HTMLDivElement>(0.1);
@@ -427,92 +444,69 @@ const Index = () => {
 
       {/* ── Why Choose Us ── */}
       <section className="relative overflow-hidden bg-surface-container-low py-20 md:py-28">
+        <div
+          className="pointer-events-none absolute inset-0 motion-reduce:hidden"
+          aria-hidden
+        >
+          <div className="absolute -top-40 left-[12%] h-[420px] w-[420px] rounded-full bg-primary/[0.09] blur-3xl dark:bg-primary/20" />
+          <div className="absolute -bottom-32 right-[-8%] h-[480px] w-[480px] rounded-full bg-accent/[0.07] blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_-15%,rgba(0,53,39,0.07),transparent_55%)] dark:bg-[radial-gradient(ellipse_90%_55%_at_50%_-10%,rgba(74,222,128,0.06),transparent_55%)]" />
+        </div>
+        <p
+          className="pointer-events-none absolute left-1/2 top-24 z-0 hidden -translate-x-1/2 select-none font-headline text-[clamp(4.5rem,14vw,11rem)] font-black leading-none tracking-tighter text-white/[0.04] motion-reduce:hidden dark:block"
+          aria-hidden
+        >
+          Why here
+        </p>
         <div className="absolute top-0 left-0 right-0 h-16 fade-top pointer-events-none z-10" />
         <div className="absolute bottom-0 left-0 right-0 h-16 fade-bottom pointer-events-none z-10" />
         <div className="container relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            {/* Left */}
+          <div className="mx-auto max-w-5xl">
+            {/* Main column */}
             <div
               ref={whyLeft.ref}
               className={`reveal-left ${whyLeft.isVisible ? "visible" : ""}`}
             >
-              <span className="mb-6 inline-block rounded-full bg-secondary-container px-4 py-2 font-headline text-xs font-bold uppercase tracking-widest text-on-secondary-container md:text-sm">
+              <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-outline-variant/50 bg-background/80 px-4 py-2 font-headline text-xs font-bold uppercase tracking-widest text-on-secondary-container shadow-sm backdrop-blur-md md:text-sm dark:border-white/10 dark:bg-black/25 dark:text-on-secondary-container">
+                <Compass className="h-3.5 w-3.5 text-accent shrink-0 md:h-4 md:w-4" />
                 Why book experiences here
               </span>
-              <h2 className="mb-6 font-headline text-3xl font-extrabold leading-tight text-primary sm:text-4xl md:text-5xl lg:text-6xl">
-                A platform for real experiences, not just places
+              <h2 className="mb-6 font-headline text-3xl font-extrabold leading-[1.06] text-primary sm:text-4xl md:text-5xl lg:text-6xl">
+                Step into stories you can actually live
               </h2>
-              <p className="mb-10 text-lg leading-relaxed text-on-surface-variant md:text-xl">
-                Endebeto connects you with bookable cultural, outdoor, and city
-                experiences led by hosts who design their own offerings. You see
-                what’s included, who it’s for, and when it runs, then reserve
-                your spot in a few steps.
+              <p className="mb-10 max-w-xl text-lg leading-relaxed text-on-surface-variant md:text-xl">
+                Endebeto is your gateway to living culture. Our hosts design each day with care, setting honest expectations for small groups. Explore clear itineraries, find what suits you best, and secure your spot effortlessly.
               </p>
               <div
-                className={`grid grid-cols-1 sm:grid-cols-2 gap-6 reveal-stagger ${whyLeft.isVisible ? "visible" : ""}`}
+                className={`grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 reveal-stagger ${whyLeft.isVisible ? "visible" : ""}`}
               >
-                {whyFeatures.map(({ icon: Icon, title, desc }) => (
-                  <div key={title} className="flex items-start gap-4">
-                    <div className="shrink-0 w-12 h-12 bg-white rounded-xl shadow-md flex items-center justify-center">
-                      <Icon className="h-5 w-5 text-primary" />
+                {whyFeatures.map(({ icon: Icon, title, desc }, i) => (
+                  <div
+                    key={title}
+                    className="group relative min-h-[300px] overflow-hidden rounded-[1.35rem] shadow-lg ring-1 ring-black/[0.06] transition-[transform,box-shadow] duration-500 ease-out hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/15 motion-reduce:transition-none motion-reduce:hover:translate-y-0 dark:ring-white/[0.08]"
+                  >
+                    <img
+                      src={featureImages[i]}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover transition-[transform,filter] duration-[1100ms] ease-out group-hover:scale-[1.07] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/15 transition-opacity duration-500 group-hover:via-black/55 motion-reduce:transition-none" />
+                    <div className="absolute inset-0 bg-[linear-gradient(120deg,transparent_40%,rgba(255,255,255,0.07)_50%,transparent_60%)] opacity-0 transition-opacity duration-700 group-hover:opacity-100 motion-reduce:transition-none motion-reduce:group-hover:opacity-0" />
+                    <div className="absolute top-3 left-3 flex h-11 w-11 items-center justify-center rounded-xl border border-white/25 bg-white/15 backdrop-blur-md icon-float">
+                      <Icon className="h-5 w-5 text-white" />
                     </div>
-                    <div>
-                      <h3 className="mb-2 font-headline text-lg font-bold text-primary md:text-xl">
+                    <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
+                      <h3 className="mb-2 font-headline text-lg font-bold text-white md:text-xl">
                         {title}
                       </h3>
-                      <p className="text-base leading-relaxed text-on-surface-variant">
+                      <p className="text-sm leading-relaxed text-white/80 transition-[color] duration-300 line-clamp-3 group-hover:line-clamp-none group-hover:text-white/95 md:text-[0.9375rem]">
                         {desc}
                       </p>
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            {/* Right: staggered image mosaic (hidden on mobile) */}
-            <div
-              ref={whyRight.ref}
-              className={`hidden lg:grid grid-cols-2 gap-4 reveal-right ${whyRight.isVisible ? "visible" : ""}`}
-            >
-              <div className="space-y-4">
-                <div className="h-48 rounded-2xl overflow-hidden shadow-lg">
-                  <img
-                    src="/imgs/why-you-choose-us-4.jpg"
-                    alt="Ethiopian highlands landscape"
-                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
-                <div className="h-64 rounded-2xl overflow-hidden shadow-lg">
-                  <img
-                    src="/imgs/why-you-choose-us-3.jpg"
-                    alt="Ethiopian heritage and scenery"
-                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
-              </div>
-              <div className="space-y-4 pt-8">
-                <div className="h-64 rounded-2xl overflow-hidden shadow-lg">
-                  <img
-                    src="/imgs/why-you-choose-us.jpg"
-                    alt="Traditional dance and culture"
-                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
-                <div className="h-48 rounded-2xl overflow-hidden shadow-lg">
-                  <img
-                    src="/imgs/why-you-choose-us-2.jpg"
-                    alt="Ethiopian travel destination"
-                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
               </div>
             </div>
           </div>
@@ -524,12 +518,13 @@ const Index = () => {
               statsReveal.isVisible ? "visible" : ""
             }`}
           >
-            {statsData.map(({ target, suffix, label }) => (
+            {statsData.map(({ target, suffix, label, icon }) => (
               <StatItem
                 key={label}
                 target={target}
                 suffix={suffix}
                 label={label}
+                icon={icon}
                 start={statsReveal.isVisible}
               />
             ))}
@@ -537,64 +532,179 @@ const Index = () => {
         </div>
       </section>
 
-      {/* ── How It Works ── */}
-      <section className="py-20 bg-primary overflow-hidden md:py-28 lg:py-32">
-        <div className="container">
+      {/* ── Let’s Explore Ethiopia — map texture + glass step cards (reference layout) ── */}
+      <section className="relative flex min-h-0 w-full items-center justify-center overflow-hidden bg-primary py-20 md:min-h-[min(100svh,52rem)] md:py-24">
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[#042f26] dark:bg-[#061f19]" aria-hidden />
+        <div className="pointer-events-none absolute inset-0 z-[1]" aria-hidden>
+          <img
+            src="/imgs/map.svg"
+            alt=""
+            className="h-full w-full object-cover opacity-[0.42] motion-reduce:opacity-[0.32] dark:opacity-[0.38]"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+        <div
+          className="pointer-events-none absolute inset-0 z-[2] bg-primary/35 dark:bg-primary/45"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-0 z-[3] bg-gradient-to-br from-black/25 via-transparent to-black/35"
+          aria-hidden
+        />
+
+        <div className="container relative z-20 w-full">
           <div
             ref={howRef.ref}
-            className={`reveal ${howRef.isVisible ? "visible" : ""}`}
+            className={`grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-10 xl:gap-14 reveal ${howRef.isVisible ? "visible" : ""}`}
           >
-            {/* Header */}
-            <div className="mb-14 flex flex-col gap-4 sm:mb-16 sm:flex-row sm:items-end sm:justify-between md:mb-20">
-              <div>
-                <span className="mb-3 inline-block font-headline text-xs font-bold uppercase tracking-[0.2em] text-accent md:text-sm">
-                  Simple Process
-                </span>
-                <h2 className="font-headline text-3xl font-extrabold leading-tight text-white sm:text-4xl md:text-5xl lg:text-6xl">
-                  How it works
+            <div className="flex flex-col space-y-7 lg:col-span-7 lg:space-y-8">
+              <div className="flex flex-wrap items-center gap-3">
+                <Sparkles
+                  className="h-6 w-6 shrink-0 text-accent md:h-7 md:w-7"
+                  aria-hidden
+                />
+                <h2 className="font-headline text-lg font-extrabold uppercase tracking-wide text-accent md:text-2xl lg:text-3xl">
+                  Let&apos;s Explore Ethiopia
                 </h2>
               </div>
-              <p className="max-w-md text-base leading-relaxed text-white/65 sm:text-right md:text-lg">
-                Three steps from browsing to walking into your next booked
-                experience.
+              <h3 className="font-headline text-[clamp(2.75rem,8vw,5.5rem)] font-extrabold italic leading-[0.98] tracking-tight text-white">
+                Where Wonders
+                <br />
+                <span className="text-accent">Await</span>
+              </h3>
+              <p className="max-w-xl font-body text-base leading-relaxed text-white/90 md:text-lg">
+                Prepare for an unforgettable journey through Ethiopia—where ancient
+                traditions meet dramatic highlands, and locals share their heritage with
+                pride.{" "}
+                <span className="font-medium text-accent">
+                  Browse handpicked experiences, book with ease,
+                </span>{" "}
+                and create memories that will last a lifetime.
               </p>
+
+              <div className="pt-2">
+                <Link
+                  to="/experiences"
+                  className="group inline-flex h-auto items-center justify-center gap-2 rounded-full border-2 border-accent bg-transparent px-8 py-4 font-headline text-sm font-bold uppercase tracking-wider text-accent transition-all duration-200 ease-out hover:gap-3 hover:bg-accent/15 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[#042f26] md:gap-2.5 md:px-10 md:text-base md:hover:gap-3.5 motion-reduce:transition-colors motion-reduce:hover:gap-2"
+                >
+                  Discover Ethiopia
+                  <ArrowRight
+                    className="h-4 w-4 shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-1 md:h-[1.125rem] md:w-[1.125rem] motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+                    aria-hidden
+                  />
+                </Link>
+              </div>
+
+              <ul className="mt-4 grid gap-4 sm:grid-cols-3 lg:hidden">
+                {howItWorks.map(({ icon: Icon, title, desc }, i) => (
+                  <li
+                    key={title}
+                    className="rounded-2xl border border-accent/30 bg-white/[0.08] p-4 shadow-lg backdrop-blur-md"
+                  >
+                    <div className="mb-3 flex items-center gap-3">
+                      <img
+                        src={stepImages[i]}
+                        alt=""
+                        className="h-12 w-12 shrink-0 rounded-lg object-cover ring-1 ring-accent/40"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      <Icon
+                        className="h-5 w-5 shrink-0 text-accent"
+                        aria-hidden
+                      />
+                    </div>
+                    <p className="font-headline text-[10px] font-bold uppercase tracking-widest text-accent">
+                      Step {String(i + 1).padStart(2, "0")}
+                    </p>
+                    <p className="mt-0.5 font-headline text-base font-bold text-accent">
+                      {title}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-white/85">
+                      {desc}
+                    </p>
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            {/* Steps */}
-            <div
-              className={`grid grid-cols-1 md:grid-cols-3 gap-px bg-white/10 rounded-3xl overflow-hidden reveal-stagger ${
-                howRef.isVisible ? "visible" : ""
-              }`}
-            >
-              {howItWorks.map(({ icon: Icon, title, desc }, i) => (
-                <div
-                  key={title}
-                  className="group relative bg-primary hover:bg-white/5 transition-colors duration-300 p-8 md:p-10 flex flex-col gap-6"
-                >
-                  {/* Step number watermark */}
-                  <span className="pointer-events-none absolute right-7 top-6 select-none font-headline text-7xl font-black leading-none text-white/[0.06] md:text-8xl lg:text-9xl">
-                    0{i + 1}
-                  </span>
-
-                  {/* Icon badge */}
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent/20 md:h-16 md:w-16">
-                    <Icon className="h-7 w-7 text-accent md:h-8 md:w-8" />
-                  </div>
-
-                  {/* Step label */}
-                  <div>
-                    <p className="mb-2 font-headline text-xs font-bold uppercase tracking-widest text-accent md:text-sm">
-                      Step 0{i + 1}
-                    </p>
-                    <h3 className="mb-3 font-headline text-2xl font-extrabold leading-snug text-white md:text-3xl lg:text-4xl">
-                      {title}
-                    </h3>
-                    <p className="text-base leading-relaxed text-white/65 md:text-lg">
-                      {desc}
+            <div className="relative mx-auto hidden h-[520px] w-full max-w-md lg:col-span-5 lg:mx-0 lg:block xl:h-[580px]">
+              <div className="absolute top-0 right-0 w-64 -rotate-6 rounded-2xl border border-accent/35 bg-white/[0.07] p-4 shadow-2xl backdrop-blur-md">
+                <div className="flex items-start gap-3">
+                  <img
+                    src={stepImages[0]}
+                    alt=""
+                    className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-accent/40"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp
+                        className="h-4 w-4 shrink-0 text-accent"
+                        aria-hidden
+                      />
+                      <span className="font-headline text-xs font-bold uppercase tracking-wide text-accent">
+                        {howItWorks[0].title}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-white/85">
+                      {howItWorks[0].desc}
                     </p>
                   </div>
                 </div>
-              ))}
+              </div>
+              <div className="absolute bottom-12 right-14 z-10 w-72 rotate-[10deg] rounded-2xl border border-accent/35 bg-white/[0.07] p-4 shadow-2xl backdrop-blur-md xl:bottom-14 xl:right-20">
+                <div className="flex items-start gap-3">
+                  <img
+                    src={stepImages[1]}
+                    alt=""
+                    className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-accent/40"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Calendar
+                        className="h-4 w-4 shrink-0 text-accent"
+                        aria-hidden
+                      />
+                      <span className="font-headline text-xs font-bold uppercase tracking-wide text-accent">
+                        {howItWorks[1].title}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-white/85">
+                      {howItWorks[1].desc}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute left-0 top-1/2 w-[15.5rem] -translate-y-1/2 -rotate-[11deg] rounded-2xl border border-accent/35 bg-white/[0.07] p-4 shadow-2xl backdrop-blur-md lg:-left-6 xl:-left-8">
+                <div className="flex items-start gap-3">
+                  <img
+                    src={stepImages[2]}
+                    alt=""
+                    className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-accent/40"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Sparkles
+                        className="h-4 w-4 shrink-0 text-accent"
+                        aria-hidden
+                      />
+                      <span className="font-headline text-xs font-bold uppercase tracking-wide text-accent">
+                        {howItWorks[2].title}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-white/85">
+                      {howItWorks[2].desc}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -608,10 +718,10 @@ const Index = () => {
             className={`mb-14 text-center reveal md:mb-16 ${featTitle.isVisible ? "visible" : ""}`}
           >
             <h2 className="mb-4 font-headline text-3xl font-extrabold text-primary sm:text-4xl md:text-5xl lg:text-[2.5rem] lg:leading-tight">
-              Featured experiences
+              Unforgettable Experiences
             </h2>
             <p className="mx-auto max-w-2xl text-lg leading-relaxed text-on-surface-variant md:text-xl">
-              Top-rated experiences you can book today.
+              Discover top-rated adventures and cultural deep-dives, ready for you to book today.
             </p>
           </div>
           <div
@@ -669,7 +779,7 @@ const Index = () => {
             className={`reveal ${testiTitle.isVisible ? "visible" : ""}`}
           >
             <h2 className="mb-10 text-center font-headline text-3xl font-extrabold text-primary sm:text-4xl md:mb-16 md:text-5xl lg:text-6xl">
-              What guests say about their bookings
+              Hear From Our Travelers
             </h2>
           </div>
           <div
@@ -715,7 +825,7 @@ const Index = () => {
                     earn by hosting unique experiences on Endebeto.
                   </p>
                   <Link to="/become-host">
-                    <Button className="h-auto rounded-2xl bg-tertiary-fixed px-8 py-4 font-headline text-base font-normal text-on-tertiary-fixed shadow-lg shadow-black/15 transition-shadow hover:bg-tertiary-fixed hover:text-on-tertiary-fixed hover:shadow-xl md:px-10 md:py-5 md:text-lg">
+                    <Button className="h-auto rounded-2xl bg-tertiary-fixed px-8 py-4 font-headline text-base font-semibold text-on-tertiary-fixed shadow-lg shadow-black/15 transition-shadow hover:bg-tertiary-fixed hover:text-on-tertiary-fixed hover:shadow-xl md:px-10 md:py-5 md:text-lg">
                       Become a Host
                     </Button>
                   </Link>

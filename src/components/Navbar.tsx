@@ -179,7 +179,7 @@ const Navbar = () => {
                   <div
                     className="hidden h-9 w-[7.25rem] animate-pulse rounded-xl bg-slate-200/70 dark:bg-zinc-700/70 md:block"
                     aria-busy="true"
-                    aria-label="Loading session"
+                    aria-label="Loading account"
                   />
                 ) : (
                   <div className="hidden items-center gap-2.5 md:flex">
@@ -312,7 +312,7 @@ const Navbar = () => {
                 <div
                   className="mx-4 mb-3 mt-1 h-12 animate-pulse rounded-xl bg-slate-200/70 dark:bg-zinc-700/70"
                   aria-busy="true"
-                  aria-label="Loading session"
+                  aria-label="Loading account"
                 />
               ) : isAuthenticated && user ? (
                 <>
