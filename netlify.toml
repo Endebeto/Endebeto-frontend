@@ -4,3 +4,9 @@
 [build]
   command = "npm run build"
   publish = "dist"
+
+# Synthetic HTML + Open Graph for link-preview crawlers (see netlify/edge-functions/experience-link-preview.ts).
+# Path is declared once here only (avoid duplicating export const config in the function body).
+[[edge_functions]]
+  path = "/experiences/*"
+  function = "experience-link-preview"
