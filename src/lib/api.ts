@@ -29,6 +29,10 @@ let failedQueue: {
   reject: (e: unknown) => void;
 }[] = [];
 
+// Track request keys that have already been retried to avoid infinite loops
+// when Axios drops custom config properties during internal cloning.
+const retriedKeys = new Set<string>();
+
 const processQueue = (error: unknown) => {
   failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve()));
   failedQueue = [];
@@ -50,9 +54,7 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const status = error.response?.status;
     const url = error.config?.url ?? "";
-    const originalConfig = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean;
-    };
+    const originalConfig = error.config as InternalAxiosRequestConfig;
 
     // Log only to our dev-only logger — production builds silence it.
     const isSessionProbe401 = status === 401 && url.includes("/users/me");
@@ -68,8 +70,10 @@ api.interceptors.response.use(
 
       // Do not retry refresh endpoint or other public auth endpoints.
       const skipRefresh = NO_REFRESH_PATHS.some((p) => url.includes(p));
+      const requestKey = `${originalConfig.method}:${originalConfig.url}`;
       // Also skip if we already retried once (avoid infinite loop).
-      if (skipRefresh || originalConfig._retry) {
+      if (skipRefresh || retriedKeys.has(requestKey)) {
+        retriedKeys.delete(requestKey);
         redirectToLogin();
         return Promise.reject(decorateError(error));
       }
@@ -91,7 +95,7 @@ api.interceptors.response.use(
           .catch((e) => Promise.reject(decorateError(e as AxiosError)));
       }
 
-      originalConfig._retry = true;
+      retriedKeys.add(requestKey);
       isRefreshing = true;
 
       try {

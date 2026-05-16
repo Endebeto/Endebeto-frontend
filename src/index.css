@@ -331,6 +331,44 @@ html {
     -8px -8px 32px rgba(255, 255, 255, 0.03);
 }
 
+/* Hero gallery — tilted frames + warm depth (Become Host) */
+.become-host-hero-frame {
+  --hero-tilt: -1.5deg;
+  position: relative;
+  transform: rotate(var(--hero-tilt));
+  transition:
+    transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.become-host-hero-frame:hover {
+  --hero-tilt: 0deg;
+  transform: rotate(0deg) scale(1.02);
+  z-index: 10;
+}
+
+.become-host-hero-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 26, 19, 0) 35%,
+    rgba(0, 26, 19, 0.42) 100%
+  );
+}
+
+.become-host-hero-frame img {
+  transform: scale(1.06);
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.become-host-hero-frame:hover img {
+  transform: scale(1.12);
+}
+
 /* ── Landing page immersive animations ── */
 @keyframes float {
   0%,

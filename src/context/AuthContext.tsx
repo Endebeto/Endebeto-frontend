@@ -86,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const onSessionEnded = () => {
       setUser(null);
       setServerConfirmed(false);
+      setLoading(false);
     };
     window.addEventListener("auth:expired", onSessionEnded);
     return () => window.removeEventListener("auth:expired", onSessionEnded);

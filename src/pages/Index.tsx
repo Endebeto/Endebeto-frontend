@@ -2,8 +2,6 @@ import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
-  TrendingUp,
-  Calendar,
   Sparkles,
   Globe,
   Users,
@@ -25,6 +23,7 @@ import ctaBg from "@/assets/cta-bg.jpg";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCountUp } from "@/hooks/useCountUp";
 import TestimonialSlider from "@/components/TestimonialSlider";
+import EthiopiaExploreMap from "@/components/landing/EthiopiaExploreMap";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 
@@ -65,24 +64,6 @@ const heroSlides = [
   },
 ];
 
-const howItWorks = [
-  {
-    icon: TrendingUp,
-    title: "Discover Unique Experiences",
-    desc: "Explore a curated list of authentic experiences. See exactly what's included, group sizes, and schedules before you decide.",
-  },
-  {
-    icon: Calendar,
-    title: "Book with Confidence",
-    desc: "Choose your date, pay securely, and receive instant confirmation from your host to lock in your adventure.",
-  },
-  {
-    icon: Sparkles,
-    title: "Live the Moment",
-    desc: "Immerse yourself in culture, nature, and food, guided by passionate locals who crafted the perfect itinerary.",
-  },
-];
-
 const whyFeatures = [
   {
     icon: Globe,
@@ -97,7 +78,7 @@ const whyFeatures = [
   {
     icon: Award,
     title: "Authentic Connections",
-    desc: "We spotlight hidden gems—food, rituals, and breathtaking landscapes that you simply won't find in a standard brochure.",
+    desc: "We spotlight hidden gems: food, rituals, and breathtaking landscapes that you simply won't find in a standard brochure.",
   },
   {
     icon: Sparkles,
@@ -111,12 +92,6 @@ const featureImages = [
   "/imgs/why-you-choose-us-3.jpg",
   "/imgs/why-you-choose-us.jpg",
   "/imgs/why-you-choose-us-2.jpg",
-];
-
-const stepImages = [
-  "/imgs/host-hero2.jpg",
-  "/imgs/host-hero3.jpg",
-  "/imgs/chapter3-host.jpg",
 ];
 
 const statsData = [
@@ -532,7 +507,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* ── Let’s Explore Ethiopia — map texture + glass step cards (reference layout) ── */}
+      {/* ── Let’s Explore Ethiopia — copy + Ethiopia map ── */}
       <section className="relative flex min-h-0 w-full items-center justify-center overflow-hidden bg-primary py-20 md:min-h-[min(100svh,52rem)] md:py-24">
         <div className="pointer-events-none absolute inset-0 z-0 bg-[#042f26] dark:bg-[#061f19]" aria-hidden />
         <div className="pointer-events-none absolute inset-0 z-[1]" aria-hidden>
@@ -568,19 +543,23 @@ const Index = () => {
                   Let&apos;s Explore Ethiopia
                 </h2>
               </div>
+              <p className="inline-flex w-fit items-center gap-2 rounded-full border border-accent/40 bg-white/10 px-4 py-1.5 font-headline text-xs font-semibold uppercase tracking-wider text-accent">
+                <Globe className="h-4 w-4 shrink-0" aria-hidden />
+                Open to travelers worldwide
+              </p>
               <h3 className="font-headline text-[clamp(2.75rem,8vw,5.5rem)] font-extrabold italic leading-[0.98] tracking-tight text-white">
-                Where Wonders
+                The world is
                 <br />
-                <span className="text-accent">Await</span>
+                <span className="text-accent">invited.</span>
               </h3>
               <p className="max-w-xl font-body text-base leading-relaxed text-white/90 md:text-lg">
-                Prepare for an unforgettable journey through Ethiopia—where ancient
-                traditions meet dramatic highlands, and locals share their heritage with
-                pride.{" "}
+                From every continent, curious travelers are discovering Ethiopia: ancient
+                kingdoms, living traditions, and landscapes you won&apos;t find in a
+                brochure.{" "}
                 <span className="font-medium text-accent">
-                  Browse handpicked experiences, book with ease,
+                  Plan from home, fly in with confidence,
                 </span>{" "}
-                and create memories that will last a lifetime.
+                and meet hosts who are proud to welcome the global community.
               </p>
 
               <div className="pt-2">
@@ -596,116 +575,12 @@ const Index = () => {
                 </Link>
               </div>
 
-              <ul className="mt-4 grid gap-4 sm:grid-cols-3 lg:hidden">
-                {howItWorks.map(({ icon: Icon, title, desc }, i) => (
-                  <li
-                    key={title}
-                    className="rounded-2xl border border-accent/30 bg-white/[0.08] p-4 shadow-lg backdrop-blur-md"
-                  >
-                    <div className="mb-3 flex items-center gap-3">
-                      <img
-                        src={stepImages[i]}
-                        alt=""
-                        className="h-12 w-12 shrink-0 rounded-lg object-cover ring-1 ring-accent/40"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                      <Icon
-                        className="h-5 w-5 shrink-0 text-accent"
-                        aria-hidden
-                      />
-                    </div>
-                    <p className="font-headline text-[10px] font-bold uppercase tracking-widest text-accent">
-                      Step {String(i + 1).padStart(2, "0")}
-                    </p>
-                    <p className="mt-0.5 font-headline text-base font-bold text-accent">
-                      {title}
-                    </p>
-                    <p className="mt-1 text-xs leading-relaxed text-white/85">
-                      {desc}
-                    </p>
-                  </li>
-                ))}
-              </ul>
             </div>
 
-            <div className="relative mx-auto hidden h-[520px] w-full max-w-md lg:col-span-5 lg:mx-0 lg:block xl:h-[580px]">
-              <div className="absolute top-0 right-0 w-64 -rotate-6 rounded-2xl border border-accent/35 bg-white/[0.07] p-4 shadow-2xl backdrop-blur-md">
-                <div className="flex items-start gap-3">
-                  <img
-                    src={stepImages[0]}
-                    alt=""
-                    className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-accent/40"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp
-                        className="h-4 w-4 shrink-0 text-accent"
-                        aria-hidden
-                      />
-                      <span className="font-headline text-xs font-bold uppercase tracking-wide text-accent">
-                        {howItWorks[0].title}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs leading-relaxed text-white/85">
-                      {howItWorks[0].desc}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute bottom-12 right-14 z-10 w-72 rotate-[10deg] rounded-2xl border border-accent/35 bg-white/[0.07] p-4 shadow-2xl backdrop-blur-md xl:bottom-14 xl:right-20">
-                <div className="flex items-start gap-3">
-                  <img
-                    src={stepImages[1]}
-                    alt=""
-                    className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-accent/40"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <Calendar
-                        className="h-4 w-4 shrink-0 text-accent"
-                        aria-hidden
-                      />
-                      <span className="font-headline text-xs font-bold uppercase tracking-wide text-accent">
-                        {howItWorks[1].title}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs leading-relaxed text-white/85">
-                      {howItWorks[1].desc}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute left-0 top-1/2 w-[15.5rem] -translate-y-1/2 -rotate-[11deg] rounded-2xl border border-accent/35 bg-white/[0.07] p-4 shadow-2xl backdrop-blur-md lg:-left-6 xl:-left-8">
-                <div className="flex items-start gap-3">
-                  <img
-                    src={stepImages[2]}
-                    alt=""
-                    className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-accent/40"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <Sparkles
-                        className="h-4 w-4 shrink-0 text-accent"
-                        aria-hidden
-                      />
-                      <span className="font-headline text-xs font-bold uppercase tracking-wide text-accent">
-                        {howItWorks[2].title}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs leading-relaxed text-white/85">
-                      {howItWorks[2].desc}
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="lg:col-span-5">
+              <EthiopiaExploreMap className="mx-auto max-w-lg lg:max-w-none" />
             </div>
+
           </div>
         </div>
       </section>

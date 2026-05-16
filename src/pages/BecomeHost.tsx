@@ -38,6 +38,61 @@ const benefits = [
   },
 ];
 
+/** Hero mosaic — layout/framing only; assets stay at `/imgs/host-hero*.jpg`. */
+const heroGallery = {
+  tall: {
+    src: "/imgs/host-hero1.jpg",
+    alt: "Axum ancient city",
+    aspect: "aspect-[3/4]",
+    tilt: "-1.5deg",
+  },
+  square: {
+    src: "/imgs/host-hero2.jpg",
+    alt: "Basket weaving in Ethiopia",
+    aspect: "aspect-square",
+    tilt: "2deg",
+  },
+  portrait: {
+    src: "/imgs/host-hero3.jpg",
+    alt: "Harar old city",
+    aspect: "aspect-[4/5]",
+    tilt: "-3deg",
+  },
+} as const;
+
+function HeroGalleryImage({
+  src,
+  alt,
+  aspect,
+  tilt,
+  priority = false,
+}: {
+  src: string;
+  alt: string;
+  aspect: string;
+  tilt: string;
+  priority?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "become-host-hero-frame become-host-asymmetric-shadow w-full overflow-hidden rounded-2xl ring-1 ring-black/5",
+        aspect,
+      )}
+      style={{ ["--hero-tilt" as string]: tilt }}
+    >
+      <img
+        src={src}
+        alt={alt}
+        className="h-full w-full object-cover"
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        fetchPriority={priority ? "high" : "auto"}
+      />
+    </div>
+  );
+}
+
 const chapters = [
   {
     kicker: "Chapter One",
@@ -126,16 +181,17 @@ export default function BecomeHost() {
             </div>
 
             <div className="relative col-span-12 lg:col-span-7">
-              <div className="grid grid-cols-2 items-end gap-6">
-                <div className="space-y-6">
-                  <div className="h-[280px] overflow-hidden rounded-2xl sm:h-[340px] lg:h-[400px] become-host-asymmetric-shadow">
-                    <img
-                      src="/imgs/host-hero1.jpg"
-                      alt="Axum ancient city"
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="rounded-2xl bg-primary-container p-6 text-white md:p-8">
+              <div
+                className="pointer-events-none absolute -right-6 -top-8 -z-10 h-56 w-56 rounded-full bg-primary/10 blur-3xl md:-right-10 md:h-64 md:w-64"
+                aria-hidden
+              />
+              <div className="grid grid-cols-2 gap-4 md:gap-8">
+                <div className="space-y-4 pt-10 md:space-y-8 md:pt-12">
+                  <HeroGalleryImage {...heroGallery.tall} priority />
+                  <div
+                    className="rounded-2xl bg-primary-container p-6 text-white shadow-xl md:p-8"
+                    style={{ transform: "rotate(2deg)" }}
+                  >
                     <h3 className="mb-2 font-headline text-3xl font-bold text-primary-foreground md:text-4xl">
                       3.2k+
                     </h3>
@@ -144,21 +200,9 @@ export default function BecomeHost() {
                     </p>
                   </div>
                 </div>
-                <div className="space-y-6 pt-8 lg:pt-12">
-                  <div className="h-[360px] overflow-hidden rounded-2xl sm:h-[420px] lg:h-[500px] become-host-asymmetric-shadow">
-                    <img
-                      src="/imgs/host-hero2.jpg"
-                      alt="Basket weaving in Ethiopia"
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="h-[200px] overflow-hidden rounded-2xl sm:h-[220px] lg:h-[250px] become-host-asymmetric-shadow">
-                    <img
-                      src="/imgs/host-hero3.jpg"
-                      alt="Harar old city"
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
+                <div className="space-y-4 md:space-y-8">
+                  <HeroGalleryImage {...heroGallery.square} />
+                  <HeroGalleryImage {...heroGallery.portrait} />
                 </div>
               </div>
             </div>
