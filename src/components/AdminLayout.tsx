@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect, useRef } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -7,15 +7,17 @@ import {
   FileText,
   CreditCard,
   Bell,
-  Settings,
   Search,
   Menu,
   X,
   Home,
   MessageSquare,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "@/context/AuthContext";
+import { cn } from "@/lib/utils";
 
 function adminInitials(name?: string): string {
   if (!name?.trim()) return "AD";
@@ -55,7 +57,17 @@ interface AdminLayoutProps {
   onSearch?: (v: string) => void;
 }
 
-function SidebarContent({ drawer }: { drawer?: boolean }) {
+interface SidebarContentProps {
+  drawer?: boolean;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
+
+function SidebarContent({
+  drawer,
+  collapsed = false,
+  onToggleCollapse,
+}: SidebarContentProps) {
   const { pathname } = useLocation();
   const { user } = useAuth();
   const displayName = user?.name || "Admin";
@@ -63,29 +75,56 @@ function SidebarContent({ drawer }: { drawer?: boolean }) {
 
   return (
     <>
-      {/* Brand — logo sits on the panel without a white tile (reads on dark primary) */}
-      <div className={drawer ? "mb-8 pr-10" : "mb-8"}>
-        <Link
-          to="/admin"
-          className="group block rounded-2xl bg-black/15 p-3 ring-1 ring-white/10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] transition-colors hover:bg-black/20 hover:ring-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary-fixed/60 focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
-          aria-label="Admin dashboard home"
-        >
-          <div className="flex items-center gap-3">
+      {/* Brand & Collapse Header */}
+      <div
+        className={cn(
+          "mb-6 flex items-center justify-between",
+          drawer && "pr-8",
+          collapsed && "justify-center",
+        )}
+      >
+        {!collapsed ? (
+          <>
             <BrandLogo
-              nested
-              className="min-w-0 shrink-0"
-              imgClassName="h-8 w-auto max-w-[9rem] object-contain object-left opacity-[0.97] drop-shadow-[0_2px_14px_rgba(0,0,0,0.42)] sm:h-[2.125rem] sm:max-w-[10rem]"
+              to="/admin"
+              variant="stacked"
+              className="justify-center flex-1"
+              imgClassName="h-10 w-auto max-w-[7.5rem] object-contain object-center drop-shadow-[0_2px_14px_rgba(0,0,0,0.42)] sm:h-11 sm:max-w-[8rem]"
+              wordmarkClassName="h-4.5 w-auto max-w-[6.5rem] sm:h-5 sm:max-w-[7.5rem]"
             />
-            <div className="flex min-w-0 flex-col gap-1 items-start">
-              <span className="rounded-md bg-white/[0.09] px-2 py-1 text-[9px] font-extrabold uppercase tracking-widest text-tertiary-fixed ring-1 ring-white/12">
-                Admin
-              </span>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/38 leading-none">
-                Portal
-              </p>
-            </div>
+            {!drawer && onToggleCollapse && (
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="p-1.5 rounded-lg bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-colors ml-1 shrink-0"
+                title="Minimize sidebar"
+                aria-label="Minimize sidebar"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <BrandLogo
+              to="/admin"
+              variant="icon"
+              className="justify-center"
+              imgClassName="h-8 w-auto max-w-[36px] object-contain object-center drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)]"
+            />
+            {onToggleCollapse && (
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="p-1 rounded-lg bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-colors"
+                title="Expand sidebar"
+                aria-label="Expand sidebar"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
-        </Link>
+        )}
       </div>
 
       {/* Nav */}
@@ -98,16 +137,18 @@ function SidebarContent({ drawer }: { drawer?: boolean }) {
             <Link
               key={item.href}
               to={item.href}
-              title={"title" in item ? item.title : undefined}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-headline font-semibold transition-all duration-200 ${
+              title={item.label}
+              className={`flex items-center ${
+                collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3.5 py-2.5"
+              } rounded-xl text-sm font-headline font-semibold transition-all duration-200 ${
                 isActive
-                  ? "bg-white/15 text-white shadow-inner translate-x-1"
-                  : "text-white/55 hover:bg-white/8 hover:text-white/85 hover:translate-x-0.5"
+                  ? "bg-white/15 text-white shadow-inner"
+                  : "text-white/55 hover:bg-white/8 hover:text-white/85"
               }`}
             >
               <item.icon className="h-4 w-4 shrink-0" />
-              <span>{item.label}</span>
-              {isActive && (
+              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && isActive && (
                 <span className="ml-auto w-1.5 h-1.5 rounded-full bg-tertiary-fixed shrink-0" />
               )}
             </Link>
@@ -117,27 +158,38 @@ function SidebarContent({ drawer }: { drawer?: boolean }) {
 
       <Link
         to="/"
-        className="mt-4 flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-headline font-semibold text-white/50 hover:text-white/85 hover:bg-white/8 transition-colors"
+        className={`mt-4 flex items-center ${
+          collapsed ? "justify-center px-2 py-2" : "gap-2.5 px-3.5 py-2"
+        } rounded-xl text-xs font-headline font-semibold text-white/50 hover:text-white/85 hover:bg-white/8 transition-colors`}
         title="Back to the public site"
       >
         <Home className="h-4 w-4 shrink-0" />
-        <span>View site</span>
+        {!collapsed && <span>View site</span>}
       </Link>
 
       {/* Admin chip */}
-      <div className="mt-auto pt-5 border-t border-white/10">
-        <div className="flex items-center gap-3 px-1">
-          <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center font-headline font-bold text-white text-xs shrink-0">
+      <div className="mt-auto pt-4 border-t border-white/10">
+        <div
+          className={`flex items-center ${
+            collapsed ? "justify-center" : "gap-2.5 px-1"
+          }`}
+        >
+          <div
+            className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center font-headline font-bold text-white text-xs shrink-0"
+            title={displayName}
+          >
             {initials}
           </div>
-          <div className="min-w-0">
-            <p className="font-headline font-bold text-white text-sm truncate">
-              {displayName}
-            </p>
-            <p className="text-[10px] text-white/45 truncate">
-              {user?.email || "Administrator"}
-            </p>
-          </div>
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="font-headline font-bold text-white text-xs truncate">
+                {displayName}
+              </p>
+              <p className="text-[9px] text-white/45 truncate">
+                {user?.email || "Administrator"}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -151,9 +203,28 @@ export default function AdminLayout({
   onSearch,
 }: AdminLayoutProps) {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("admin_sidebar_collapsed") === "true";
+    } catch (_err) {
+      return false;
+    }
+  });
+
+  const toggleCollapse = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("admin_sidebar_collapsed", String(next));
+      } catch (_err) {
+        // localStorage not available
+      }
+      return next;
+    });
+  };
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const displayName = user?.name || "Admin";
   const initials = adminInitials(user?.name);
@@ -174,8 +245,16 @@ export default function AdminLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-background text-on-surface">
       {/* ── Desktop Fixed Sidebar ── */}
-      <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-[260px] bg-primary flex-col p-5 z-50 shadow-[8px_0_32px_-4px_rgba(0,53,39,0.3)]">
-        <SidebarContent />
+      <aside
+        className={cn(
+          "hidden lg:flex fixed left-0 top-0 h-screen bg-primary flex-col z-50 shadow-[8px_0_32px_-4px_rgba(0,53,39,0.3)] transition-all duration-300 ease-in-out",
+          collapsed ? "w-[70px] p-3" : "w-[210px] p-4",
+        )}
+      >
+        <SidebarContent
+          collapsed={collapsed}
+          onToggleCollapse={toggleCollapse}
+        />
       </aside>
 
       {/* ── Mobile Sidebar Drawer ── */}
@@ -190,7 +269,7 @@ export default function AdminLayout({
       />
       {/* Drawer panel */}
       <aside
-        className={`lg:hidden fixed left-0 top-0 h-screen w-[272px] bg-primary flex flex-col p-5 z-50 shadow-[8px_0_32px_-4px_rgba(0,53,39,0.3)] transition-transform duration-300 ${
+        className={`lg:hidden fixed left-0 top-0 h-screen w-[240px] bg-primary flex flex-col p-4 z-50 shadow-[8px_0_32px_-4px_rgba(0,53,39,0.3)] transition-transform duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -206,7 +285,12 @@ export default function AdminLayout({
       </aside>
 
       {/* ── Main area ── */}
-      <div className="lg:ml-[260px] flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+      <div
+        className={cn(
+          "flex-1 flex flex-col h-screen overflow-hidden min-w-0 transition-all duration-300 ease-in-out",
+          collapsed ? "lg:ml-[70px]" : "lg:ml-[210px]",
+        )}
+      >
         {/* Top bar */}
         <header className="shrink-0 min-h-14 flex items-center justify-between gap-3 px-4 md:px-6 py-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-b border-outline-variant/15 z-40 shadow-sm shadow-black/[0.03]">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -248,70 +332,50 @@ export default function AdminLayout({
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Mobile: jump to search field when search is active */}
-            {onSearch && (
-              <button
-                type="button"
-                className="sm:hidden p-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors"
-                aria-label="Focus search"
-                onClick={() => searchInputRef.current?.focus()}
-              >
-                <Search className="h-[18px] w-[18px]" />
-              </button>
-            )}
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <Link
               to="/"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold text-primary border border-primary/25 hover:bg-primary/[0.06] transition-colors"
-              title="Back to the public site"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant hover:text-primary transition-colors py-1.5 px-3 rounded-lg hover:bg-surface-container"
+              title="Open public marketplace"
             >
-              <Home className="h-3.5 w-3.5 shrink-0" />
-              <span>View site</span>
+              <Home className="h-3.5 w-3.5" />
+              <span>Marketplace</span>
             </Link>
-            <Link
-              to="/"
-              className="sm:hidden p-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors"
-              aria-label="View site"
-              title="View site"
-            >
-              <Home className="h-[18px] w-[18px] text-primary" />
-            </Link>
+
+            {/* Notifications */}
             <button
               type="button"
-              onClick={() => navigate("/admin")}
               className="relative p-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors"
-              title="Notifications"
+              aria-label="Notifications"
             >
-              <Bell className="h-[18px] w-[18px]" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900" />
+              <Bell className="h-4 w-4" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary ring-2 ring-white dark:ring-zinc-900" />
             </button>
-            <button
-              type="button"
-              onClick={() => navigate("/admin/payouts")}
-              className="hidden sm:flex p-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors"
-              title="Settings / Payouts"
+
+            {/* Admin identity pill */}
+            <div
+              className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-outline-variant/15"
+              title={user?.email || displayName}
             >
-              <Settings className="h-[18px] w-[18px]" />
-            </button>
-            <div className="h-8 w-px bg-outline-variant/35 mx-0.5 hidden sm:block" />
-            <div className="flex items-center gap-2 pl-0.5">
-              <div className="text-right hidden sm:block leading-tight">
-                <p className="text-[11px] font-headline font-bold text-primary truncate max-w-[120px]">
-                  {displayName}
-                </p>
-                <p className="text-[10px] text-on-surface-variant">
-                  Administrator
-                </p>
-              </div>
-              <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center font-headline font-bold text-white text-[11px] shadow-md shadow-primary/25 shrink-0 ring-2 ring-white dark:ring-zinc-900">
+              <div className="w-8 h-8 rounded-full bg-primary/10 text-primary dark:bg-primary/20 font-headline font-bold text-xs flex items-center justify-center shrink-0 ring-1 ring-primary/15">
                 {initials}
+              </div>
+              <div className="hidden md:flex flex-col min-w-0 max-w-[130px] lg:max-w-[160px] text-left">
+                <span className="text-xs font-headline font-bold text-on-surface truncate leading-tight">
+                  {displayName}
+                </span>
+                <span className="text-[10px] text-on-surface-variant truncate">
+                  {user?.email || "Administrator"}
+                </span>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Content slot — each page manages its own scroll/overflow */}
-        <div className="flex-1 min-h-0 flex flex-col">{children}</div>
+        {/* Scrollable page body */}
+        <main className="flex-1 overflow-y-auto bg-surface-container-lowest dark:bg-zinc-950 p-4 md:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto w-full">{children}</div>
+        </main>
       </div>
     </div>
   );
