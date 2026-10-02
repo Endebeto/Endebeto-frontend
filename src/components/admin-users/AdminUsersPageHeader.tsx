@@ -1,19 +1,33 @@
-import { ChevronRight, ShieldOff } from "lucide-react";
+import { ChevronRight, Download, ShieldOff } from "lucide-react";
 import {
   STATUS_TABS,
   type StatusFilter,
 } from "@/components/admin-users/adminUsersUtils";
+import type { AdminUser } from "@/services/admin.service";
+import { exportUsersCsv } from "@/lib/csvExport";
+import { toast } from "sonner";
 
 export function AdminUsersPageHeader({
   statusFilter,
   onStatusChange,
+  users,
 }: {
   statusFilter: StatusFilter;
   onStatusChange: (k: StatusFilter) => void;
+  users?: AdminUser[];
 }) {
+  const handleExport = () => {
+    if (!users || users.length === 0) {
+      toast.error("No users available to export");
+      return;
+    }
+    exportUsersCsv(users, `users-${statusFilter}`);
+    toast.success(`Exported ${users.length} users to CSV`);
+  };
+
   return (
     <>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <nav className="flex items-center gap-1.5 text-[11px] text-on-surface-variant mb-1.5">
             <span>Admin</span>
@@ -27,6 +41,17 @@ export function AdminUsersPageHeader({
             Manage platform users, roles, and host approval status.
           </p>
         </div>
+
+        <button
+          type="button"
+          disabled={!users || users.length === 0}
+          onClick={handleExport}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-[#2d3133] border border-outline-variant/20 hover:border-primary/40 text-xs font-semibold text-primary shadow-sm hover:shadow transition-all disabled:opacity-50 shrink-0 self-start sm:self-auto"
+          title="Export current users list to CSV"
+        >
+          <Download className="w-4 h-4 text-primary" />
+          <span>Export CSV</span>
+        </button>
       </div>
 
       <div className="flex gap-1 p-1 bg-surface-container-low rounded-xl w-fit">

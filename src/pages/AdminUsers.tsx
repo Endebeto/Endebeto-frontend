@@ -25,6 +25,7 @@ export default function AdminUsers() {
           <div className="max-w-7xl mx-auto space-y-6">
             <AdminUsersPageHeader
               statusFilter={admin.statusFilter}
+              users={admin.users}
               onStatusChange={(k) => {
                 admin.setStatusFilter(k);
                 admin.setPage(1);

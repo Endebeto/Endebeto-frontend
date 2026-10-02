@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Copy,
   Check,
+  Download,
   Eye,
   Loader2,
   Search,
@@ -14,8 +15,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/UserAvatar";
-import type { AdminPlatformBooking } from "@/services/admin.service";
+import {
+  adminService,
+  type AdminPlatformBooking,
+} from "@/services/admin.service";
 import type { AdminBookingStatusFilter } from "@/hooks/useAdminBookings";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AdminBulkActionBar } from "@/components/admin/AdminBulkActionBar";
+import { exportBookingsCsv } from "@/lib/csvExport";
 import {
   BOOKING_STATUS_CONFIG,
   fmtCurrency,
@@ -64,6 +71,49 @@ export function AdminBookingsTable({
   refetch,
 }: AdminBookingsTableProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isExportingAll, setIsExportingAll] = useState(false);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, statusFilter, search]);
+
+  const handleExportAll = async () => {
+    try {
+      setIsExportingAll(true);
+      const res = await adminService.getAllBookings({
+        limit: 1000,
+        status: statusFilter === "all" ? undefined : statusFilter,
+        q: search.trim() || undefined,
+      });
+      const allMatching = res.data.data;
+      if (!allMatching || allMatching.length === 0) {
+        toast.error("No bookings available to export");
+        return;
+      }
+      exportBookingsCsv(allMatching, `bookings-${statusFilter}`);
+      toast.success(`Exported ${allMatching.length} bookings to CSV`);
+    } catch {
+      toast.error("Failed to export bookings");
+    } finally {
+      setIsExportingAll(false);
+    }
+  };
+
+  const handleExportSelected = () => {
+    const selected = bookings.filter((b) => selectedIds.has(b._id));
+    if (selected.length === 0) return;
+    exportBookingsCsv(selected, "selected-bookings");
+    toast.success(`Exported ${selected.length} selected bookings to CSV`);
+  };
+
+  const handleCopySelectedRefs = () => {
+    const selected = bookings.filter((b) => selectedIds.has(b._id));
+    const refs = selected.map((b) => b.txRef || b._id).filter(Boolean);
+    if (refs.length === 0) return;
+    navigator.clipboard.writeText(refs.join("\n"));
+    toast.success(`Copied ${refs.length} references to clipboard`);
+  };
 
   const copyRef = (text: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -110,34 +160,50 @@ export function AdminBookingsTable({
           ))}
         </div>
 
-        <div className="relative min-w-[260px] md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-on-surface-variant/60" />
-          <input
-            type="text"
-            placeholder="Search txRef, guest, host, experience..."
-            value={search}
-            onChange={(e) => onSearch(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                if (onSearchImmediate) {
-                  onSearchImmediate(search);
-                } else {
-                  onSearch(search);
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-on-surface-variant/60" />
+            <input
+              type="text"
+              placeholder="Search txRef, guest, host, experience..."
+              value={search}
+              onChange={(e) => onSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  if (onSearchImmediate) {
+                    onSearchImmediate(search);
+                  } else {
+                    onSearch(search);
+                  }
                 }
-              }
-            }}
-            className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-[#2d3133] border border-outline-variant/20 focus:outline-none focus:ring-2 focus:ring-primary/20 text-on-surface placeholder:text-on-surface-variant/50"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => onSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60 hover:text-on-surface"
-              aria-label="Clear search"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
+              }}
+              className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-[#2d3133] border border-outline-variant/20 focus:outline-none focus:ring-2 focus:ring-primary/20 text-on-surface placeholder:text-on-surface-variant/50"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => onSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60 hover:text-on-surface"
+                aria-label="Clear search"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            disabled={isExportingAll || totalBookings === 0}
+            onClick={handleExportAll}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-[#2d3133] border border-outline-variant/20 hover:border-primary/40 text-xs font-semibold text-primary transition-all shadow-sm hover:shadow disabled:opacity-50 shrink-0"
+            title="Export all matching reservations to CSV"
+          >
+            {isExportingAll ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5" />
+            )}
+            <span className="hidden sm:inline">Export CSV</span>
+          </button>
         </div>
       </div>
 
@@ -191,14 +257,34 @@ export function AdminBookingsTable({
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-outline-variant/10 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider bg-surface-container-low/50 dark:bg-zinc-800/40">
-                    <th className="py-3.5 px-5">Ref / ID</th>
-                    <th className="py-3.5 px-5">Date & Time</th>
-                    <th className="py-3.5 px-5">Experience</th>
-                    <th className="py-3.5 px-5">Guest</th>
-                    <th className="py-3.5 px-5">Host</th>
-                    <th className="py-3.5 px-5">Total Price</th>
-                    <th className="py-3.5 px-5">Status</th>
-                    <th className="py-3.5 px-5 text-right">Actions</th>
+                    <th className="py-3.5 pl-5 pr-2 w-10">
+                      <Checkbox
+                        checked={
+                          bookings.length > 0 &&
+                          selectedIds.size === bookings.length
+                            ? true
+                            : selectedIds.size > 0
+                              ? "indeterminate"
+                              : false
+                        }
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedIds(new Set(bookings.map((b) => b._id)));
+                          } else {
+                            setSelectedIds(new Set());
+                          }
+                        }}
+                        aria-label="Select all bookings on this page"
+                      />
+                    </th>
+                    <th className="py-3.5 px-4">Ref / ID</th>
+                    <th className="py-3.5 px-4">Date & Time</th>
+                    <th className="py-3.5 px-4">Experience</th>
+                    <th className="py-3.5 px-4">Guest</th>
+                    <th className="py-3.5 px-4">Host</th>
+                    <th className="py-3.5 px-4">Total Price</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant/10 text-xs">
@@ -213,10 +299,31 @@ export function AdminBookingsTable({
                       <tr
                         key={b._id}
                         onClick={() => onSelectBooking(b)}
-                        className="hover:bg-surface-container-low/60 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer group"
+                        className={`hover:bg-surface-container-low/60 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer group ${
+                          selectedIds.has(b._id)
+                            ? "bg-primary/5 dark:bg-primary/10"
+                            : ""
+                        }`}
                       >
+                        <td
+                          className="py-3.5 pl-5 pr-2 w-10"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Checkbox
+                            checked={selectedIds.has(b._id)}
+                            onCheckedChange={(checked) => {
+                              setSelectedIds((prev) => {
+                                const next = new Set(prev);
+                                if (checked) next.add(b._id);
+                                else next.delete(b._id);
+                                return next;
+                              });
+                            }}
+                            aria-label={`Select booking ${b.txRef || b._id}`}
+                          />
+                        </td>
                         {/* Ref / ID */}
-                        <td className="py-3.5 px-5">
+                        <td className="py-3.5 px-4">
                           <div className="flex items-center gap-1.5 font-mono text-[11px] font-semibold text-primary">
                             <span
                               className="truncate max-w-[120px]"
@@ -438,6 +545,29 @@ export function AdminBookingsTable({
           </>
         )}
       </div>
+
+      {/* Floating Bulk Actions Bar */}
+      <AdminBulkActionBar
+        selectedCount={selectedIds.size}
+        onClearSelection={() => setSelectedIds(new Set())}
+      >
+        <button
+          type="button"
+          onClick={handleExportSelected}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs transition-colors"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Export Selected (CSV)
+        </button>
+        <button
+          type="button"
+          onClick={handleCopySelectedRefs}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs transition-colors"
+        >
+          <Copy className="w-3.5 h-3.5" />
+          Copy Refs
+        </button>
+      </AdminBulkActionBar>
     </div>
   );
 }

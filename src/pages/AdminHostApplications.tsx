@@ -11,6 +11,7 @@ import {
   Loader2,
   AlertCircle,
   Check,
+  Download,
   ExternalLink,
   User,
   Sparkles,
@@ -25,6 +26,9 @@ import {
 } from "@/services/admin.service";
 import { adminQueryKeys } from "@/lib/adminQueryKeys";
 import { useSyncAdminHeader } from "@/hooks/useSyncAdminHeader";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AdminBulkActionBar } from "@/components/admin/AdminBulkActionBar";
+import { exportHostApplicationsCsv } from "@/lib/csvExport";
 
 /* ─── status styles ──────────────────────────────────────── */
 type Status = "pending" | "submitted" | "approved" | "rejected";
@@ -297,6 +301,113 @@ export default function AdminHostApplications() {
     rejected: 0,
   };
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkOperating, setIsBulkOperating] = useState(false);
+  const [showBulkReject, setShowBulkReject] = useState(false);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, activeTab, search]);
+
+  const handleExportSelected = () => {
+    const selectedApps = applications.filter((a) => selectedIds.has(a._id));
+    if (selectedApps.length === 0) return;
+    exportHostApplicationsCsv(selectedApps, "selected-applications");
+    toast.success(`Exported ${selectedApps.length} applications to CSV`);
+  };
+
+  const handleExportAll = async () => {
+    try {
+      const res = await adminService.getHostApplications({
+        status: activeTab,
+        limit: 1000,
+        search: search.trim() || undefined,
+      });
+      const allMatching = res.data.data.applications;
+      if (!allMatching || allMatching.length === 0) {
+        toast.error("No applications available to export");
+        return;
+      }
+      exportHostApplicationsCsv(allMatching, `applications-${activeTab}`);
+      toast.success(`Exported ${allMatching.length} applications to CSV`);
+    } catch {
+      toast.error("Failed to export applications");
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    const targets = applications.filter(
+      (a) =>
+        selectedIds.has(a._id) &&
+        (a.status === "pending" || a.status === "submitted"),
+    );
+    if (!targets.length) {
+      toast.error("No pending applications selected to approve");
+      return;
+    }
+    setIsBulkOperating(true);
+    try {
+      const results = await Promise.allSettled(
+        targets.map((a) => adminService.approveHostApplication(a._id)),
+      );
+      const succeeded = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (succeeded > 0) {
+        toast.success(
+          `Approved ${succeeded} application${succeeded > 1 ? "s" : ""}`,
+        );
+        qc.invalidateQueries({
+          queryKey: adminQueryKeys.hostApplicationsPrefix,
+        });
+        qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+        setSelectedIds(new Set());
+        setSelected(null);
+      }
+      if (failed > 0) {
+        toast.error(`Failed to approve ${failed} application(s)`);
+      }
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  const handleBulkReject = async (reason: string) => {
+    const targets = applications.filter(
+      (a) =>
+        selectedIds.has(a._id) &&
+        (a.status === "pending" || a.status === "submitted"),
+    );
+    if (!targets.length) {
+      toast.error("No pending applications selected to reject");
+      return;
+    }
+    setIsBulkOperating(true);
+    try {
+      const results = await Promise.allSettled(
+        targets.map((a) => adminService.rejectHostApplication(a._id, reason)),
+      );
+      const succeeded = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (succeeded > 0) {
+        toast.success(
+          `Rejected ${succeeded} application${succeeded > 1 ? "s" : ""}`,
+        );
+        qc.invalidateQueries({
+          queryKey: adminQueryKeys.hostApplicationsPrefix,
+        });
+        qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+        setSelectedIds(new Set());
+        setShowBulkReject(false);
+        setSelected(null);
+      }
+      if (failed > 0) {
+        toast.error(`Failed to reject ${failed} application(s)`);
+      }
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
   const tabs: { id: Tab; label: string }[] = [
     {
       id: "pending",
@@ -325,13 +436,25 @@ export default function AdminHostApplications() {
         {/* ── Table panel ── */}
         <div className="flex-1 overflow-y-auto p-6 min-w-0">
           <div className="w-full">
-            <div className="mb-6">
-              <h2 className="font-headline font-extrabold text-2xl text-primary tracking-tight">
-                Host Applications
-              </h2>
-              <p className="text-on-surface-variant text-sm mt-0.5">
-                Review and manage host applicants
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="font-headline font-extrabold text-2xl text-primary tracking-tight">
+                  Host Applications
+                </h2>
+                <p className="text-on-surface-variant text-sm mt-0.5">
+                  Review and manage host applicants
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={applications.length === 0}
+                onClick={handleExportAll}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-[#2d3133] border border-outline-variant/20 hover:border-primary/40 text-xs font-semibold text-primary transition-all shadow-sm hover:shadow disabled:opacity-50 shrink-0 self-start sm:self-auto"
+                title="Export applications to CSV"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export CSV</span>
+              </button>
             </div>
 
             {/* Tabs */}
@@ -374,6 +497,28 @@ export default function AdminHostApplications() {
                   <table className="w-full min-w-[560px] text-left">
                     <thead className="bg-surface-container-low/60">
                       <tr>
+                        <th className="px-5 py-3 w-10">
+                          <Checkbox
+                            checked={
+                              applications.length > 0 &&
+                              selectedIds.size === applications.length
+                                ? true
+                                : selectedIds.size > 0
+                                  ? "indeterminate"
+                                  : false
+                            }
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedIds(
+                                  new Set(applications.map((a) => a._id)),
+                                );
+                              } else {
+                                setSelectedIds(new Set());
+                              }
+                            }}
+                            aria-label="Select all applications on this page"
+                          />
+                        </th>
                         {[
                           "Applicant",
                           "Experience Types",
@@ -394,7 +539,7 @@ export default function AdminHostApplications() {
                       {applications.length === 0 ? (
                         <tr>
                           <td
-                            colSpan={5}
+                            colSpan={6}
                             className="px-5 py-12 text-center text-sm text-on-surface-variant"
                           >
                             No {activeTab} applications found
@@ -411,9 +556,28 @@ export default function AdminHostApplications() {
                               className={`cursor-pointer transition-colors ${
                                 selected?._id === app._id
                                   ? "bg-primary/5"
-                                  : "hover:bg-primary/3 dark:hover:bg-primary/5"
+                                  : selectedIds.has(app._id)
+                                    ? "bg-primary/5 dark:bg-primary/10"
+                                    : "hover:bg-primary/3 dark:hover:bg-primary/5"
                               }`}
                             >
+                              <td
+                                className="px-5 py-4 w-10"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Checkbox
+                                  checked={selectedIds.has(app._id)}
+                                  onCheckedChange={(checked) => {
+                                    setSelectedIds((prev) => {
+                                      const next = new Set(prev);
+                                      if (checked) next.add(app._id);
+                                      else next.delete(app._id);
+                                      return next;
+                                    });
+                                  }}
+                                  aria-label={`Select ${app.user?.name || "applicant"}`}
+                                />
+                              </td>
                               <td className="px-5 py-4">
                                 <div className="flex items-center gap-3">
                                   <UserAvatar
@@ -819,6 +983,55 @@ export default function AdminHostApplications() {
           </div>
         )}
       </div>
+
+      {/* Floating Bulk Actions Bar */}
+      <AdminBulkActionBar
+        selectedCount={selectedIds.size}
+        onClearSelection={() => setSelectedIds(new Set())}
+      >
+        <button
+          type="button"
+          onClick={handleExportSelected}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs transition-colors"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Export (CSV)
+        </button>
+        {activeTab === "pending" && (
+          <>
+            <button
+              type="button"
+              disabled={isBulkOperating}
+              onClick={handleBulkApprove}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium text-xs transition-colors disabled:opacity-50"
+            >
+              {isBulkOperating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Check className="w-3.5 h-3.5" />
+              )}
+              Bulk Approve
+            </button>
+            <button
+              type="button"
+              disabled={isBulkOperating}
+              onClick={() => setShowBulkReject(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600/80 hover:bg-red-600 text-white font-medium text-xs transition-colors disabled:opacity-50"
+            >
+              <X className="w-3.5 h-3.5" />
+              Bulk Reject
+            </button>
+          </>
+        )}
+      </AdminBulkActionBar>
+
+      {showBulkReject && (
+        <RejectModal
+          onClose={() => setShowBulkReject(false)}
+          loading={isBulkOperating}
+          onConfirm={handleBulkReject}
+        />
+      )}
 
       {showReject && selected && (
         <RejectModal

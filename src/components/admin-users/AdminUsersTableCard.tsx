@@ -1,13 +1,18 @@
+import { useEffect, useState } from "react";
 import {
   AlertCircle,
+  Check,
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  Download,
   Loader2,
   MoreVertical,
   ShieldOff,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { AdminUsersActionMenu } from "@/components/admin-users/AdminUsersActionMenu";
 import { AdminUsersProviderIcon } from "@/components/admin-users/AdminUsersProviderIcon";
 import {
@@ -21,13 +26,18 @@ import {
   type StatusFilter,
 } from "@/components/admin-users/adminUsersUtils";
 import { UserAvatar } from "@/components/UserAvatar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AdminBulkActionBar } from "@/components/admin/AdminBulkActionBar";
+import { exportUsersCsv } from "@/lib/csvExport";
+import { adminService } from "@/services/admin.service";
+import { adminQueryKeys } from "@/lib/adminQueryKeys";
 import type { UseAdminUsersReturn } from "@/hooks/useAdminUsers";
 
-export function AdminUsersTableCard({
-  admin,
-}: {
-  admin: UseAdminUsersReturn;
-}) {
+export function AdminUsersTableCard({ admin }: { admin: UseAdminUsersReturn }) {
+  const qc = useQueryClient();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkOperating, setIsBulkOperating] = useState(false);
+
   const {
     currentUser,
     search,
@@ -48,6 +58,81 @@ export function AdminUsersTableCard({
     totalUsers,
     totalPages,
   } = admin;
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, statusFilter, search]);
+
+  const handleExportSelected = () => {
+    const selectedUsers = users.filter((u) => selectedIds.has(u._id));
+    if (!selectedUsers.length) return;
+    exportUsersCsv(selectedUsers, "selected-users");
+    toast.success(`Exported ${selectedUsers.length} users to CSV`);
+  };
+
+  const handleBulkSuspend = async () => {
+    const targetUsers = users.filter(
+      (u) => selectedIds.has(u._id) && u.active !== false && u.role !== "admin",
+    );
+    if (!targetUsers.length) {
+      toast.error("No eligible non-admin active users selected to suspend");
+      return;
+    }
+    setIsBulkOperating(true);
+    try {
+      const results = await Promise.allSettled(
+        targetUsers.map((u) =>
+          adminService.suspendUser(u._id, "Bulk administrative suspension"),
+        ),
+      );
+      const succeeded = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (succeeded > 0) {
+        toast.success(
+          `Suspended ${succeeded} user account${succeeded > 1 ? "s" : ""}`,
+        );
+        qc.invalidateQueries({ queryKey: adminQueryKeys.usersPrefix });
+        qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+        setSelectedIds(new Set());
+      }
+      if (failed > 0) {
+        toast.error(`Failed to suspend ${failed} user(s)`);
+      }
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  const handleBulkReinstate = async () => {
+    const targetUsers = users.filter(
+      (u) => selectedIds.has(u._id) && u.active === false,
+    );
+    if (!targetUsers.length) {
+      toast.error("No suspended users selected to reinstate");
+      return;
+    }
+    setIsBulkOperating(true);
+    try {
+      const results = await Promise.allSettled(
+        targetUsers.map((u) => adminService.reinstateUser(u._id)),
+      );
+      const succeeded = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (succeeded > 0) {
+        toast.success(
+          `Reinstated ${succeeded} user account${succeeded > 1 ? "s" : ""}`,
+        );
+        qc.invalidateQueries({ queryKey: adminQueryKeys.usersPrefix });
+        qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+        setSelectedIds(new Set());
+      }
+      if (failed > 0) {
+        toast.error(`Failed to reinstate ${failed} user(s)`);
+      }
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-[#2d3133] rounded-3xl shadow-sm overflow-hidden">
@@ -73,27 +158,74 @@ export function AdminUsersTableCard({
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-surface-container-low/50">
-                  {["Name", "Email", "Role", "Host Status", "Verified", "Provider", "Joined", ""].map(
-                    (h, i) => (
-                      <th
-                        key={h}
-                        className={`px-5 py-3.5 text-[9px] font-bold uppercase tracking-widest text-primary ${i === 7 ? "text-right" : ""}`}
-                      >
-                        {h}
-                      </th>
-                    ),
-                  )}
+                  <th className="px-5 py-3.5 w-10">
+                    <Checkbox
+                      checked={
+                        users.length > 0 && selectedIds.size === users.length
+                          ? true
+                          : selectedIds.size > 0
+                            ? "indeterminate"
+                            : false
+                      }
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedIds(new Set(users.map((u) => u._id)));
+                        } else {
+                          setSelectedIds(new Set());
+                        }
+                      }}
+                      aria-label="Select all users on this page"
+                    />
+                  </th>
+                  {[
+                    "Name",
+                    "Email",
+                    "Role",
+                    "Host Status",
+                    "Verified",
+                    "Provider",
+                    "Joined",
+                    "",
+                  ].map((h, i) => (
+                    <th
+                      key={h}
+                      className={`px-5 py-3.5 text-[9px] font-bold uppercase tracking-widest text-primary ${i === 7 ? "text-right" : ""}`}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-container">
                 {users.map((user) => (
                   <tr
                     key={user._id}
-                    className="hover:bg-surface-container-low transition-colors group cursor-pointer"
+                    className={`hover:bg-surface-container-low transition-colors group cursor-pointer ${
+                      selectedIds.has(user._id)
+                        ? "bg-primary/5 dark:bg-primary/10"
+                        : ""
+                    }`}
                     onClick={() => {
                       if (!openMenu) setDrawerUser(user);
                     }}
                   >
+                    <td
+                      className="px-5 py-4 w-10"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        checked={selectedIds.has(user._id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (checked) next.add(user._id);
+                            else next.delete(user._id);
+                            return next;
+                          });
+                        }}
+                        aria-label={`Select ${user.name}`}
+                      />
+                    </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2.5">
                         <UserAvatar
@@ -103,21 +235,26 @@ export function AdminUsersTableCard({
                           initialsClassName="text-xs text-on-secondary-container"
                         />
                         <div>
-                          <p className="text-sm font-bold text-primary leading-none">{user.name}</p>
+                          <p className="text-sm font-bold text-primary leading-none">
+                            {user.name}
+                          </p>
                           {user.active === false && (
                             <span className="text-[9px] text-red-500 font-bold uppercase">
                               Suspended
                             </span>
                           )}
-                          {user.hostStatus === "approved" && user.hostListingSuspended && (
-                            <span className="text-[9px] text-amber-700 font-bold uppercase ml-1">
-                              Listings on hold
-                            </span>
-                          )}
+                          {user.hostStatus === "approved" &&
+                            user.hostListingSuspended && (
+                              <span className="text-[9px] text-amber-700 font-bold uppercase ml-1">
+                                Listings on hold
+                              </span>
+                            )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-xs text-on-surface-variant">{user.email}</td>
+                    <td className="px-5 py-4 text-xs text-on-surface-variant">
+                      {user.email}
+                    </td>
                     <td className="px-5 py-4">
                       <span
                         className={`text-[10px] font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full ${ROLE_BADGE[effectiveRole(user)] ?? "bg-surface-container text-on-surface-variant"}`}
@@ -133,7 +270,9 @@ export function AdminUsersTableCard({
                           {user.hostStatus}
                         </span>
                       ) : (
-                        <span className="text-xs text-outline-variant">N/A</span>
+                        <span className="text-xs text-outline-variant">
+                          N/A
+                        </span>
                       )}
                     </td>
                     <td className="px-5 py-4 text-center">
@@ -169,7 +308,8 @@ export function AdminUsersTableCard({
                         <AdminUsersActionMenu
                           user={user}
                           canSuspend={
-                            user.role !== "admin" && user._id !== currentUser?._id
+                            user.role !== "admin" &&
+                            user._id !== currentUser?._id
                           }
                           canManageHostListings={
                             user.hostStatus === "approved" &&
@@ -206,7 +346,8 @@ export function AdminUsersTableCard({
             <p className="text-xs text-on-surface-variant font-medium">
               Showing{" "}
               <span className="font-bold text-primary">
-                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, totalUsers)}
+                {(page - 1) * PAGE_SIZE + 1}–
+                {Math.min(page * PAGE_SIZE, totalUsers)}
               </span>{" "}
               of {totalUsers} users
             </p>
@@ -220,7 +361,9 @@ export function AdminUsersTableCard({
                 <ChevronLeft className="h-4 w-4" />
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+                .filter(
+                  (n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1,
+                )
                 .reduce<(number | "…")[]>((acc, n, i, arr) => {
                   if (i > 0 && n - (arr[i - 1] as number) > 1) acc.push("…");
                   acc.push(n);
@@ -228,7 +371,10 @@ export function AdminUsersTableCard({
                 }, [])
                 .map((item, idx) =>
                   item === "…" ? (
-                    <span key={`e-${idx}`} className="text-xs text-outline-variant px-1">
+                    <span
+                      key={`e-${idx}`}
+                      className="text-xs text-outline-variant px-1"
+                    >
                       …
                     </span>
                   ) : (
@@ -258,6 +404,47 @@ export function AdminUsersTableCard({
           </div>
         </>
       )}
+
+      {/* Floating Bulk Actions Bar */}
+      <AdminBulkActionBar
+        selectedCount={selectedIds.size}
+        onClearSelection={() => setSelectedIds(new Set())}
+      >
+        <button
+          type="button"
+          onClick={handleExportSelected}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs transition-colors"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Export (CSV)
+        </button>
+        <button
+          type="button"
+          disabled={isBulkOperating}
+          onClick={handleBulkSuspend}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600/80 hover:bg-red-600 text-white font-medium text-xs transition-colors disabled:opacity-50"
+        >
+          {isBulkOperating ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <ShieldOff className="w-3.5 h-3.5" />
+          )}
+          Bulk Suspend
+        </button>
+        <button
+          type="button"
+          disabled={isBulkOperating}
+          onClick={handleBulkReinstate}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 text-white font-medium text-xs transition-colors disabled:opacity-50"
+        >
+          {isBulkOperating ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Check className="w-3.5 h-3.5" />
+          )}
+          Bulk Reinstate
+        </button>
+      </AdminBulkActionBar>
     </div>
   );
 }

@@ -2,9 +2,11 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  Download,
   Eye,
   Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { ExperienceCatalogRow } from "@/components/admin-experiences/ExperienceCatalogRow";
 import {
   CATALOG_TAB_ITEMS,
@@ -12,6 +14,7 @@ import {
   type TabKey,
 } from "@/components/admin-experiences/experienceAdminUtils";
 import type { AdminExperience } from "@/services/admin.service";
+import { exportExperiencesCsv } from "@/lib/csvExport";
 
 export function ExperienceCatalogSidebar({
   tab,
@@ -49,14 +52,32 @@ export function ExperienceCatalogSidebar({
       }`}
     >
       <div className="shrink-0 px-5 pt-5 pb-0">
-        <div className="mb-4">
-          <h1 className="font-headline font-extrabold text-lg text-on-surface dark:text-white">
-            Experience Management
-          </h1>
-          <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5">
-            Live and suspended listings are approved experiences. Suspend to hide
-            a listing from guests until issues are resolved.
-          </p>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h1 className="font-headline font-extrabold text-lg text-on-surface dark:text-white">
+              Experience Management
+            </h1>
+            <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5">
+              Live and suspended listings are approved experiences. Suspend to
+              hide a listing from guests until issues are resolved.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={experiences.length === 0}
+            onClick={() => {
+              if (experiences.length === 0) return;
+              exportExperiencesCsv(experiences, `experiences-${tab}`);
+              toast.success(
+                `Exported ${experiences.length} experiences to CSV`,
+              );
+            }}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-outline-variant/20 hover:border-primary/40 text-xs font-semibold text-primary transition-all shadow-sm hover:shadow disabled:opacity-40 shrink-0 mt-0.5"
+            title="Export experiences list to CSV"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export</span>
+          </button>
         </div>
 
         <div className="flex gap-1 border-b border-outline-variant/10 dark:border-zinc-700 overflow-x-auto">
