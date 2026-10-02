@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { adminService, type AdminWithdrawal } from "@/services/admin.service";
@@ -7,7 +8,10 @@ import { fmtETB, PAGE_SIZE } from "@/components/admin-payouts/payoutUtils";
 
 export function useAdminPayouts() {
   const qc = useQueryClient();
-  const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch =
+    searchParams.get("search") || searchParams.get("q") || "";
+  const [search, setSearch] = useState(initialSearch);
   const [failTarget, setFailTarget] = useState<AdminWithdrawal | null>(null);
   const [paidTarget, setPaidTarget] = useState<AdminWithdrawal | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
@@ -18,51 +22,68 @@ export function useAdminPayouts() {
   >({});
   const [revealingId, setRevealingId] = useState<string | null>(null);
 
+  useEffect(() => {
+    const urlQuery = searchParams.get("search") || searchParams.get("q") || "";
+    setSearch((prev) => {
+      if (prev !== urlQuery) {
+        setHistoryPage(1);
+        setPendingPage(1);
+        return urlQuery;
+      }
+      return prev;
+    });
+  }, [searchParams]);
+
   const searchTrim = search.trim();
 
-  const { data: historyApi, isLoading: historyLoading, isError: historyErr } =
-    useQuery({
-      queryKey: adminQueryKeys.withdrawals({
-        tab: "history",
-        page: historyPage,
-        search: searchTrim,
-      }),
-      queryFn: () =>
-        adminService
-          .getWithdrawals({
-            tab: "history",
-            page: historyPage,
-            limit: PAGE_SIZE,
-            q: searchTrim || undefined,
-          })
-          .then((r) => r.data),
-      staleTime: 30_000,
-    });
+  const {
+    data: historyApi,
+    isLoading: historyLoading,
+    isError: historyErr,
+  } = useQuery({
+    queryKey: adminQueryKeys.withdrawals({
+      tab: "history",
+      page: historyPage,
+      search: searchTrim,
+    }),
+    queryFn: () =>
+      adminService
+        .getWithdrawals({
+          tab: "history",
+          page: historyPage,
+          limit: PAGE_SIZE,
+          q: searchTrim || undefined,
+        })
+        .then((r) => r.data),
+    staleTime: 30_000,
+  });
 
-  const { data: pendingApi, isLoading: pendingLoading, isError: pendingErr } =
-    useQuery({
-      queryKey: adminQueryKeys.withdrawals({
-        tab: "pending",
-        page: pendingPage,
-        search: searchTrim,
-      }),
-      queryFn: () =>
-        adminService
-          .getWithdrawals({
-            tab: "pending",
-            page: pendingPage,
-            limit: PAGE_SIZE,
-            q: searchTrim || undefined,
-          })
-          .then((r) => r.data),
-      staleTime: 30_000,
-    });
+  const {
+    data: pendingApi,
+    isLoading: pendingLoading,
+    isError: pendingErr,
+  } = useQuery({
+    queryKey: adminQueryKeys.withdrawals({
+      tab: "pending",
+      page: pendingPage,
+      search: searchTrim,
+    }),
+    queryFn: () =>
+      adminService
+        .getWithdrawals({
+          tab: "pending",
+          page: pendingPage,
+          limit: PAGE_SIZE,
+          q: searchTrim || undefined,
+        })
+        .then((r) => r.data),
+    staleTime: 30_000,
+  });
 
   const isLoading = historyLoading || pendingLoading;
   const isError = historyErr || pendingErr;
 
-  const dashboardTotals =
-    pendingApi?.dashboardTotals ??
+  const dashboardTotals = pendingApi?.dashboardTotals ??
     historyApi?.dashboardTotals ?? {
       pendingCount: 0,
       pendingAmountCents: 0,
@@ -159,11 +180,26 @@ export function useAdminPayouts() {
     setSearch(v);
     setHistoryPage(1);
     setPendingPage(1);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        const trimmed = v.trim();
+        if (trimmed) {
+          next.set("search", trimmed);
+        } else {
+          next.delete("search");
+          next.delete("q");
+        }
+        return next;
+      },
+      { replace: true },
+    );
   };
 
   return {
     search,
     onSearch,
+    onSearchImmediate: onSearch,
     failTarget,
     setFailTarget,
     paidTarget,

@@ -1,4 +1,14 @@
-import { Ban, LockKeyhole, RotateCcw, Trash2, Unlock } from "lucide-react";
+import { Link } from "react-router-dom";
+import {
+  Ban,
+  CalendarCheck,
+  Compass,
+  ExternalLink,
+  LockKeyhole,
+  RotateCcw,
+  Trash2,
+  Unlock,
+} from "lucide-react";
 import type { AdminUser } from "@/services/admin.service";
 
 export function AdminUsersActionMenu({
@@ -22,6 +32,30 @@ export function AdminUsersActionMenu({
 }) {
   return (
     <div className="absolute right-4 top-full mt-1 z-50 w-52 bg-white dark:bg-[#2d3133] rounded-xl shadow-xl border border-outline-variant/20 py-1 overflow-hidden">
+      <Link
+        to={`/admin/bookings?search=${encodeURIComponent(user.email)}`}
+        onClick={onClose}
+        className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5 transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          <CalendarCheck className="h-3.5 w-3.5" /> Bookings
+        </span>
+        <ExternalLink className="h-2.5 w-2.5 opacity-50" />
+      </Link>
+      {(user.role === "host" ||
+        (user.hostStatus && user.hostStatus !== "none")) && (
+        <Link
+          to={`/admin/experiences?search=${encodeURIComponent(user.name || user.email)}`}
+          onClick={onClose}
+          className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5 transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <Compass className="h-3.5 w-3.5" /> Experiences
+          </span>
+          <ExternalLink className="h-2.5 w-2.5 opacity-50" />
+        </Link>
+      )}
+      <div className="my-1 border-t border-outline-variant/10" />
       {canSuspend ? (
         <button
           type="button"
@@ -46,7 +80,8 @@ export function AdminUsersActionMenu({
           <Ban className="h-3.5 w-3.5" /> Suspend User
         </div>
       )}
-      {canManageHostListings && user.hostStatus === "approved" &&
+      {canManageHostListings &&
+        user.hostStatus === "approved" &&
         (user.hostListingSuspended ? (
           <button
             type="button"

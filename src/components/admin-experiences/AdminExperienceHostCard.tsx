@@ -1,4 +1,13 @@
-import { Copy, Mail, Phone } from "lucide-react";
+import { Link } from "react-router-dom";
+import {
+  CalendarCheck,
+  Copy,
+  CreditCard,
+  ExternalLink,
+  Mail,
+  Phone,
+  User,
+} from "lucide-react";
 import { toast } from "sonner";
 import { hostInitials } from "@/components/admin-experiences/experienceAdminUtils";
 import type { AdminExperience } from "@/services/admin.service";
@@ -25,21 +34,32 @@ export function AdminExperienceHostCard({ exp }: { exp: AdminExperience }) {
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-xl border border-outline-variant/20 dark:border-zinc-700 p-4 space-y-3">
       <div className="flex items-center gap-3">
-        {host.photo ? (
-          <img
-            src={host.photo}
-            alt={host.name}
-            className="w-12 h-12 rounded-full object-cover border border-outline-variant/30 dark:border-zinc-700"
-          />
-        ) : (
-          <div className="w-12 h-12 rounded-full bg-primary/15 dark:bg-primary/30 text-primary dark:text-green-400 text-sm font-bold flex items-center justify-center">
-            {hostInitials(host.name ?? "")}
-          </div>
-        )}
+        <Link
+          to={`/admin/users?search=${encodeURIComponent(host.email)}`}
+          className="shrink-0 hover:opacity-85 transition-opacity"
+          title="Inspect host in Admin Users"
+        >
+          {host.photo ? (
+            <img
+              src={host.photo}
+              alt={host.name}
+              className="w-12 h-12 rounded-full object-cover border border-outline-variant/30 dark:border-zinc-700"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-primary/15 dark:bg-primary/30 text-primary dark:text-green-400 text-sm font-bold flex items-center justify-center">
+              {hostInitials(host.name ?? "")}
+            </div>
+          )}
+        </Link>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-headline font-bold text-on-surface dark:text-white truncate">
-            {host.name}
-          </p>
+          <Link
+            to={`/admin/users?search=${encodeURIComponent(host.email)}`}
+            className="text-sm font-headline font-bold text-on-surface dark:text-white truncate hover:text-primary dark:hover:text-green-400 hover:underline flex items-center gap-1 group"
+            title="Inspect host in Admin Users"
+          >
+            <span className="truncate">{host.name}</span>
+            <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-primary dark:text-green-400" />
+          </Link>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             {host.hostStatus && (
               <span
@@ -62,6 +82,30 @@ export function AdminExperienceHostCard({ exp }: { exp: AdminExperience }) {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+        <Link
+          to={`/admin/users?search=${encodeURIComponent(host.email)}`}
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline px-2 py-1 rounded bg-surface-container-low hover:bg-surface-container dark:bg-zinc-800 dark:hover:bg-zinc-700 transition-colors"
+          title="Inspect host in Admin Users"
+        >
+          <User className="h-3 w-3" /> Profile
+        </Link>
+        <Link
+          to={`/admin/bookings?search=${encodeURIComponent(host.email)}`}
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline px-2 py-1 rounded bg-surface-container-low hover:bg-surface-container dark:bg-zinc-800 dark:hover:bg-zinc-700 transition-colors"
+          title="Search host bookings"
+        >
+          <CalendarCheck className="h-3 w-3" /> Bookings
+        </Link>
+        <Link
+          to={`/admin/payouts?search=${encodeURIComponent(host.email)}`}
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline px-2 py-1 rounded bg-surface-container-low hover:bg-surface-container dark:bg-zinc-800 dark:hover:bg-zinc-700 transition-colors"
+          title="View host payouts"
+        >
+          <CreditCard className="h-3 w-3" /> Payouts
+        </Link>
       </div>
 
       <div className="space-y-1.5">

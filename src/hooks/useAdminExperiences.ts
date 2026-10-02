@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   CATALOG_PAGE_SIZE,
@@ -8,22 +9,33 @@ import {
 import { adminQueryKeys } from "@/lib/adminQueryKeys";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { normalizeApiList } from "@/lib/normalizeApiList";
-import {
-  adminService,
-  type AdminExperience,
-} from "@/services/admin.service";
+import { adminService, type AdminExperience } from "@/services/admin.service";
 
 export function useAdminExperiences() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch =
+    searchParams.get("search") || searchParams.get("q") || "";
   const [tab, setTab] = useState<TabKey>("live");
   const [page, setPage] = useState(1);
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const searchEffectSkipMount = useRef(true);
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [search, setSearch] = useState(initialSearch);
+  const searchEffectSkipMount = useRef(!initialSearch);
   const [selected, setSelected] = useState<AdminExperience | null>(null);
-  const [suspendModalExp, setSuspendModalExp] = useState<AdminExperience | null>(
-    null,
-  );
+  const [suspendModalExp, setSuspendModalExp] =
+    useState<AdminExperience | null>(null);
+
+  useEffect(() => {
+    const urlQuery = searchParams.get("search") || searchParams.get("q") || "";
+    setSearch((prev) => {
+      if (prev !== urlQuery) {
+        setSearchInput(urlQuery);
+        setPage(1);
+        return urlQuery;
+      }
+      return prev;
+    });
+  }, [searchParams]);
 
   useEffect(() => {
     if (searchEffectSkipMount.current) {
@@ -31,13 +43,31 @@ export function useAdminExperiences() {
       return;
     }
     const t = setTimeout(() => {
-      setSearch(searchInput);
+      const trimmed = searchInput.trim();
+      setSearch(trimmed);
       setPage(1);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (trimmed) {
+            next.set("search", trimmed);
+          } else {
+            next.delete("search");
+            next.delete("q");
+          }
+          return next;
+        },
+        { replace: true },
+      );
     }, 400);
     return () => clearTimeout(t);
-  }, [searchInput]);
+  }, [searchInput, setSearchParams]);
 
-  const { data: catalogData, isLoading, isError } = useQuery({
+  const {
+    data: catalogData,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: adminQueryKeys.experiencesCatalog({
       tab,
       page,
@@ -81,10 +111,16 @@ export function useAdminExperiences() {
           "Listing suspended. Email notifications skipped — SMTP not configured.",
         );
       }
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.experiencesCatalogPrefix });
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.experiencesCatalogPrefix,
+      });
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.experienceDetailPrefix });
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.experienceBookingsPrefix });
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.experienceDetailPrefix,
+      });
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.experienceBookingsPrefix,
+      });
       setSuspendModalExp(null);
       setSelected(null);
     },
@@ -108,10 +144,16 @@ export function useAdminExperiences() {
           "Listing reinstated. Email notifications skipped — SMTP not configured.",
         );
       }
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.experiencesCatalogPrefix });
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.experiencesCatalogPrefix,
+      });
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.experienceDetailPrefix });
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.experienceBookingsPrefix });
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.experienceDetailPrefix,
+      });
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.experienceBookingsPrefix,
+      });
       setSelected(null);
     },
     onError: (err: unknown) => {
@@ -129,6 +171,27 @@ export function useAdminExperiences() {
     setSelected(null);
   };
 
+  const handleSearchImmediate = (v: string) => {
+    const trimmed = v.trim();
+    setSearchInput(v);
+    setSearch(trimmed);
+    setPage(1);
+    setSelected(null);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (trimmed) {
+          next.set("search", trimmed);
+        } else {
+          next.delete("search");
+          next.delete("q");
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
   return {
     tab,
     setTab,
@@ -137,6 +200,7 @@ export function useAdminExperiences() {
     searchInput,
     search,
     handleSearch,
+    handleSearchImmediate,
     selected,
     setSelected,
     suspendModalExp,

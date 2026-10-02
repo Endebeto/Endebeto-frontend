@@ -13,6 +13,7 @@ export default function AdminExperiences() {
     searchInput,
     search,
     handleSearch,
+    handleSearchImmediate,
     selected,
     setSelected,
     suspendModalExp,
@@ -31,6 +32,7 @@ export default function AdminExperiences() {
     searchPlaceholder: "Search title, host, or location…",
     searchValue: searchInput,
     onSearch: handleSearch,
+    onSearchImmediate: handleSearchImmediate,
   });
 
   return (

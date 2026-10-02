@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -13,8 +14,22 @@ import { adminService, type AdminUser } from "@/services/admin.service";
 export function useAdminUsers() {
   const qc = useQueryClient();
   const { user: currentUser } = useAuth();
-  const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch =
+    searchParams.get("search") || searchParams.get("q") || "";
+  const [search, setSearch] = useState(initialSearch);
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const urlQuery = searchParams.get("search") || searchParams.get("q") || "";
+    setSearch((prev) => {
+      if (prev !== urlQuery) {
+        setPage(1);
+        return urlQuery;
+      }
+      return prev;
+    });
+  }, [searchParams]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [drawerUser, setDrawerUser] = useState<AdminUser | null>(null);
@@ -160,16 +175,34 @@ export function useAdminUsers() {
     },
   });
 
-  const onSearch = useCallback((v: string) => {
-    setSearch(v);
-    setPage(1);
-  }, []);
+  const onSearch = useCallback(
+    (v: string) => {
+      setSearch(v);
+      setPage(1);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          const trimmed = v.trim();
+          if (trimmed) {
+            next.set("search", trimmed);
+          } else {
+            next.delete("search");
+            next.delete("q");
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   return {
     currentUser,
     search,
     setSearch,
     onSearch,
+    onSearchImmediate: onSearch,
     page,
     setPage,
     statusFilter,

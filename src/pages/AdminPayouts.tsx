@@ -39,12 +39,14 @@ export default function AdminPayouts() {
     pendingTotalPages,
     markPaidMutation,
     markFailedMutation,
+    onSearchImmediate,
   } = useAdminPayouts();
 
   useSyncAdminHeader({
     searchPlaceholder: "Search hosts or transactions...",
     searchValue: search,
     onSearch,
+    onSearchImmediate,
   });
 
   return (

@@ -1,6 +1,13 @@
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertCircle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Loader2,
+} from "lucide-react";
 import {
   BOOKING_FILTERS,
   BOOKING_STATUS_BADGE,
@@ -14,7 +21,13 @@ import {
   type AdminBookingStatus,
 } from "@/services/admin.service";
 
-export function ExperienceBookingsSection({ expId }: { expId: string }) {
+export function ExperienceBookingsSection({
+  expId,
+  expTitle,
+}: {
+  expId: string;
+  expTitle?: string;
+}) {
   const [filter, setFilter] = useState<"all" | AdminBookingStatus>("all");
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -42,6 +55,14 @@ export function ExperienceBookingsSection({ expId }: { expId: string }) {
         <p className="text-xs font-semibold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wide">
           Bookings {total > 0 && `(${total})`}
         </p>
+        <Link
+          to={`/admin/bookings?search=${encodeURIComponent(expTitle || expId)}`}
+          className="text-[11px] font-semibold text-primary hover:underline inline-flex items-center gap-1"
+          title="Open in Platform Bookings Manager"
+        >
+          <span>Open in Bookings</span>
+          <ExternalLink className="h-3 w-3" />
+        </Link>
       </div>
 
       <div className="flex gap-1.5 mb-3 flex-wrap">
@@ -103,14 +124,18 @@ export function ExperienceBookingsSection({ expId }: { expId: string }) {
                       {hostInitials(b.user?.name ?? "??")}
                     </div>
                   )}
-                  <div className="min-w-0">
-                    <p className="font-semibold text-on-surface dark:text-white truncate">
+                  <Link
+                    to={`/admin/users?search=${encodeURIComponent(b.user?.email || "")}`}
+                    className="min-w-0 hover:underline flex flex-col group"
+                    title="Inspect user in Admin Users"
+                  >
+                    <p className="font-semibold text-on-surface dark:text-white truncate group-hover:text-primary transition-colors">
                       {b.user?.name ?? "Deleted user"}
                     </p>
                     <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 truncate">
                       {b.user?.email ?? ""}
                     </p>
-                  </div>
+                  </Link>
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-on-surface dark:text-zinc-200">

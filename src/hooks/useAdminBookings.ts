@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getFriendlyErrorMessage } from "@/lib/errors";
@@ -20,8 +21,11 @@ export const BOOKING_PAGE_SIZE = 10;
 
 export function useAdminBookings() {
   const qc = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch =
+    searchParams.get("search") || searchParams.get("q") || "";
+  const [search, setSearch] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] =
     useState<AdminBookingStatusFilter>("all");
@@ -32,11 +36,37 @@ export function useAdminBookings() {
   );
 
   useEffect(() => {
+    const urlQuery = searchParams.get("search") || searchParams.get("q") || "";
+    setSearch((prev) => {
+      if (prev !== urlQuery) {
+        setDebouncedSearch(urlQuery);
+        setPage(1);
+        return urlQuery;
+      }
+      return prev;
+    });
+  }, [searchParams]);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          const trimmed = search.trim();
+          if (trimmed) {
+            next.set("search", trimmed);
+          } else {
+            next.delete("search");
+            next.delete("q");
+          }
+          return next;
+        },
+        { replace: true },
+      );
     }, 250);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, setSearchParams]);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: adminQueryKeys.allBookings({
@@ -99,11 +129,28 @@ export function useAdminBookings() {
     setPage(1);
   }, []);
 
-  const onSearchImmediate = useCallback((value: string) => {
-    setSearch(value);
-    setDebouncedSearch(value);
-    setPage(1);
-  }, []);
+  const onSearchImmediate = useCallback(
+    (value: string) => {
+      setSearch(value);
+      setDebouncedSearch(value);
+      setPage(1);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          const trimmed = value.trim();
+          if (trimmed) {
+            next.set("search", trimmed);
+          } else {
+            next.delete("search");
+            next.delete("q");
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   const onStatusChange = useCallback((status: AdminBookingStatusFilter) => {
     setStatusFilter(status);

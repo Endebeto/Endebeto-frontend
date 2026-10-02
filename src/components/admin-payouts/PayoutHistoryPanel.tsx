@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import {
   AlertCircle,
   ChevronLeft,
@@ -99,7 +100,8 @@ export function PayoutHistoryPanel({
                   </tr>
                 ) : (
                   historyWithdrawals.map((wr) => {
-                    const st = (wr.status ?? "pending_transfer") as PayoutStatus;
+                    const st = (wr.status ??
+                      "pending_transfer") as PayoutStatus;
                     const bank = bankDetailsForPayout(wr);
                     const when = wr.processedAt ?? wr.createdAt;
                     return (
@@ -109,24 +111,54 @@ export function PayoutHistoryPanel({
                       >
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
-                            {wr.host?.photo ? (
-                              <img
-                                src={wr.host.photo}
-                                alt={wr.host.name}
-                                className="w-9 h-9 rounded-full object-cover shrink-0"
-                              />
-                            ) : (
-                              <div className="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center font-headline font-bold text-xs text-on-secondary-container shrink-0">
-                                {payoutInitials(wr.host?.name ?? "?")}
-                              </div>
-                            )}
+                            <Link
+                              to={`/admin/users?search=${encodeURIComponent(wr.host?.email || "")}`}
+                              className="shrink-0 hover:opacity-80 transition-opacity"
+                              title="Inspect host in Admin Users"
+                            >
+                              {wr.host?.photo ? (
+                                <img
+                                  src={wr.host.photo}
+                                  alt={wr.host.name}
+                                  className="w-9 h-9 rounded-full object-cover shrink-0"
+                                />
+                              ) : (
+                                <div className="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center font-headline font-bold text-xs text-on-secondary-container shrink-0">
+                                  {payoutInitials(wr.host?.name ?? "?")}
+                                </div>
+                              )}
+                            </Link>
                             <div>
-                              <p className="font-headline font-semibold text-sm text-primary">
-                                {wr.host?.name ?? "–"}
-                              </p>
+                              <Link
+                                to={`/admin/users?search=${encodeURIComponent(wr.host?.email || "")}`}
+                                className="font-headline font-semibold text-sm text-primary hover:underline inline-flex items-center gap-1 group"
+                                title="Inspect host in Admin Users"
+                              >
+                                <span>{wr.host?.name ?? "–"}</span>
+                                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </Link>
                               <p className="text-[10px] text-on-surface-variant">
                                 {wr.host?.email}
                               </p>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <Link
+                                  to={`/admin/bookings?search=${encodeURIComponent(wr.host?.email || "")}`}
+                                  className="text-[9px] font-semibold text-primary hover:underline"
+                                  title="View host bookings"
+                                >
+                                  Bookings
+                                </Link>
+                                <span className="text-[9px] text-outline-variant">
+                                  •
+                                </span>
+                                <Link
+                                  to={`/admin/experiences?search=${encodeURIComponent(wr.host?.name || wr.host?.email || "")}`}
+                                  className="text-[9px] font-semibold text-primary hover:underline"
+                                  title="View host experiences"
+                                >
+                                  Experiences
+                                </Link>
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -198,8 +230,7 @@ export function PayoutHistoryPanel({
                               rel="noreferrer"
                               className="inline-flex items-center gap-1 text-[10px] font-bold text-primary hover:underline break-all"
                             >
-                              <ExternalLink className="h-3 w-3 shrink-0" />{" "}
-                              View
+                              <ExternalLink className="h-3 w-3 shrink-0" /> View
                             </a>
                           ) : (
                             <span className="text-[10px] text-outline-variant">
@@ -221,14 +252,10 @@ export function PayoutHistoryPanel({
               <span className="font-bold text-primary">
                 {historyTotal === 0
                   ? 0
-                  : Math.min(
-                      (historyPage - 1) * PAGE_SIZE + 1,
-                      historyTotal,
-                    )}
+                  : Math.min((historyPage - 1) * PAGE_SIZE + 1, historyTotal)}
                 –{Math.min(historyPage * PAGE_SIZE, historyTotal)}
               </span>{" "}
-              of{" "}
-              <span className="font-bold text-primary">{historyTotal}</span>{" "}
+              of <span className="font-bold text-primary">{historyTotal}</span>{" "}
               completed
             </p>
             <div className="flex items-center gap-1.5">

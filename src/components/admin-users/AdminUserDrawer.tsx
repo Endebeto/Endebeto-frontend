@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { LockKeyhole, ShieldOff, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import {
+  CalendarCheck,
+  Compass,
+  CreditCard,
+  ExternalLink,
+  FileText,
+  LockKeyhole,
+  ShieldOff,
+  X,
+} from "lucide-react";
 import {
   effectiveRole,
   formatUserDate,
@@ -11,7 +21,13 @@ import {
 import { UserAvatar } from "@/components/UserAvatar";
 import type { AdminUser } from "@/services/admin.service";
 
-export function AdminUserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void }) {
+export function AdminUserDrawer({
+  user,
+  onClose,
+}: {
+  user: AdminUser;
+  onClose: () => void;
+}) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
@@ -45,7 +61,9 @@ export function AdminUserDrawer({ user, onClose }: { user: AdminUser; onClose: (
             initialsClassName="text-3xl text-on-secondary-container font-black"
             imgClassName="w-full h-full object-cover"
           />
-          <p className="font-headline font-extrabold text-lg text-primary">{user.name}</p>
+          <p className="font-headline font-extrabold text-lg text-primary">
+            {user.name}
+          </p>
           <p className="text-xs text-on-surface-variant mt-0.5">{user.email}</p>
           <div className="flex items-center gap-2 mt-3">
             <span
@@ -76,16 +94,82 @@ export function AdminUserDrawer({ user, onClose }: { user: AdminUser; onClose: (
           {[
             { label: "Login method", value: loginMethodLabel(user) },
             { label: "Verified", value: user.isVerified ? "Yes" : "No" },
-            { label: "Member Since", value: formatUserDate(user.createdAt, user._id) },
+            {
+              label: "Member Since",
+              value: formatUserDate(user.createdAt, user._id),
+            },
           ].map(({ label, value }) => (
             <div
               key={label}
               className="flex items-center justify-between py-2.5 border-b border-outline-variant/10 last:border-none"
             >
-              <span className="text-xs text-on-surface-variant font-medium">{label}</span>
+              <span className="text-xs text-on-surface-variant font-medium">
+                {label}
+              </span>
               <span className="text-xs font-bold text-on-surface">{value}</span>
             </div>
           ))}
+        </div>
+
+        {/* Quick Cross-Module Drilldowns */}
+        <div className="px-6 py-4 border-t border-outline-variant/10 space-y-2">
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant mb-2">
+            Related Modules &amp; Records
+          </p>
+          <div className="space-y-1.5">
+            <Link
+              to={`/admin/bookings?search=${encodeURIComponent(user.email)}`}
+              onClick={onClose}
+              className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container text-xs font-semibold text-primary transition-colors border border-outline-variant/10 group"
+            >
+              <div className="flex items-center gap-2.5">
+                <CalendarCheck className="h-4 w-4 text-primary" />
+                <span>View User Bookings</span>
+              </div>
+              <ExternalLink className="h-3 w-3 text-on-surface-variant group-hover:text-primary transition-colors" />
+            </Link>
+
+            {(user.role === "host" ||
+              (user.hostStatus && user.hostStatus !== "none")) && (
+              <>
+                <Link
+                  to={`/admin/experiences?search=${encodeURIComponent(user.name || user.email)}`}
+                  onClick={onClose}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container text-xs font-semibold text-primary transition-colors border border-outline-variant/10 group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Compass className="h-4 w-4 text-primary" />
+                    <span>View Hosted Experiences</span>
+                  </div>
+                  <ExternalLink className="h-3 w-3 text-on-surface-variant group-hover:text-primary transition-colors" />
+                </Link>
+
+                <Link
+                  to={`/admin/host-applications?search=${encodeURIComponent(user.email)}`}
+                  onClick={onClose}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container text-xs font-semibold text-primary transition-colors border border-outline-variant/10 group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span>View Host Application</span>
+                  </div>
+                  <ExternalLink className="h-3 w-3 text-on-surface-variant group-hover:text-primary transition-colors" />
+                </Link>
+
+                <Link
+                  to={`/admin/payouts?search=${encodeURIComponent(user.name || user.email)}`}
+                  onClick={onClose}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container text-xs font-semibold text-primary transition-colors border border-outline-variant/10 group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <CreditCard className="h-4 w-4 text-primary" />
+                    <span>View Payout Requests</span>
+                  </div>
+                  <ExternalLink className="h-3 w-3 text-on-surface-variant group-hover:text-primary transition-colors" />
+                </Link>
+              </>
+            )}
+          </div>
         </div>
 
         {user.hostStatus === "approved" && user.hostListingSuspended && (

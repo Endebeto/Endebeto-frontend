@@ -15,6 +15,7 @@ export default function AdminUsers() {
     searchPlaceholder: "Search users by name or email...",
     searchValue: admin.search,
     onSearch: admin.onSearch,
+    onSearchImmediate: admin.onSearchImmediate,
   });
 
   return (
@@ -62,7 +63,9 @@ export default function AdminUsers() {
           confirmLabel="Reinstate"
           confirmClass="bg-primary"
           loading={admin.reinstateMutation.isPending}
-          onConfirm={() => admin.reinstateMutation.mutate(admin.suspendTarget!._id)}
+          onConfirm={() =>
+            admin.reinstateMutation.mutate(admin.suspendTarget!._id)
+          }
           onClose={() => admin.setSuspendTarget(null)}
         />
       )}

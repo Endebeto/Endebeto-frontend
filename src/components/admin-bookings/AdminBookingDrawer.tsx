@@ -180,12 +180,21 @@ export function AdminBookingDrawer({
             </div>
 
             {booking.experience && (
-              <div className="flex justify-end">
+              <div className="flex items-center justify-end gap-3 mt-1">
+                <Link
+                  to={`/admin/experiences?search=${encodeURIComponent(booking.experience.title || "")}`}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                  title="Inspect experience in Admin Catalog"
+                >
+                  Inspect in Experiences
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+                <span className="text-outline-variant">•</span>
                 <Link
                   to={`/experiences/${booking.experience.slug || booking.experience._id}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline mt-1"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-on-surface-variant hover:text-primary hover:underline"
                 >
                   View Public Listing
                   <ExternalLink className="h-3 w-3" />
@@ -262,15 +271,27 @@ export function AdminBookingDrawer({
               <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
                 Host Information
               </h4>
-              {booking.experience?.host?.email && (
-                <Link
-                  to={`/admin/users?search=${encodeURIComponent(booking.experience.host.email)}`}
-                  className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1"
-                >
-                  Inspect in Users
-                  <ExternalLink className="h-2.5 w-2.5" />
-                </Link>
-              )}
+              <div className="flex items-center gap-2">
+                {booking.experience?.host?.email && (
+                  <>
+                    <Link
+                      to={`/admin/users?search=${encodeURIComponent(booking.experience.host.email)}`}
+                      className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      Inspect in Users
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </Link>
+                    <span className="text-outline-variant">•</span>
+                    <Link
+                      to={`/admin/payouts?search=${encodeURIComponent(booking.experience.host.email)}`}
+                      className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      Payouts
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
             <div className="bg-white dark:bg-zinc-800/40 border border-outline-variant/10 rounded-2xl p-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   AlertCircle,
   CalendarCheck,
@@ -265,12 +266,14 @@ export function AdminBookingsTable({
                               </div>
                             )}
                             <div className="truncate">
-                              <p
-                                className="font-bold text-primary truncate"
-                                title={b.experience?.title || "Untitled"}
+                              <Link
+                                to={`/admin/experiences?search=${encodeURIComponent(b.experience?.title || "")}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="font-bold text-primary truncate hover:underline block"
+                                title="Inspect experience in Catalog"
                               >
                                 {b.experience?.title || "Untitled Experience"}
-                              </p>
+                              </Link>
                               <p className="text-[10px] text-on-surface-variant truncate">
                                 {b.experience?.location || "Ethiopia"}
                               </p>
@@ -281,16 +284,28 @@ export function AdminBookingsTable({
                         {/* Guest */}
                         <td className="py-3.5 px-5 max-w-[180px]">
                           <div className="flex items-center gap-2">
-                            <UserAvatar
-                              name={b.user?.name || "Guest"}
-                              photo={b.user?.photo}
-                              className="w-7 h-7 rounded-full flex-shrink-0"
-                              initialsClassName="text-xs"
-                            />
+                            <Link
+                              to={`/admin/users?search=${encodeURIComponent(b.user?.email || "")}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="shrink-0 hover:opacity-80 transition-opacity"
+                              title="Inspect guest in Users"
+                            >
+                              <UserAvatar
+                                name={b.user?.name || "Guest"}
+                                photo={b.user?.photo}
+                                className="w-7 h-7 rounded-full flex-shrink-0"
+                                initialsClassName="text-xs"
+                              />
+                            </Link>
                             <div className="truncate">
-                              <p className="font-semibold text-on-surface truncate">
+                              <Link
+                                to={`/admin/users?search=${encodeURIComponent(b.user?.email || "")}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="font-semibold text-on-surface truncate hover:text-primary hover:underline block"
+                                title="Inspect guest in Users"
+                              >
                                 {b.user?.name || "Guest User"}
-                              </p>
+                              </Link>
                               <p className="text-[10px] text-on-surface-variant truncate">
                                 {b.user?.email || "—"}
                               </p>
@@ -301,9 +316,14 @@ export function AdminBookingsTable({
                         {/* Host */}
                         <td className="py-3.5 px-5 max-w-[160px]">
                           <div className="truncate">
-                            <p className="font-semibold text-on-surface truncate">
+                            <Link
+                              to={`/admin/users?search=${encodeURIComponent(b.experience?.host?.email || "")}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-semibold text-on-surface truncate hover:text-primary hover:underline block"
+                              title="Inspect host in Users"
+                            >
                               {b.experience?.host?.name || "Host"}
-                            </p>
+                            </Link>
                             <p className="text-[10px] text-on-surface-variant truncate">
                               {b.experience?.host?.email || "—"}
                             </p>

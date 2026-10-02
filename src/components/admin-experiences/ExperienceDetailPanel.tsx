@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -18,7 +19,10 @@ import {
 import { AdminExperienceHostCard } from "@/components/admin-experiences/AdminExperienceHostCard";
 import { ExperienceBookingKpiStrip } from "@/components/admin-experiences/ExperienceBookingKpiStrip";
 import { ExperienceBookingsSection } from "@/components/admin-experiences/ExperienceBookingsSection";
-import type { ExpStatus, TabKey } from "@/components/admin-experiences/experienceAdminUtils";
+import type {
+  ExpStatus,
+  TabKey,
+} from "@/components/admin-experiences/experienceAdminUtils";
 import {
   expiredBadge,
   fmtDateSafe,
@@ -159,16 +163,26 @@ export function ExperienceDetailPanel({
         </div>
 
         <div>
-          <p className="text-xs font-semibold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wide mb-2">
-            Booking KPIs
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wide">
+              Booking KPIs
+            </p>
+            <Link
+              to={`/admin/bookings?search=${encodeURIComponent(exp.title)}`}
+              className="text-[11px] font-semibold text-primary hover:underline inline-flex items-center gap-1"
+              title="Open experience bookings in Bookings Center"
+            >
+              <span>Open in Bookings</span>
+              <ExternalLink className="h-3 w-3" />
+            </Link>
+          </div>
           <ExperienceBookingKpiStrip
             stats={bookingStats}
             isLoading={detailLoading}
           />
         </div>
 
-        <ExperienceBookingsSection expId={exp._id} />
+        <ExperienceBookingsSection expId={exp._id} expTitle={exp.title} />
 
         {exp.suspended && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-xl p-4 space-y-2">
@@ -198,7 +212,11 @@ export function ExperienceDetailPanel({
               label: "Price",
               value: `ETB ${(exp.price ?? 0).toLocaleString()}`,
             },
-            { icon: Timer, label: "Duration", value: fmtDuration(exp.duration) },
+            {
+              icon: Timer,
+              label: "Duration",
+              value: fmtDuration(exp.duration),
+            },
             {
               icon: Users,
               label: "Max guests",
