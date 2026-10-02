@@ -14,6 +14,7 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
+  CalendarCheck,
 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "@/context/AuthContext";
@@ -40,6 +41,12 @@ const navLinks = [
     label: "Experiences",
     href: "/admin/experiences",
     title: "Experiences (catalog management)",
+  },
+  {
+    icon: CalendarCheck,
+    label: "Bookings",
+    href: "/admin/bookings",
+    title: "Platform Bookings Management",
   },
   { icon: MessageSquare, label: "Reviews", href: "/admin/reviews" },
   {
@@ -325,6 +332,11 @@ export default function AdminLayout({
                   type="text"
                   value={searchValue}
                   onChange={(e) => onSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      onSearch(searchValue);
+                    }
+                  }}
                   placeholder={searchPlaceholder}
                   className="w-full pl-9 pr-4 py-2 bg-surface-container-low border border-outline-variant/10 rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-on-surface-variant/50"
                 />

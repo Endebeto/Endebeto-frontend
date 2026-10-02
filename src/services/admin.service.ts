@@ -233,6 +233,65 @@ export interface AdminBooking {
   createdAt: string;
 }
 
+export interface AdminPlatformBooking {
+  _id: string;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+    photo?: string;
+    phone?: string;
+  } | null;
+  experience: {
+    _id: string;
+    title: string;
+    imageCover?: string;
+    location?: string;
+    price?: number;
+    duration?: number;
+    nextOccurrenceAt?: string | null;
+    slug?: string;
+    host?: {
+      _id: string;
+      name: string;
+      email: string;
+      photo?: string;
+      phone?: string;
+    } | null;
+  } | null;
+  price: number;
+  quantity: number;
+  status: AdminBookingStatus;
+  paid: boolean;
+  txRef?: string;
+  experienceDate?: string;
+  completedAt?: string;
+  expiresAt?: string;
+  createdAt: string;
+  cancellationReason?: string;
+}
+
+export interface AdminBookingsSummary {
+  totalBookings: number;
+  totalRevenue: number;
+  filteredRevenue: number;
+  upcoming: number;
+  completed: number;
+  paymentExpired: number;
+  cancelled: number;
+}
+
+export interface AdminBookingsResponse {
+  status: string;
+  results: number;
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+  summary: AdminBookingsSummary;
+  data: AdminPlatformBooking[];
+}
+
 export interface SuspendExperienceNotifications {
   hostEmailed: boolean;
   /** Guest count for upcoming bookings (emails may be sent after the HTTP response). */
@@ -554,4 +613,20 @@ export const adminService = {
         accountNumber: string | null;
       };
     }>(`/admin/payouts/withdrawals/${id}/reveal`),
+
+  /* Platform-Wide Bookings */
+  getAllBookings: (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    q?: string;
+    paid?: boolean;
+  }) => api.get<AdminBookingsResponse>("/bookings", { params }),
+
+  cancelBooking: (id: string) =>
+    api.patch<{
+      status: string;
+      message: string;
+      data: { booking: AdminPlatformBooking };
+    }>(`/bookings/${id}/cancel`),
 };

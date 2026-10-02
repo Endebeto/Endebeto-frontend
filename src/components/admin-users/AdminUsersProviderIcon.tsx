@@ -24,7 +24,9 @@ export function AdminUsersProviderIcon({ p }: { p?: string }) {
     );
   if (p === "legacy-oauth")
     return (
-      <Mail className="h-3.5 w-3.5 text-on-surface-variant" title="Email sign-in (legacy)" />
+      <span title="Email sign-in (legacy)">
+        <Mail className="h-3.5 w-3.5 text-on-surface-variant" />
+      </span>
     );
   return <Mail className="h-3.5 w-3.5 text-on-surface-variant" />;
 }

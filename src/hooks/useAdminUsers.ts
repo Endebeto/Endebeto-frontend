@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -132,7 +132,9 @@ export function useAdminUsers() {
       setHostListingSuspendTarget(null);
     },
     onError: (err: unknown) => {
-      toast.error(getFriendlyErrorMessage(err, "Failed to suspend host listings"));
+      toast.error(
+        getFriendlyErrorMessage(err, "Failed to suspend host listings"),
+      );
     },
   });
 
@@ -152,14 +154,16 @@ export function useAdminUsers() {
       setHostListingReinstateTarget(null);
     },
     onError: (err: unknown) => {
-      toast.error(getFriendlyErrorMessage(err, "Failed to reinstate host listings"));
+      toast.error(
+        getFriendlyErrorMessage(err, "Failed to reinstate host listings"),
+      );
     },
   });
 
-  const onSearch = (v: string) => {
+  const onSearch = useCallback((v: string) => {
     setSearch(v);
     setPage(1);
-  };
+  }, []);
 
   return {
     currentUser,

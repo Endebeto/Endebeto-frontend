@@ -1,5 +1,11 @@
 import { lazy, Suspense, useEffect } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+} from "react-router-dom";
 import AdminRouteLayout from "@/components/AdminRouteLayout";
 import HostRouteLayout from "@/components/HostRouteLayout";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -14,11 +20,14 @@ const ExperienceDetail = lazy(() => import("./pages/ExperienceDetail"));
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
-const AdminHostApplications = lazy(() => import("./pages/AdminHostApplications"));
+const AdminHostApplications = lazy(
+  () => import("./pages/AdminHostApplications"),
+);
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 const AdminPayouts = lazy(() => import("./pages/AdminPayouts"));
 const AdminExperiences = lazy(() => import("./pages/AdminExperiences"));
 const AdminReviews = lazy(() => import("./pages/AdminReviews"));
+const AdminBookings = lazy(() => import("./pages/AdminBookings"));
 const HostDashboard = lazy(() => import("./pages/HostDashboard"));
 const HostWallet = lazy(() => import("./pages/HostWallet"));
 const HostCreateExperience = lazy(() => import("./pages/HostCreateExperience"));
@@ -33,7 +42,9 @@ const SafetyPage = lazy(() => import("./pages/SafetyPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const HostApply = lazy(() => import("./pages/HostApply"));
-const HostApplicationStatus = lazy(() => import("./pages/HostApplicationStatus"));
+const HostApplicationStatus = lazy(
+  () => import("./pages/HostApplicationStatus"),
+);
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
@@ -128,18 +139,58 @@ const AppRoutes = () => (
     <Route path="/privacy" element={<PrivacyPage />} />
 
     {/* Authenticated */}
-    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-    <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
-    <Route path="/host/apply" element={<ProtectedRoute><HostApply /></ProtectedRoute>} />
-    <Route path="/host/application-status" element={<ProtectedRoute><HostApplicationStatus /></ProtectedRoute>} />
+    <Route
+      path="/profile"
+      element={
+        <ProtectedRoute>
+          <Profile />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/my-bookings"
+      element={
+        <ProtectedRoute>
+          <MyBookings />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/host/apply"
+      element={
+        <ProtectedRoute>
+          <HostApply />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/host/application-status"
+      element={
+        <ProtectedRoute>
+          <HostApplicationStatus />
+        </ProtectedRoute>
+      }
+    />
 
     {/* Host dashboard shell: layout stays mounted; lazy leaf chunks suspend inside Suspense */}
-    <Route element={<ProtectedRoute allowedRoles={["host"]}><HostRouteLayout /></ProtectedRoute>}>
+    <Route
+      element={
+        <ProtectedRoute allowedRoles={["host"]}>
+          <HostRouteLayout />
+        </ProtectedRoute>
+      }
+    >
       <Route path="/host-dashboard" element={<HostDashboard />} />
       <Route path="/host/wallet" element={<HostWallet />} />
       <Route path="/host/experiences" element={<HostExperiences />} />
-      <Route path="/host/experiences/create" element={<HostCreateExperience />} />
-      <Route path="/host/experiences/:id/edit" element={<HostEditExperience />} />
+      <Route
+        path="/host/experiences/create"
+        element={<HostCreateExperience />}
+      />
+      <Route
+        path="/host/experiences/:id/edit"
+        element={<HostEditExperience />}
+      />
       <Route path="/host/bookings" element={<HostBookings />} />
     </Route>
 
@@ -155,6 +206,7 @@ const AppRoutes = () => (
       <Route index element={<AdminDashboard />} />
       <Route path="users" element={<AdminUsers />} />
       <Route path="experiences" element={<AdminExperiences />} />
+      <Route path="bookings" element={<AdminBookings />} />
       <Route path="host-applications" element={<AdminHostApplications />} />
       <Route path="payouts" element={<AdminPayouts />} />
       <Route path="reviews" element={<AdminReviews />} />

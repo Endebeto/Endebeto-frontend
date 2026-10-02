@@ -36,18 +36,42 @@ export const adminQueryKeys = {
     status: string;
     page: number;
     search: string;
-  }) => ["admin", "host-applications", filters.status, filters.page, filters.search] as const,
-  hostApplicationCounts: () => ["admin", "host-applications", "counts"] as const,
+  }) =>
+    [
+      "admin",
+      "host-applications",
+      filters.status,
+      filters.page,
+      filters.search,
+    ] as const,
+  hostApplicationCounts: () =>
+    ["admin", "host-applications", "counts"] as const,
   hostApplicationsPrefix: ["admin", "host-applications"] as const,
 
-  experiencesCatalog: (filters: { tab: string; page: number; search: string }) =>
-    ["admin", "experiences", "catalog", filters.tab, filters.page, filters.search] as const,
+  experiencesCatalog: (filters: {
+    tab: string;
+    page: number;
+    search: string;
+  }) =>
+    [
+      "admin",
+      "experiences",
+      "catalog",
+      filters.tab,
+      filters.page,
+      filters.search,
+    ] as const,
   experiencesCatalogPrefix: ["admin", "experiences", "catalog"] as const,
 
-  experienceDetail: (id: string) => ["admin", "experiences", "detail", id] as const,
+  experienceDetail: (id: string) =>
+    ["admin", "experiences", "detail", id] as const,
   experienceDetailPrefix: ["admin", "experiences", "detail"] as const,
 
   experienceBookings: (expId: string, filter: string, page: number) =>
     ["admin", "experiences", "bookings", expId, filter, page] as const,
   experienceBookingsPrefix: ["admin", "experiences", "bookings"] as const,
+
+  allBookings: (filters: { page: number; status: string; search: string }) =>
+    ["admin", "bookings", "all", filters] as const,
+  allBookingsPrefix: ["admin", "bookings"] as const,
 } as const;
