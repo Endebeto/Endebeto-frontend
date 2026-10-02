@@ -5,12 +5,9 @@ import { DashboardOperationalSection } from "@/components/admin-dashboard/Dashbo
 import { TopExperiencesCard } from "@/components/admin-dashboard/TopExperiencesCard";
 import { TopHostsCard } from "@/components/admin-dashboard/TopHostsCard";
 import { useAdminDashboard } from "@/hooks/useAdminDashboard";
-import { useSyncAdminHeader } from "@/hooks/useSyncAdminHeader";
 
 export default function AdminDashboard() {
   const {
-    search,
-    setSearch,
     compare,
     setCompare,
     months,
@@ -29,12 +26,6 @@ export default function AdminDashboard() {
     expMixTotal,
   } = useAdminDashboard();
 
-  useSyncAdminHeader({
-    searchPlaceholder: "Search activities, hosts, or users...",
-    searchValue: search,
-    onSearch: setSearch,
-  });
-
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-6 max-w-7xl mx-auto w-full space-y-5">
@@ -45,10 +36,7 @@ export default function AdminDashboard() {
           setMonths={setMonths}
         />
 
-        <DashboardMetricsGrid
-          stats={stats}
-          compareSuffix={compareSuffix}
-        />
+        <DashboardMetricsGrid stats={stats} compareSuffix={compareSuffix} />
 
         <DashboardChartsGrid
           months={months}

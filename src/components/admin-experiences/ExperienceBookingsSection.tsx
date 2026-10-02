@@ -1,11 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  AlertCircle,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-} from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import {
   BOOKING_FILTERS,
   BOOKING_STATUS_BADGE,
@@ -118,7 +113,9 @@ export function ExperienceBookingsSection({ expId }: { expId: string }) {
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-on-surface dark:text-zinc-200">{dateStr}</p>
+                  <p className="text-on-surface dark:text-zinc-200">
+                    {dateStr}
+                  </p>
                   <p className="text-[10px] text-on-surface-variant dark:text-zinc-400">
                     Qty {b.quantity ?? 1}
                   </p>
@@ -137,9 +134,9 @@ export function ExperienceBookingsSection({ expId }: { expId: string }) {
                   )}
                 </div>
                 <span
-                  className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${BOOKING_STATUS_BADGE[b.status]}`}
+                  className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${BOOKING_STATUS_BADGE[b.status] ?? BOOKING_STATUS_BADGE.expired}`}
                 >
-                  {b.status}
+                  {b.status === "paymentExpired" ? "Payment expired" : b.status}
                 </span>
               </div>
             );

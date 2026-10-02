@@ -1,42 +1,52 @@
 import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  ArrowLeft,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import heroCoffee from "@/assets/hero-coffee.jpg";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { authService } from "@/services/auth.service";
 import { BrandLogo } from "@/components/BrandLogo";
 
 /* ── password strength ──────────────────────────────── */
-function getStrength(pw: string): { score: number; label: string; color: string } {
+function getStrength(pw: string): {
+  score: number;
+  label: string;
+  color: string;
+} {
   let score = 0;
-  if (pw.length >= 8)          score++;
-  if (/[A-Z]/.test(pw))        score++;
-  if (/[0-9]/.test(pw))        score++;
+  if (pw.length >= 8) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
   const map = [
-    { label: "",        color: "bg-outline-variant/30" },
-    { label: "Weak",    color: "bg-red-500" },
-    { label: "Fair",    color: "bg-amber-500" },
-    { label: "Good",    color: "bg-sky-500" },
-    { label: "Strong",  color: "bg-emerald-500" },
+    { label: "", color: "bg-outline-variant/30" },
+    { label: "Weak", color: "bg-red-500" },
+    { label: "Fair", color: "bg-amber-500" },
+    { label: "Good", color: "bg-sky-500" },
+    { label: "Strong", color: "bg-emerald-500" },
   ];
   return { score, ...map[score] };
 }
 
 export default function ResetPassword() {
-  const { token }   = useParams<{ token: string }>();
-  const navigate    = useNavigate();
+  const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
 
-  const [password,   setPassword]   = useState("");
-  const [confirm,    setConfirm]    = useState("");
-  const [showPw,     setShowPw]     = useState(false);
-  const [showCfm,    setShowCfm]    = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [showCfm, setShowCfm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [done,       setDone]       = useState(false);
-  const [error,      setError]      = useState("");
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
 
-  const strength  = getStrength(password);
-  const mismatch  = confirm.length > 0 && confirm !== password;
+  const strength = getStrength(password);
+  const mismatch = confirm.length > 0 && confirm !== password;
   const canSubmit = password.length >= 8 && password === confirm && !submitting;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,10 +55,15 @@ export default function ResetPassword() {
     setError("");
     setSubmitting(true);
     try {
-      await authService.resetPassword(token, { password, passwordConfirm: confirm });
+      await authService.resetPassword(token, {
+        password,
+        passwordConfirm: confirm,
+      });
       setDone(true);
     } catch (err: unknown) {
-      setError(getFriendlyErrorMessage(err, "Reset link is invalid or has expired."));
+      setError(
+        getFriendlyErrorMessage(err, "Reset link is invalid or has expired."),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -56,13 +71,11 @@ export default function ResetPassword() {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-
       {/* ── Form side ── */}
       <div className="flex flex-col justify-center px-8 py-12 lg:px-16 bg-background dark:bg-zinc-950">
         <BrandLogo />
 
         <div className="mt-10 max-w-sm w-full">
-
           {!done ? (
             <>
               <Link
@@ -76,13 +89,16 @@ export default function ResetPassword() {
                 Set a new password
               </h1>
               <p className="text-on-surface-variant dark:text-zinc-400 text-sm mb-8 leading-relaxed">
-                Your new password must be at least 8 characters and different from your old one.
+                Your new password must be at least 8 characters and different
+                from your old one.
               </p>
 
               {error && (
                 <div className="flex items-start gap-2.5 p-3 mb-5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl">
                   <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                  <p className="text-xs text-red-600 dark:text-red-400">
+                    {error}
+                  </p>
                 </div>
               )}
 
@@ -106,7 +122,11 @@ export default function ResetPassword() {
                       onClick={() => setShowPw((v) => !v)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary dark:hover:text-green-400 transition-colors"
                     >
-                      {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPw ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
 
@@ -118,17 +138,25 @@ export default function ResetPassword() {
                           <div
                             key={i}
                             className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                              i <= strength.score ? strength.color : "bg-outline-variant/20 dark:bg-zinc-700"
+                              i <= strength.score
+                                ? strength.color
+                                : "bg-outline-variant/20 dark:bg-zinc-700"
                             }`}
                           />
                         ))}
                       </div>
                       {strength.label && (
-                        <p className={`text-[11px] font-semibold ${
-                          strength.score <= 1 ? "text-red-500" :
-                          strength.score === 2 ? "text-amber-500" :
-                          strength.score === 3 ? "text-sky-500" : "text-emerald-500"
-                        }`}>
+                        <p
+                          className={`text-[11px] font-semibold ${
+                            strength.score <= 1
+                              ? "text-red-500"
+                              : strength.score === 2
+                                ? "text-amber-500"
+                                : strength.score === 3
+                                  ? "text-sky-500"
+                                  : "text-emerald-500"
+                          }`}
+                        >
                           {strength.label} password
                         </p>
                       )}
@@ -159,7 +187,11 @@ export default function ResetPassword() {
                       onClick={() => setShowCfm((v) => !v)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary dark:hover:text-green-400 transition-colors"
                     >
-                      {showCfm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showCfm ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                   {mismatch && (
@@ -180,19 +212,15 @@ export default function ResetPassword() {
                   className="w-full py-3 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm shadow-md shadow-primary/20 hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                 >
                   {submitting ? (
-                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Resetting…</>
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{" "}
+                      Resetting…
+                    </>
                   ) : (
                     "Reset Password"
                   )}
                 </button>
               </form>
-
-              {/* token debug hint */}
-              {token && (
-                <p className="text-[10px] text-on-surface-variant/40 dark:text-zinc-600 mt-6 text-center break-all">
-                  Token: {token.slice(0, 12)}…
-                </p>
-              )}
             </>
           ) : (
             /* ── Success state ── */
@@ -204,7 +232,8 @@ export default function ResetPassword() {
                 Password updated!
               </h2>
               <p className="text-sm text-on-surface-variant dark:text-zinc-400 leading-relaxed mb-8">
-                Your password has been reset successfully. You can now sign in with your new password.
+                Your password has been reset successfully. You can now sign in
+                with your new password.
               </p>
               <button
                 onClick={() => navigate("/login")}
@@ -227,10 +256,13 @@ export default function ResetPassword() {
         <div className="absolute inset-0 bg-primary/50" />
         <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
           <p className="font-headline font-extrabold text-4xl text-white leading-tight mb-4 drop-shadow">
-            A fresh start<br />awaits you.
+            A fresh start
+            <br />
+            awaits you.
           </p>
           <p className="text-white/75 text-base max-w-xs leading-relaxed">
-            Choose a strong, memorable password and get back to exploring Ethiopia's hidden gems.
+            Choose a strong, memorable password and get back to exploring
+            Ethiopia's hidden gems.
           </p>
         </div>
       </div>

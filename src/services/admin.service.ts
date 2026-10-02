@@ -199,6 +199,7 @@ export interface AdminExperience {
 export type AdminBookingStatus =
   | "upcoming"
   | "completed"
+  | "paymentExpired"
   | "expired"
   | "cancelled";
 

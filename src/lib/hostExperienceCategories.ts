@@ -1,18 +1,32 @@
-/** Experience themes hosts choose when publishing; keep in sync across host and browse. */
+/** Experience themes hosts choose when applying and publishing; keep in sync across host and browse. */
 export const HOST_EXPERIENCE_CATEGORY_OPTIONS = [
+  "Cultural Tour",
+  "Food & Cooking",
+  "Adventure",
+  "History & Heritage",
+  "Nature & Wildlife",
+  "Spiritual",
+  "Arts & Crafts",
+  "Music & Dance",
+  "Coffee Ceremony",
+  "Photography",
+  "Language Exchange",
+  "Wellness",
+] as const;
+
+/** Legacy category labels that may exist on older listings or host approvals. */
+export const LEGACY_EXPERIENCE_CATEGORIES = [
   "Cultural Heritage",
   "Food & Cuisine",
-  "Nature & Wildlife",
-  "Adventure",
   "History",
   "Art & Craft",
-  "Music & Dance",
   "Religion & Spirituality",
 ] as const;
 
-export type HostExperienceCategoryOption = (typeof HOST_EXPERIENCE_CATEGORY_OPTIONS)[number];
+export type HostExperienceCategoryOption =
+  (typeof HOST_EXPERIENCE_CATEGORY_OPTIONS)[number];
 
-/** Puts the standard theme list first, then any extra themes found on live listings. */
+/** Puts the standard theme list first, then any extra/legacy themes found on live listings. */
 export function mergeHostAndCatalogCategories(
   fromApi: string[] | undefined,
 ): string[] {

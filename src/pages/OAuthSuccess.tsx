@@ -18,9 +18,14 @@ const OAuthSuccess = () => {
     handled.current = true;
 
     refreshUser()
-      .then(() => {
-        toast.success("Signed in with Google!");
-        navigate("/", { replace: true });
+      .then((freshUser) => {
+        if (freshUser) {
+          toast.success("Signed in with Google!");
+          navigate("/", { replace: true });
+        } else {
+          toast.error("Could not load your account. Please try again.");
+          navigate("/login", { replace: true });
+        }
       })
       .catch(() => {
         toast.error("Could not load your account. Please try again.");

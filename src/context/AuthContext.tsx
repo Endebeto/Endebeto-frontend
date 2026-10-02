@@ -1,5 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from "react";
 import { authService, type User } from "@/services/auth.service";
 
 interface AuthContextValue {
@@ -11,11 +18,11 @@ interface AuthContextValue {
     name: string,
     email: string,
     password: string,
-    passwordConfirm: string
+    passwordConfirm: string,
   ) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -43,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const refreshUser = useCallback(async () => {
+  const refreshUser = useCallback(async (): Promise<User | null> => {
     try {
       const res = await authService.getMe();
       // /users/me uses handlerFactory.getOne → { data: { data: user } }
@@ -51,10 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(freshUser);
       localStorage.setItem("user", JSON.stringify(freshUser));
       setServerConfirmed(true);
+      return freshUser;
     } catch {
       localStorage.removeItem("user");
       setUser(null);
       setServerConfirmed(false);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -104,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: string,
     email: string,
     password: string,
-    passwordConfirm: string
+    passwordConfirm: string,
   ) => {
     // Backend returns 201 { status, message } — no token until email is verified.
     await authService.signup({ name, email, password, passwordConfirm });

@@ -27,8 +27,14 @@ export function WithdrawalsPager({
         >
           <ChevronLeft className="h-3.5 w-3.5" /> Previous
         </button>
-        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(
-          (p) => (
+        {(() => {
+          const maxButtons = 5;
+          const count = Math.min(totalPages, maxButtons);
+          const start = Math.max(
+            1,
+            Math.min(page - Math.floor(count / 2), totalPages - count + 1),
+          );
+          return Array.from({ length: count }, (_, i) => start + i).map((p) => (
             <button
               key={p}
               type="button"
@@ -37,8 +43,8 @@ export function WithdrawalsPager({
             >
               {p}
             </button>
-          ),
-        )}
+          ));
+        })()}
         <button
           type="button"
           disabled={page === totalPages}
