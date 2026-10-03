@@ -117,6 +117,8 @@ export function useAdminPayouts() {
     onSuccess: () => {
       toast.success("Withdrawal marked as paid");
       qc.invalidateQueries({ queryKey: adminQueryKeys.withdrawalsPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
       setPaidTarget(null);
     },
     onError: () => toast.error("Failed to mark as paid"),
@@ -128,6 +130,8 @@ export function useAdminPayouts() {
     onSuccess: () => {
       toast.success("Withdrawal marked as failed");
       qc.invalidateQueries({ queryKey: adminQueryKeys.withdrawalsPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
       setFailTarget(null);
     },
     onError: () => toast.error("Failed to mark as failed"),
@@ -148,6 +152,8 @@ export function useAdminPayouts() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success("CSV exported");
+      qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
     } catch {
       toast.error("Failed to export CSV");
     } finally {
@@ -169,6 +175,8 @@ export function useAdminPayouts() {
       const res = await adminService.revealWithdrawalAccount(wrId);
       const full = res.data.data.accountNumber ?? "—";
       setRevealedAccounts((prev) => ({ ...prev, [wrId]: full }));
+      qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
     } catch {
       toast.error("Could not reveal account number. Please try again.");
     } finally {

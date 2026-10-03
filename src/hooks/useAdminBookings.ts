@@ -112,6 +112,8 @@ export function useAdminBookings() {
       toast.success("Booking cancelled successfully.");
       qc.invalidateQueries({ queryKey: adminQueryKeys.allBookingsPrefix });
       qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
       setCancelTarget(null);
       if (selectedBooking) {
         setSelectedBooking((prev) =>

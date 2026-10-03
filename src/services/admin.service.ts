@@ -301,6 +301,41 @@ export interface SuspendExperienceNotifications {
   emailQueued?: boolean;
 }
 
+/* ─── Admin Audit Logs ───────────────────────────────────── */
+export interface AdminAuditLog {
+  _id: string;
+  admin: {
+    _id: string;
+    name: string;
+    email: string;
+    photo?: string;
+  } | null;
+  action: string;
+  targetType: "User" | "Experience" | "Booking" | "HostApplication" | "WithdrawalRequest" | "System";
+  targetId?: string;
+  targetLabel?: string;
+  details?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+}
+
+export interface AdminAuditLogsResponse {
+  status: string;
+  results: number;
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+  data: AdminAuditLog[];
+}
+
+export interface AdminActivityFeedResponse {
+  status: string;
+  results: number;
+  data: AdminAuditLog[];
+}
+
 /* ─── Admin Users ────────────────────────────────────────── */
 export interface AdminUser {
   _id: string;
@@ -629,4 +664,20 @@ export const adminService = {
       message: string;
       data: { booking: AdminPlatformBooking };
     }>(`/bookings/${id}/cancel`),
+
+  /* Audit Logs & Real-Time Activity Feed */
+  getAuditLogs: (params?: {
+    page?: number;
+    limit?: number;
+    targetType?: string;
+    targetId?: string;
+    action?: string;
+    adminId?: string;
+    search?: string;
+  }) => api.get<AdminAuditLogsResponse>("/admin/audit-logs", { params }),
+
+  getActivityFeed: (limit?: number) =>
+    api.get<AdminActivityFeedResponse>("/admin/activity-feed", {
+      params: limit ? { limit } : undefined,
+    }),
 };

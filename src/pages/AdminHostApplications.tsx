@@ -272,6 +272,8 @@ export default function AdminHostApplications() {
       toast.success("Application approved");
       qc.invalidateQueries({ queryKey: adminQueryKeys.hostApplicationsPrefix });
       qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
       setSelected(null);
     },
     onError: () => toast.error("Failed to approve application"),
@@ -284,6 +286,8 @@ export default function AdminHostApplications() {
       toast.success("Application rejected");
       qc.invalidateQueries({ queryKey: adminQueryKeys.hostApplicationsPrefix });
       qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
       setShowReject(false);
       setSelected(null);
     },
@@ -360,6 +364,8 @@ export default function AdminHostApplications() {
           queryKey: adminQueryKeys.hostApplicationsPrefix,
         });
         qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+        qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+        qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
         setSelectedIds(new Set());
         setSelected(null);
       }
@@ -396,6 +402,8 @@ export default function AdminHostApplications() {
           queryKey: adminQueryKeys.hostApplicationsPrefix,
         });
         qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+        qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+        qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
         setSelectedIds(new Set());
         setShowBulkReject(false);
         setSelected(null);

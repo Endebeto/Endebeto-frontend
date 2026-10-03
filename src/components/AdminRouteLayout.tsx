@@ -25,7 +25,8 @@ export default function AdminRouteLayout() {
           resolved &&
           prev.searchPlaceholder === resolved.searchPlaceholder &&
           prev.searchValue === resolved.searchValue &&
-          prev.onSearch === resolved.onSearch
+          prev.onSearch === resolved.onSearch &&
+          prev.onSearchImmediate === resolved.onSearchImmediate
         ) {
           return prev;
         }
@@ -45,6 +46,7 @@ export default function AdminRouteLayout() {
       searchPlaceholder={header?.searchPlaceholder ?? "Search..."}
       searchValue={header?.searchValue ?? ""}
       onSearch={header?.onSearch}
+      onSearchImmediate={header?.onSearchImmediate}
     >
       <Suspense fallback={<RouteMainFallback />}>
         <Outlet context={outletCtx} />

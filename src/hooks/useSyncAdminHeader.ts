@@ -5,6 +5,7 @@ export type AdminHeaderState = {
   searchPlaceholder: string;
   searchValue: string;
   onSearch: (v: string) => void;
+  onSearchImmediate?: (v: string) => void;
 };
 
 export type AdminOutletContextType = {
@@ -25,6 +26,7 @@ export function useSyncAdminHeader({
   searchPlaceholder,
   searchValue,
   onSearch,
+  onSearchImmediate,
 }: AdminHeaderState): void {
   const { setHeader } = useOutletContext<AdminOutletContextType>();
 
@@ -33,8 +35,17 @@ export function useSyncAdminHeader({
     onSearchRef.current = onSearch;
   }, [onSearch]);
 
+  const onSearchImmediateRef = useRef(onSearchImmediate);
+  useEffect(() => {
+    onSearchImmediateRef.current = onSearchImmediate;
+  }, [onSearchImmediate]);
+
   const stableOnSearch = useCallback((v: string) => {
     onSearchRef.current?.(v);
+  }, []);
+
+  const stableOnSearchImmediate = useCallback((v: string) => {
+    onSearchImmediateRef.current?.(v);
   }, []);
 
   useEffect(() => {
@@ -43,13 +54,25 @@ export function useSyncAdminHeader({
         prev &&
         prev.searchPlaceholder === searchPlaceholder &&
         prev.searchValue === searchValue &&
-        prev.onSearch === stableOnSearch
+        prev.onSearch === stableOnSearch &&
+        prev.onSearchImmediate === stableOnSearchImmediate
       ) {
         return prev;
       }
-      return { searchPlaceholder, searchValue, onSearch: stableOnSearch };
+      return {
+        searchPlaceholder,
+        searchValue,
+        onSearch: stableOnSearch,
+        onSearchImmediate: stableOnSearchImmediate,
+      };
     });
-  }, [setHeader, searchPlaceholder, searchValue, stableOnSearch]);
+  }, [
+    setHeader,
+    searchPlaceholder,
+    searchValue,
+    stableOnSearch,
+    stableOnSearchImmediate,
+  ]);
 
   useEffect(() => {
     return () => setHeader(null);

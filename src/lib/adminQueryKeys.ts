@@ -74,4 +74,18 @@ export const adminQueryKeys = {
   allBookings: (filters: { page: number; status: string; search: string }) =>
     ["admin", "bookings", "all", filters] as const,
   allBookingsPrefix: ["admin", "bookings"] as const,
+
+  activityFeed: () => ["admin", "activity-feed"] as const,
+  activityFeedPrefix: ["admin", "activity-feed"] as const,
+
+  auditLogs: (filters?: {
+    page?: number;
+    limit?: number;
+    targetType?: string;
+    targetId?: string;
+    action?: string;
+    adminId?: string;
+    search?: string;
+  }) => ["admin", "audit-logs", filters] as const,
+  auditLogsPrefix: ["admin", "audit-logs"] as const,
 } as const;

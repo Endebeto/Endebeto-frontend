@@ -121,6 +121,12 @@ export function useAdminExperiences() {
       queryClient.invalidateQueries({
         queryKey: adminQueryKeys.experienceBookingsPrefix,
       });
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.activityFeedPrefix,
+      });
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.auditLogsPrefix,
+      });
       setSuspendModalExp(null);
       setSelected(null);
     },
@@ -153,6 +159,12 @@ export function useAdminExperiences() {
       });
       queryClient.invalidateQueries({
         queryKey: adminQueryKeys.experienceBookingsPrefix,
+      });
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.activityFeedPrefix,
+      });
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.auditLogsPrefix,
       });
       setSelected(null);
     },

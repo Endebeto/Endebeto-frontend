@@ -62,6 +62,7 @@ interface AdminLayoutProps {
   searchPlaceholder?: string;
   searchValue?: string;
   onSearch?: (v: string) => void;
+  onSearchImmediate?: (v: string) => void;
 }
 
 interface SidebarContentProps {
@@ -208,6 +209,7 @@ export default function AdminLayout({
   searchPlaceholder = "Search...",
   searchValue = "",
   onSearch,
+  onSearchImmediate,
 }: AdminLayoutProps) {
   const { pathname } = useLocation();
   const { user } = useAuth();
@@ -334,7 +336,11 @@ export default function AdminLayout({
                   onChange={(e) => onSearch(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      onSearch(searchValue);
+                      if (onSearchImmediate) {
+                        onSearchImmediate(searchValue);
+                      } else {
+                        onSearch(searchValue);
+                      }
                     }
                   }}
                   placeholder={searchPlaceholder}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   CalendarCheck,
   Compass,
@@ -11,6 +12,7 @@ import {
   ShieldOff,
   X,
 } from "lucide-react";
+import { adminQueryKeys } from "@/lib/adminQueryKeys";
 import {
   effectiveRole,
   formatUserDate,
@@ -19,7 +21,7 @@ import {
   ROLE_BADGE,
 } from "@/components/admin-users/adminUsersUtils";
 import { UserAvatar } from "@/components/UserAvatar";
-import type { AdminUser } from "@/services/admin.service";
+import { adminService, type AdminUser } from "@/services/admin.service";
 
 export function AdminUserDrawer({
   user,
@@ -30,6 +32,20 @@ export function AdminUserDrawer({
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  const { data: auditData, isLoading: auditLoading } = useQuery({
+    queryKey: adminQueryKeys.auditLogs({ targetType: "User", targetId: user._id }),
+    queryFn: async () => {
+      const res = await adminService.getAuditLogs({
+        targetType: "User",
+        targetId: user._id,
+        limit: 10,
+      });
+      return res.data?.data || [];
+    },
+    enabled: Boolean(user._id),
+  });
+
   if (!mounted) return null;
 
   return createPortal(
@@ -170,6 +186,62 @@ export function AdminUserDrawer({
               </>
             )}
           </div>
+        </div>
+
+        {/* Audit Trail & Action History */}
+        <div className="px-6 py-4 border-t border-outline-variant/10 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant">
+              Audit &amp; Action History
+            </p>
+            {auditData && auditData.length > 0 && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 bg-surface-container rounded-full text-primary">
+                {auditData.length}
+              </span>
+            )}
+          </div>
+
+          {auditLoading ? (
+            <div className="space-y-2 animate-pulse">
+              <div className="h-10 bg-surface-container rounded-xl" />
+              <div className="h-10 bg-surface-container rounded-xl" />
+            </div>
+          ) : auditData && auditData.length > 0 ? (
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {auditData.map((log) => {
+                const actionLabel = log.action
+                  .replace(/^user\./, "")
+                  .replace(/_/g, " ");
+                return (
+                  <div
+                    key={log._id}
+                    className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/10 text-xs space-y-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-primary capitalize text-[11px]">
+                        {actionLabel}
+                      </span>
+                      <span className="text-[10px] text-on-surface-variant">
+                        {new Date(log.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-on-surface-variant">
+                      by <span className="font-semibold text-primary">{log.admin?.name || "Admin"}</span>
+                    </p>
+                    {log.details && typeof log.details.reason === "string" && (
+                      <p className="text-[10px] italic text-on-surface-variant bg-surface-container px-2 py-0.5 rounded border border-outline-variant/10">
+                        &ldquo;{log.details.reason}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-on-surface-variant italic py-1">
+              No administrative actions recorded for this user.
+            </p>
+          )}
         </div>
 
         {user.hostStatus === "approved" && user.hostListingSuspended && (

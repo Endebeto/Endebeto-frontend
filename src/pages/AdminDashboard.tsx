@@ -1,3 +1,4 @@
+import { AdminActivityFeed } from "@/components/admin-dashboard/AdminActivityFeed";
 import { DashboardChartsGrid } from "@/components/admin-dashboard/DashboardChartsGrid";
 import { DashboardHeaderBar } from "@/components/admin-dashboard/DashboardHeaderBar";
 import { DashboardMetricsGrid } from "@/components/admin-dashboard/DashboardMetricsGrid";
@@ -56,6 +57,8 @@ export default function AdminDashboard() {
           <TopExperiencesCard />
           <TopHostsCard />
         </section>
+
+        <AdminActivityFeed />
 
         <DashboardOperationalSection stats={stats} />
       </div>

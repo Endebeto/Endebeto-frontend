@@ -79,6 +79,8 @@ export function useAdminUsers() {
       }
       qc.invalidateQueries({ queryKey: adminQueryKeys.usersPrefix });
       qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
       setSuspendTarget(null);
     },
     onError: (err: unknown) => {
@@ -105,6 +107,8 @@ export function useAdminUsers() {
       }
       qc.invalidateQueries({ queryKey: adminQueryKeys.usersPrefix });
       qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
       setSuspendTarget(null);
     },
     onError: (err: unknown) => {
@@ -118,6 +122,8 @@ export function useAdminUsers() {
       toast.success("User deleted");
       qc.invalidateQueries({ queryKey: adminQueryKeys.usersPrefix });
       qc.invalidateQueries({ queryKey: adminQueryKeys.statsPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
       setDeleteTarget(null);
     },
     onError: () => toast.error("Failed to delete user"),
@@ -144,6 +150,8 @@ export function useAdminUsers() {
         );
       }
       qc.invalidateQueries({ queryKey: adminQueryKeys.usersPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
       setHostListingSuspendTarget(null);
     },
     onError: (err: unknown) => {
@@ -166,6 +174,8 @@ export function useAdminUsers() {
         toast.success("Host listings reinstated.");
       }
       qc.invalidateQueries({ queryKey: adminQueryKeys.usersPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.activityFeedPrefix });
+      qc.invalidateQueries({ queryKey: adminQueryKeys.auditLogsPrefix });
       setHostListingReinstateTarget(null);
     },
     onError: (err: unknown) => {
