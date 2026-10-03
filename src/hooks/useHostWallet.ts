@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { hostQueryKeys } from "@/lib/hostQueryKeys";
 import {
   walletService,
   type WithdrawalRequest,
@@ -24,18 +26,17 @@ export function useHostWallet() {
   const withdrawalsSearch = search.trim();
 
   const { data: walletData, isLoading: walletLoading } = useQuery({
-    queryKey: ["my-wallet"],
+    queryKey: hostQueryKeys.wallet.summary(),
     queryFn: () => walletService.getWallet(),
     staleTime: 30_000,
   });
 
   const { data: pendingWData, isLoading: pendingWLoading } = useQuery({
-    queryKey: [
-      "my-withdrawals",
+    queryKey: hostQueryKeys.wallet.withdrawals(
       "pending",
       pendingWithdrawalsPage,
       withdrawalsSearch,
-    ],
+    ),
     queryFn: () =>
       walletService.getWithdrawals({
         tab: "pending",
@@ -47,12 +48,11 @@ export function useHostWallet() {
   });
 
   const { data: historyWData, isLoading: historyWLoading } = useQuery({
-    queryKey: [
-      "my-withdrawals",
+    queryKey: hostQueryKeys.wallet.withdrawals(
       "history",
       historyWithdrawalsPage,
       withdrawalsSearch,
-    ],
+    ),
     queryFn: () =>
       walletService.getWithdrawals({
         tab: "history",
@@ -64,34 +64,32 @@ export function useHostWallet() {
   });
 
   const { data: earningsData, isLoading: earningsLoading } = useQuery({
-    queryKey: ["my-earnings", earningsPage],
+    queryKey: hostQueryKeys.wallet.earnings(earningsPage),
     queryFn: () =>
       walletService.getEarnings({ page: earningsPage, limit: PAGE_SIZE }),
     staleTime: 30_000,
   });
 
-  const wallet = walletData?.data.data.wallet;
+  const wallet = walletData?.data?.data?.wallet;
 
   const pendingWithdrawalsRows: WithdrawalRequest[] =
-    pendingWData?.data.data.withdrawals ?? [];
-  const pendingWithdrawalsTotal = pendingWData?.data.total ?? 0;
-  const pendingWithdrawalsPages = pendingWData?.data.pages ?? 1;
+    pendingWData?.data?.data?.withdrawals ?? [];
+  const pendingWithdrawalsTotal = pendingWData?.data?.total ?? 0;
+  const pendingWithdrawalsPages = pendingWData?.data?.pages ?? 1;
 
   const historyWithdrawalsRows: WithdrawalRequest[] =
-    historyWData?.data.data.withdrawals ?? [];
-  const historyWithdrawalsTotal = historyWData?.data.total ?? 0;
-  const historyWithdrawalsPages = historyWData?.data.pages ?? 1;
+    historyWData?.data?.data?.withdrawals ?? [];
+  const historyWithdrawalsTotal = historyWData?.data?.total ?? 0;
+  const historyWithdrawalsPages = historyWData?.data?.pages ?? 1;
 
   const totalWithdrawalsCount =
     pendingWithdrawalsTotal + historyWithdrawalsTotal;
 
-  const earnings = earningsData?.data.data.earnings ?? [];
-  const totalE = earningsData?.data.total ?? 0;
+  const earnings = earningsData?.data?.data?.earnings ?? [];
+  const totalE = earningsData?.data?.total ?? 0;
   const totalEPages = Math.ceil(totalE / PAGE_SIZE);
 
-  const availableETB = wallet
-    ? wallet.availableBalanceCents / 100
-    : 0;
+  const availableETB = wallet ? wallet.availableBalanceCents / 100 : 0;
 
   const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
   const lastPayoutAt = user?.lastPayoutRequestAt
@@ -108,9 +106,10 @@ export function useHostWallet() {
   const withdrawalsLoading = pendingWLoading || historyWLoading;
 
   const invalidateAll = () => {
-    void queryClient.invalidateQueries({ queryKey: ["my-wallet"] });
-    void queryClient.invalidateQueries({ queryKey: ["my-withdrawals"] });
-    void queryClient.invalidateQueries({ queryKey: ["my-earnings"] });
+    void queryClient.invalidateQueries({
+      queryKey: hostQueryKeys.wallet.all(),
+    });
+    void queryClient.invalidateQueries({ queryKey: hostQueryKeys.dashboard() });
   };
 
   const resetWithdrawalPaging = () => {
@@ -130,6 +129,45 @@ export function useHostWallet() {
         block: "start",
       });
     });
+  };
+
+  const exportEarningsCSV = () => {
+    if (!earnings.length) {
+      toast.error("No earnings records to export.");
+      return;
+    }
+    const headers = [
+      "Date",
+      "Type",
+      "Status",
+      "Experience",
+      "Gross (ETB)",
+      "Platform Fee 15% (ETB)",
+      "Net Payout (ETB)",
+    ];
+    const rows = earnings.map((e) => [
+      new Date(e.date).toLocaleDateString("en-US"),
+      e.type,
+      e.status,
+      `"${(e.booking?.experience?.title || "Hosted Experience").replace(/"/g, '""')}"`,
+      (e.grossCents / 100).toFixed(2),
+      (e.feeCents / 100).toFixed(2),
+      (e.netCents / 100).toFixed(2),
+    ]);
+    const csvContent =
+      "data:text/csv;charset=utf-8,\uFEFF" +
+      [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `Endebeto_Host_Statement_${new Date().toISOString().slice(0, 10)}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Statement CSV exported successfully.");
   };
 
   const legalHostName = (user?.hostApplicationData?.fullName ?? "").trim();
@@ -175,5 +213,6 @@ export function useHostWallet() {
     invalidateAll,
     resetWithdrawalPaging,
     scrollToStatement,
+    exportEarningsCSV,
   };
 }

@@ -20,6 +20,7 @@ import {
   Ban,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { hostQueryKeys } from "@/lib/hostQueryKeys";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/context/AuthContext";
 import { bookingsService, type Booking } from "@/services/bookings.service";
@@ -79,24 +80,24 @@ export default function HostDashboard() {
     isLoading: bLoading,
     isError: bError,
   } = useQuery({
-    queryKey: ["host-bookings-dashboard"],
+    queryKey: hostQueryKeys.dashboard(),
     queryFn: () =>
       bookingsService.getHostBookings({ dashboard: true, recentLimit: 5 }),
   });
 
   const { data: expData, isLoading: eLoading } = useQuery({
-    queryKey: ["my-experiences"],
+    queryKey: hostQueryKeys.experiences.list(),
     queryFn: () => experiencesService.getMyExperiences(),
   });
 
   const { data: walletData } = useQuery({
-    queryKey: ["my-wallet"],
+    queryKey: hostQueryKeys.wallet.summary(),
     queryFn: () => walletService.getWallet(),
     staleTime: 30_000,
   });
 
   const dash = bookingsData?.data;
-  const recentBookings: Booking[] = dash?.data ?? [];
+  const recentBookings: Booking[] = Array.isArray(dash?.data) ? dash.data : [];
   const summary = dash?.summary ?? {
     upcoming: 0,
     completed: 0,
@@ -104,45 +105,51 @@ export default function HostDashboard() {
     cancelled: 0,
   };
 
-  const wallet = walletData?.data.data.wallet;
+  const wallet = walletData?.data?.data?.wallet;
   const availableBalanceCents = wallet?.availableBalanceCents ?? 0;
   const totalEarnedCents = wallet?.totalEarnedCents ?? 0;
 
   const upcomingGuestCount = dash?.upcomingGuestsTotal ?? 0;
-  const etb = (cents: number) =>
-    (cents / 100).toLocaleString("en-ET", {
+  const etb = (cents: number) => {
+    const safeCents = Number.isFinite(cents) ? cents : 0;
+    return (safeCents / 100).toLocaleString("en-ET", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
+  };
 
   const allExperiences: Experience[] = normalizeApiList<Experience>(
     expData?.data,
   ).items;
   const activeCount = allExperiences.filter(
-    (e) => e.status === "approved",
+    (e) => e && e.status === "approved",
   ).length;
 
   /* ── Build per-experience booking stats from dashboard aggregates ── */
   const expBookingMap = new Map<string, number>(
-    (dash?.bookingCountByExperience ?? []).map((row) => [
-      row.experienceId,
-      row.count,
-    ]),
+    (dash?.bookingCountByExperience ?? [])
+      .filter((row): row is { experienceId: string; count: number } =>
+        Boolean(row && row.experienceId),
+      )
+      .map((row) => [row.experienceId, row.count ?? 0]),
   );
 
+  const expBookingCounts = Array.from(expBookingMap.values());
+  const maxBookings =
+    expBookingCounts.length > 0 ? Math.max(...expBookingCounts, 1) : 1;
+
   const performances = allExperiences
-    .filter((e) => e.status === "approved")
+    .filter((e) => e && e.status === "approved")
     .map((e) => {
-      const id = e._id ?? e.id;
+      const id = e._id ?? e.id ?? "";
       const bookings = expBookingMap.get(id) ?? 0;
-      const maxBookings = Math.max(...[...expBookingMap.values(), 1]);
       return {
         id,
-        name: e.title,
-        image: e.imageCover,
+        name: e.title ?? "Untitled",
+        image: e.imageCover ?? "",
         bookings,
-        rating: e.ratingsAverage,
-        reviews: e.ratingsQuantity,
+        rating: e.ratingsAverage ?? 0,
+        reviews: e.ratingsQuantity ?? 0,
         pct: Math.round((bookings / maxBookings) * 100) || 5,
       };
     })
@@ -285,7 +292,7 @@ export default function HostDashboard() {
           {/* Approved experience documents — not the same as “on Explore today” */}
           <div
             className="bg-white dark:bg-zinc-900 p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,53,39,0.06)] flex flex-col justify-between border border-outline-variant/10 dark:border-zinc-800"
-            title="Count of your experiences with Approved status. Drafts, pending review, and rejected listings are not included. Guests still need a future scheduled date to book."
+            title="Count of your experiences with Approved status. Pending review and rejected listings are not included. Guests still need a future scheduled date to book."
           >
             <div>
               <div className="w-7 h-7 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-secondary-container/40 dark:bg-emerald-900/30 flex items-center justify-center mb-2 md:mb-4">

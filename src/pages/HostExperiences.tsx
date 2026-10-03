@@ -1,16 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
+import { hostQueryKeys } from "@/lib/hostQueryKeys";
 import {
-  Plus, MapPin, Users, Timer, Star, MoreVertical,
-  CheckCircle2, Clock, XCircle, Pencil, Calendar,
-  Ban, Eye, Search, SlidersHorizontal, Loader2,
-  RefreshCw, AlertCircle, MegaphoneOff,
+  Plus,
+  MapPin,
+  Users,
+  Timer,
+  Star,
+  MoreVertical,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Pencil,
+  Calendar,
+  Ban,
+  Eye,
+  Search,
+  SlidersHorizontal,
+  Loader2,
+  RefreshCw,
+  AlertCircle,
+  MegaphoneOff,
+  Trash2,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { experiencesService, type Experience } from "@/services/experiences.service";
+import {
+  experiencesService,
+  type Experience,
+} from "@/services/experiences.service";
 import { normalizeApiList } from "@/lib/normalizeApiList";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
@@ -23,12 +43,18 @@ const isExpired = (exp: Experience) => {
 
 const fmtDate = (iso?: string) => {
   if (!iso) return "No date set";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 };
 
 /* ─── types ──────────────────────────────────────────── */
 /** Host tabs: Live = approved with a future run; Expired = approved but past/unset run */
-type TabFilter = "all" | "approved" | "expired" | "draft";
+type TabFilter = "all" | "approved" | "expired" | "pending" | "rejected";
 
 /** Mount modals here (see index.html `#modal-root`) so they sit above #root, cards, and host chrome. */
 function getHostModalContainer(): Element {
@@ -36,17 +62,45 @@ function getHostModalContainer(): Element {
 }
 
 /* ─── status config ──────────────────────────────────── */
-const statusCfg: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
-  approved: { label: "Live",    icon: CheckCircle2, cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-green-400 dark:border-emerald-800" },
-  pending:  { label: "Pending", icon: Clock,        cls: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800" },
-  rejected: { label: "Rejected",icon: XCircle,      cls: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800" },
-  draft:    { label: "Draft",   icon: Clock,        cls: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700" },
+const statusCfg: Record<
+  string,
+  { label: string; icon: React.ElementType; cls: string }
+> = {
+  approved: {
+    label: "Live",
+    icon: CheckCircle2,
+    cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-green-400 dark:border-emerald-800",
+  },
+  pending: {
+    label: "Pending",
+    icon: Clock,
+    cls: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
+  },
+  rejected: {
+    label: "Rejected",
+    icon: XCircle,
+    cls: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
+  },
 };
 
 /* ─── reschedule modal ───────────────────────────────── */
-function RescheduleModal({ exp, onClose }: { exp: Experience; onClose: () => void }) {
+function RescheduleModal({
+  exp,
+  onClose,
+}: {
+  exp: Experience;
+  onClose: () => void;
+}) {
   const queryClient = useQueryClient();
   const [date, setDate] = useState("");
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   const minDateTime = (() => {
     const d = new Date();
@@ -66,10 +120,16 @@ function RescheduleModal({ exp, onClose }: { exp: Experience; onClose: () => voi
   };
 
   const mutation = useMutation({
-    mutationFn: (iso: string) => experiencesService.updateNextOccurrence(exp._id ?? exp.id, iso),
-    onSuccess: () => {
+    mutationFn: (iso: string) =>
+      experiencesService.updateNextOccurrence(exp._id ?? exp.id, iso),
+    onSuccess: async () => {
       toast.success("Experience rescheduled successfully.");
-      queryClient.invalidateQueries({ queryKey: ["my-experiences"] });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: hostQueryKeys.experiences.all(),
+        }),
+        queryClient.invalidateQueries({ queryKey: hostQueryKeys.dashboard() }),
+      ]);
       onClose();
     },
     onError: (err: unknown) => {
@@ -90,12 +150,21 @@ function RescheduleModal({ exp, onClose }: { exp: Experience; onClose: () => voi
             <RefreshCw className="h-5 w-5 text-primary dark:text-green-400" />
           </div>
           <div className="min-w-0">
-            <h3 id="reschedule-modal-title" className="font-headline font-bold text-on-surface dark:text-white">Reschedule Experience</h3>
-            <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 line-clamp-2 break-words">{exp.title}</p>
+            <h3
+              id="reschedule-modal-title"
+              className="font-headline font-bold text-on-surface dark:text-white"
+            >
+              Reschedule Experience
+            </h3>
+            <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 line-clamp-2 break-words">
+              {exp.title}
+            </p>
           </div>
         </div>
 
-        <label className="block text-xs font-bold text-on-surface dark:text-white mb-2">New Date &amp; Time</label>
+        <label className="block text-xs font-bold text-on-surface dark:text-white mb-2">
+          New Date &amp; Time
+        </label>
         <input
           type="datetime-local"
           min={minDateTime}
@@ -105,15 +174,24 @@ function RescheduleModal({ exp, onClose }: { exp: Experience; onClose: () => voi
         />
 
         <div className="flex gap-3">
-          <button type="button" onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-outline-variant/30 dark:border-zinc-600 text-sm font-semibold text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-800 transition-colors">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-outline-variant/30 dark:border-zinc-600 text-sm font-semibold text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-800 transition-colors"
+          >
             Cancel
           </button>
-          <button type="button"
+          <button
+            type="button"
             disabled={!date || mutation.isPending}
             onClick={submitReschedule}
-            className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
-            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            {mutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
             Reschedule
           </button>
         </div>
@@ -128,21 +206,25 @@ function ActionMenu({
   exp,
   onReschedule,
   onStop,
+  onDelete,
   hostListingLocked,
   hasUpcomingBookings,
 }: {
   exp: Experience;
   onReschedule: (exp: Experience) => void;
   onStop: (exp: Experience) => void;
+  onDelete: (exp: Experience) => void;
   hostListingLocked: boolean;
   hasUpcomingBookings: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const id = exp._id ?? exp.id;
   const expired = isExpired(exp);
-  const isPubliclyVisible = exp.status === "approved" && !exp.suspended && !expired;
+  const isPubliclyVisible =
+    exp.status === "approved" && !exp.suspended && !expired;
   // Stop is only meaningful for approved listings that are currently scheduled (live).
-  const canStop = exp.status === "approved" && !!exp.nextOccurrenceAt && !expired;
+  const canStop =
+    exp.status === "approved" && !!exp.nextOccurrenceAt && !expired;
   const scheduleLocked = hostListingLocked || hasUpcomingBookings;
   const scheduleLockTitle = hasUpcomingBookings
     ? "You can’t change the next date while guests have upcoming bookings for this run."
@@ -152,6 +234,16 @@ function ActionMenu({
     ? "You can’t stop while guests have upcoming bookings. Let them complete or cancel first."
     : hostListingLocked
       ? "Stopping is temporarily disabled for your account."
+      : undefined;
+
+  // Deletion is strictly allowed ONLY if the experience is expired or stopped (or rejected)
+  const isExpiredOrStopped =
+    expired || !exp.nextOccurrenceAt || exp.status === "rejected";
+  const deleteLocked = hostListingLocked || hasUpcomingBookings;
+  const deleteLockTitle = hasUpcomingBookings
+    ? "You can’t delete while guests have upcoming bookings."
+    : hostListingLocked
+      ? "Deletion is temporarily disabled for your account."
       : undefined;
 
   return (
@@ -177,20 +269,31 @@ function ActionMenu({
             "ring-2 ring-primary ring-offset-2 ring-offset-white dark:ring-offset-white bg-white dark:bg-white scale-[1.02] shadow-[0_2px_18px_rgba(0,0,0,0.22)] dark:shadow-[0_4px_26px_rgba(0,0,0,0.65)]",
         )}
       >
-        <MoreVertical className="h-6 w-6 shrink-0" strokeWidth={2.75} aria-hidden />
+        <MoreVertical
+          className="h-6 w-6 shrink-0"
+          strokeWidth={2.75}
+          aria-hidden
+        />
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+            aria-hidden
+          />
           <div
             role="menu"
             aria-orientation="vertical"
             className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-44 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-outline-variant/20 dark:border-zinc-700 overflow-hidden py-1"
           >
             {isPubliclyVisible && (
-              <Link to={`/experiences/${id}`}
-                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors">
-                <Eye className="h-3.5 w-3.5 text-on-surface-variant" /> View Listing
+              <Link
+                to={`/experiences/${id}`}
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors"
+              >
+                <Eye className="h-3.5 w-3.5 text-on-surface-variant" /> View
+                Listing
               </Link>
             )}
             {hostListingLocked ? (
@@ -201,8 +304,10 @@ function ActionMenu({
                 <Pencil className="h-3.5 w-3.5" /> Edit
               </div>
             ) : (
-              <Link to={`/host/experiences/${id}/edit`}
-                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors">
+              <Link
+                to={`/host/experiences/${id}/edit`}
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors"
+              >
                 <Pencil className="h-3.5 w-3.5 text-on-surface-variant" /> Edit
               </Link>
             )}
@@ -218,7 +323,8 @@ function ActionMenu({
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 title={scheduleLocked ? scheduleLockTitle : undefined}
               >
-                <Calendar className="h-3.5 w-3.5 text-on-surface-variant" /> Set Next Date
+                <Calendar className="h-3.5 w-3.5 text-on-surface-variant" /> Set
+                Next Date
               </button>
             )}
             {canStop && (
@@ -236,6 +342,24 @@ function ActionMenu({
                   title={stopLockTitle}
                 >
                   <Ban className="h-3.5 w-3.5" /> Stop
+                </button>
+              </>
+            )}
+            {isExpiredOrStopped && (
+              <>
+                <div className="my-1 border-t border-outline-variant/20 dark:border-zinc-700" />
+                <button
+                  type="button"
+                  disabled={deleteLocked}
+                  onClick={() => {
+                    if (deleteLocked) return;
+                    onDelete(exp);
+                    setOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-error hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={deleteLockTitle}
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Delete listing
                 </button>
               </>
             )}
@@ -258,6 +382,14 @@ function StopModal({
   onConfirm: () => void;
   isPending: boolean;
 }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isPending) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, isPending]);
+
   return createPortal(
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/55 p-4 backdrop-blur-sm isolate [pointer-events:auto]"
@@ -270,25 +402,120 @@ function StopModal({
             <Ban className="h-5 w-5 text-destructive" />
           </div>
           <div className="min-w-0">
-            <h3 className="font-headline font-bold text-on-surface dark:text-white">Stop this experience?</h3>
-            <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 line-clamp-2 break-words">{exp.title}</p>
+            <h3 className="font-headline font-bold text-on-surface dark:text-white">
+              Stop this experience?
+            </h3>
+            <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 line-clamp-2 break-words">
+              {exp.title}
+            </p>
           </div>
         </div>
 
         <p className="text-sm text-on-surface-variant dark:text-zinc-300 leading-relaxed mb-6">
-          It will no longer accept bookings and will disappear from the public catalog. You can bring it back anytime by rescheduling.
-          Reviews and booking history are preserved.
+          It will no longer accept bookings and will disappear from the public
+          catalog. You can bring it back anytime by rescheduling. Reviews and
+          booking history are preserved.
         </p>
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-stretch border-t border-outline-variant/15 dark:border-zinc-700 pt-5 -mx-6 px-6 -mb-6 pb-6 bg-surface-container-low/80 dark:bg-zinc-800/80 rounded-b-2xl">
-          <button type="button" onClick={onClose} disabled={isPending}
-            className="flex-1 min-h-[44px] py-2.5 rounded-xl border-2 border-outline-variant/35 dark:border-zinc-500 bg-white dark:bg-zinc-900 text-sm font-semibold text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-800 transition-colors disabled:opacity-50">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="flex-1 min-h-[44px] py-2.5 rounded-xl border-2 border-outline-variant/35 dark:border-zinc-500 bg-white dark:bg-zinc-900 text-sm font-semibold text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+          >
             Cancel
           </button>
-          <button type="button" onClick={onConfirm} disabled={isPending}
-            className="flex-1 min-h-[44px] py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-bold shadow-md shadow-destructive/30 hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2">
-            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4 shrink-0" />}
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isPending}
+            className="flex-1 min-h-[44px] py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-bold shadow-md shadow-destructive/30 hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
+          >
+            {isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Ban className="h-4 w-4 shrink-0" />
+            )}
             Stop listing
+          </button>
+        </div>
+      </div>
+    </div>,
+    getHostModalContainer(),
+  );
+}
+
+/* ─── delete confirmation modal ────────────────────────── */
+function DeleteExperienceModal({
+  exp,
+  onClose,
+  onConfirm,
+  isPending,
+}: {
+  exp: Experience;
+  onClose: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isPending) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, isPending]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/55 p-4 backdrop-blur-sm isolate [pointer-events:auto]"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-experience-modal-title"
+    >
+      <div className="relative z-10 my-auto w-full max-w-sm rounded-2xl border border-outline-variant/20 bg-white p-6 shadow-2xl dark:border-zinc-600 dark:bg-zinc-900 max-h-[min(90vh,520px)] overflow-y-auto">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-destructive/15 dark:bg-destructive/25 flex items-center justify-center shrink-0 ring-1 ring-destructive/25">
+            <Trash2 className="h-5 w-5 text-destructive" />
+          </div>
+          <div className="min-w-0">
+            <h3
+              id="delete-experience-modal-title"
+              className="font-headline font-bold text-on-surface dark:text-white"
+            >
+              Delete this experience?
+            </h3>
+            <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 line-clamp-2 break-words">
+              {exp.title}
+            </p>
+          </div>
+        </div>
+
+        <p className="text-sm text-on-surface-variant dark:text-zinc-300 leading-relaxed mb-6">
+          This will permanently delete this experience listing, photos, and associated details. This action cannot be undone.
+        </p>
+
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-stretch border-t border-outline-variant/15 dark:border-zinc-700 pt-5 -mx-6 px-6 -mb-6 pb-6 bg-surface-container-low/80 dark:bg-zinc-800/80 rounded-b-2xl">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="flex-1 min-h-[44px] py-2.5 rounded-xl border-2 border-outline-variant/35 dark:border-zinc-500 bg-white dark:bg-zinc-900 text-sm font-semibold text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isPending}
+            className="flex-1 min-h-[44px] py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-bold shadow-md shadow-destructive/30 hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
+          >
+            {isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4 shrink-0" />
+            )}
+            Delete permanently
           </button>
         </div>
       </div>
@@ -302,17 +529,19 @@ function ExpCard({
   exp,
   onReschedule,
   onStop,
+  onDelete,
   hostListingLocked,
 }: {
   exp: Experience;
   onReschedule: (e: Experience) => void;
   onStop: (e: Experience) => void;
+  onDelete: (e: Experience) => void;
   hostListingLocked: boolean;
 }) {
   const isSuspended = exp.status === "approved" && exp.suspended;
   const expired = exp.status === "approved" && !exp.suspended && isExpired(exp);
   const hasUpcomingBookings = (exp.upcomingBookingsCount ?? 0) > 0;
-  const s = statusCfg[exp.status ?? "draft"] ?? statusCfg.draft;
+  const s = statusCfg[exp.status ?? "pending"] ?? statusCfg.pending;
   const Icon = isSuspended ? AlertCircle : expired ? Clock : s.icon;
   const id = exp._id ?? exp.id;
   const suspendedBadgeCls =
@@ -340,17 +569,23 @@ function ExpCard({
             src={exp.imageCover}
             alt={exp.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            onError={(e) => { (e.target as HTMLImageElement).src = "/imgs/image1.jpg"; }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/imgs/image1.jpg";
+            }}
           />
         </div>
-        <span className={`absolute top-3 left-3 z-10 flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${badgeCls}`}>
-          <Icon className="h-3 w-3" />{badgeLabel}
+        <span
+          className={`absolute top-3 left-3 z-10 flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${badgeCls}`}
+        >
+          <Icon className="h-3 w-3" />
+          {badgeLabel}
         </span>
         <div className="absolute top-2.5 right-2.5 z-30">
           <ActionMenu
             exp={exp}
             onReschedule={onReschedule}
             onStop={onStop}
+            onDelete={onDelete}
             hostListingLocked={hostListingLocked}
             hasUpcomingBookings={hasUpcomingBookings}
           />
@@ -372,13 +607,16 @@ function ExpCard({
 
         <div className="flex flex-wrap gap-x-3 gap-y-1 mb-3">
           <span className="flex items-center gap-1 text-xs text-on-surface-variant dark:text-zinc-400">
-            <MapPin className="h-3 w-3" />{exp.location}
+            <MapPin className="h-3 w-3" />
+            {exp.location}
           </span>
           <span className="flex items-center gap-1 text-xs text-on-surface-variant dark:text-zinc-400">
-            <Timer className="h-3 w-3" />{exp.duration}
+            <Timer className="h-3 w-3" />
+            {exp.duration}
           </span>
           <span className="flex items-center gap-1 text-xs text-on-surface-variant dark:text-zinc-400">
-            <Users className="h-3 w-3" />Up to {exp.maxGuests}
+            <Users className="h-3 w-3" />
+            Up to {exp.maxGuests}
           </span>
         </div>
 
@@ -388,11 +626,17 @@ function ExpCard({
             {exp.ratingsQuantity > 0 ? (
               <>
                 <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                <span className="text-xs font-bold text-on-surface dark:text-white">{exp.ratingsAverage}</span>
-                <span className="text-xs text-on-surface-variant dark:text-zinc-500">({exp.ratingsQuantity})</span>
+                <span className="text-xs font-bold text-on-surface dark:text-white">
+                  {exp.ratingsAverage}
+                </span>
+                <span className="text-xs text-on-surface-variant dark:text-zinc-500">
+                  ({exp.ratingsQuantity})
+                </span>
               </>
             ) : (
-              <span className="text-xs text-on-surface-variant dark:text-zinc-500">No reviews yet</span>
+              <span className="text-xs text-on-surface-variant dark:text-zinc-500">
+                No reviews yet
+              </span>
             )}
           </div>
           <span className="text-sm font-headline font-bold text-primary dark:text-green-400">
@@ -408,7 +652,8 @@ function ExpCard({
                 type="button"
                 disabled={hostListingLocked || hasUpcomingBookings}
                 onClick={() => {
-                  if (!hostListingLocked && !hasUpcomingBookings) onReschedule(exp);
+                  if (!hostListingLocked && !hasUpcomingBookings)
+                    onReschedule(exp);
                 }}
                 className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-700/40 text-amber-700 dark:text-amber-300 text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 title={
@@ -420,18 +665,23 @@ function ExpCard({
                 }
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                Reschedule — {exp.nextOccurrenceAt ? "past date" : "no date set"}
+                Reschedule —{" "}
+                {exp.nextOccurrenceAt ? "past date" : "no date set"}
               </button>
             ) : (
               <div>
                 <p className="text-xs text-on-surface-variant dark:text-zinc-400 flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  Next: <strong className="text-on-surface dark:text-white ml-1">{fmtDate(exp.nextOccurrenceAt)}</strong>
+                  Next:{" "}
+                  <strong className="text-on-surface dark:text-white ml-1">
+                    {fmtDate(exp.nextOccurrenceAt)}
+                  </strong>
                 </p>
                 {hasUpcomingBookings && (
                   <p className="text-[10px] text-amber-800 dark:text-amber-300 mt-1.5 leading-snug">
                     {exp.upcomingBookingsCount} upcoming guest booking
-                    {(exp.upcomingBookingsCount ?? 0) > 1 ? "s" : ""} — the next date is locked. Contact support if you need an exception.
+                    {(exp.upcomingBookingsCount ?? 0) > 1 ? "s" : ""} — the next
+                    date is locked. Contact support if you need an exception.
                   </p>
                 )}
               </div>
@@ -443,13 +693,19 @@ function ExpCard({
         {exp.status === "rejected" && (
           <div className="mt-3 pt-3 border-t border-outline-variant/10 dark:border-zinc-700">
             <p className="text-xs text-red-600 dark:text-red-400 leading-relaxed line-clamp-2">
-              {(exp as Experience & { rejectionReason?: string }).rejectionReason ?? "Rejected by editorial team."}
+              {(exp as Experience & { rejectionReason?: string })
+                .rejectionReason ?? "Rejected by editorial team."}
             </p>
             {hostListingLocked ? (
-              <p className="mt-2 text-xs text-on-surface-variant">Editing is temporarily disabled. Contact support if you need help.</p>
+              <p className="mt-2 text-xs text-on-surface-variant">
+                Editing is temporarily disabled. Contact support if you need
+                help.
+              </p>
             ) : (
-              <Link to={`/host/experiences/${id}/edit`}
-                className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary dark:text-green-400 hover:underline">
+              <Link
+                to={`/host/experiences/${id}/edit`}
+                className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary dark:text-green-400 hover:underline"
+              >
                 <Pencil className="h-3 w-3" /> Edit &amp; Resubmit
               </Link>
             )}
@@ -458,7 +714,9 @@ function ExpCard({
 
         {exp.status === "pending" && (
           <div className="mt-3 pt-3 border-t border-outline-variant/10 dark:border-zinc-700">
-            <p className="text-xs text-amber-600 dark:text-amber-400">Under review — you'll be notified within 48 hours.</p>
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Under review — you'll be notified within 48 hours.
+            </p>
           </div>
         )}
       </div>
@@ -473,13 +731,14 @@ export default function HostExperiences() {
   const listingLocked =
     user?.hostStatus === "approved" && user?.hostListingSuspended === true;
 
-  const [search, setSearch]           = useState("");
-  const [tab, setTab]                 = useState<TabFilter>("all");
+  const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<TabFilter>("all");
   const [rescheduleExp, setReschedule] = useState<Experience | null>(null);
-  const [stopExp, setStopExp]         = useState<Experience | null>(null);
+  const [stopExp, setStopExp] = useState<Experience | null>(null);
+  const [deleteExp, setDeleteExp] = useState<Experience | null>(null);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["my-experiences"],
+    queryKey: hostQueryKeys.experiences.list(),
     queryFn: () => experiencesService.getMyExperiences(),
   });
 
@@ -487,9 +746,14 @@ export default function HostExperiences() {
 
   const stopMutation = useMutation({
     mutationFn: (id: string) => experiencesService.stop(id),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Experience stopped. You can reschedule it anytime.");
-      queryClient.invalidateQueries({ queryKey: ["my-experiences"] });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: hostQueryKeys.experiences.all(),
+        }),
+        queryClient.invalidateQueries({ queryKey: hostQueryKeys.dashboard() }),
+      ]);
       setStopExp(null);
     },
     onError: (err: unknown) => {
@@ -497,11 +761,30 @@ export default function HostExperiences() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => experiencesService.delete(id),
+    onSuccess: async () => {
+      toast.success("Experience deleted successfully.");
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: hostQueryKeys.experiences.all(),
+        }),
+        queryClient.invalidateQueries({ queryKey: hostQueryKeys.dashboard() }),
+      ]);
+      setDeleteExp(null);
+    },
+    onError: (err: unknown) => {
+      toast.error(getFriendlyErrorMessage(err, "Failed to delete experience."));
+    },
+  });
+
   const counts: Record<TabFilter, number> = {
     all: exps.length,
-    approved: exps.filter((e) => e.status === "approved" && !isExpired(e)).length,
+    approved: exps.filter((e) => e.status === "approved" && !isExpired(e))
+      .length,
     expired: exps.filter((e) => e.status === "approved" && isExpired(e)).length,
-    draft: exps.filter((e) => e.status === "draft").length,
+    pending: exps.filter((e) => e.status === "pending").length,
+    rejected: exps.filter((e) => e.status === "rejected").length,
   };
 
   const filtered = exps.filter((e) => {
@@ -511,7 +794,8 @@ export default function HostExperiences() {
       matchTab = e.status === "approved" && !isExpired(e);
     else if (tab === "expired")
       matchTab = e.status === "approved" && isExpired(e);
-    else if (tab === "draft") matchTab = e.status === "draft";
+    else if (tab === "pending") matchTab = e.status === "pending";
+    else if (tab === "rejected") matchTab = e.status === "rejected";
 
     const q = search.toLowerCase();
     const matchSearch =
@@ -524,14 +808,18 @@ export default function HostExperiences() {
   const tabs: { key: TabFilter; label: string }[] = [
     { key: "all", label: "All" },
     { key: "approved", label: "Live" },
-    { key: "expired", label: "Expired" },
-    { key: "draft", label: "Drafts" },
+    { key: "expired", label: "Needs Date" },
+    { key: "pending", label: "Pending Review" },
+    { key: "rejected", label: "Rejected" },
   ];
 
   return (
     <>
       {rescheduleExp && (
-        <RescheduleModal exp={rescheduleExp} onClose={() => setReschedule(null)} />
+        <RescheduleModal
+          exp={rescheduleExp}
+          onClose={() => setReschedule(null)}
+        />
       )}
       {stopExp && (
         <StopModal
@@ -541,18 +829,29 @@ export default function HostExperiences() {
           isPending={stopMutation.isPending}
         />
       )}
+      {deleteExp && (
+        <DeleteExperienceModal
+          exp={deleteExp}
+          onClose={() => !deleteMutation.isPending && setDeleteExp(null)}
+          onConfirm={() => deleteMutation.mutate(deleteExp._id ?? deleteExp.id)}
+          isPending={deleteMutation.isPending}
+        />
+      )}
 
       <main className="p-10 max-w-[1440px]">
-
         {listingLocked && (
           <div className="mb-8 flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl">
             <div className="w-9 h-9 rounded-xl bg-amber-200/80 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
               <MegaphoneOff className="h-4 w-4 text-amber-900 dark:text-amber-200" />
             </div>
             <div>
-              <p className="text-sm font-bold text-amber-950 dark:text-amber-100">Listing changes are limited</p>
+              <p className="text-sm font-bold text-amber-950 dark:text-amber-100">
+                Listing changes are limited
+              </p>
               <p className="text-xs text-amber-900/80 dark:text-amber-200/90 mt-1 leading-relaxed">
-                You can still view the public page of your live experiences, but you cannot create, edit, reschedule, or stop a listing until this is lifted.
+                You can still view the public page of your live experiences, but
+                you cannot create, edit, reschedule, or stop a listing until
+                this is lifted.
               </p>
             </div>
           </div>
@@ -561,8 +860,12 @@ export default function HostExperiences() {
         {/* ── Header ──────────────────────────────────── */}
         <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-headline font-extrabold text-primary dark:text-green-400 tracking-tight">My Experiences</h1>
-            <p className="text-on-surface-variant dark:text-zinc-400 mt-1">Manage and monitor all your hosted experiences.</p>
+            <h1 className="text-3xl font-headline font-extrabold text-primary dark:text-green-400 tracking-tight">
+              My Experiences
+            </h1>
+            <p className="text-on-surface-variant dark:text-zinc-400 mt-1">
+              Manage and monitor all your hosted experiences.
+            </p>
           </div>
           {listingLocked ? (
             <div
@@ -572,8 +875,10 @@ export default function HostExperiences() {
               <Plus className="h-4 w-4" /> New Experience
             </div>
           ) : (
-            <Link to="/host/experiences/create"
-              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-semibold px-6 py-3 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-sm">
+            <Link
+              to="/host/experiences/create"
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-semibold px-6 py-3 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-sm"
+            >
               <Plus className="h-4 w-4" /> New Experience
             </Link>
           )}
@@ -582,16 +887,58 @@ export default function HostExperiences() {
         {/* ── Stats strip ─────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
-            { label: "Total",  value: counts.all,      color: "text-primary dark:text-green-400",       c1: "rgba(0,82,52,0.12)",   c2: "rgba(0,82,52,0.07)" },
-            { label: "Live on site", value: exps.filter((e) => e.status === "approved" && !e.suspended && !isExpired(e)).length, color: "text-emerald-600 dark:text-green-400", c1: "rgba(5,150,105,0.15)", c2: "rgba(5,150,105,0.08)" },
-            { label: "Suspended", value: exps.filter((e) => e.status === "approved" && e.suspended).length, color: "text-amber-700 dark:text-amber-400", c1: "rgba(180,83,9,0.12)", c2: "rgba(180,83,9,0.06)" },
-            { label: "Drafts", value: counts.draft,    color: "text-zinc-500 dark:text-zinc-400",       c1: "rgba(100,116,139,0.12)", c2: "rgba(100,116,139,0.07)" },
+            {
+              label: "Total",
+              value: counts.all,
+              color: "text-primary dark:text-green-400",
+              c1: "rgba(0,82,52,0.12)",
+              c2: "rgba(0,82,52,0.07)",
+            },
+            {
+              label: "Live on site",
+              value: exps.filter(
+                (e) => e.status === "approved" && !e.suspended && !isExpired(e),
+              ).length,
+              color: "text-emerald-600 dark:text-green-400",
+              c1: "rgba(5,150,105,0.15)",
+              c2: "rgba(5,150,105,0.08)",
+            },
+            {
+              label: "Suspended",
+              value: exps.filter((e) => e.status === "approved" && e.suspended)
+                .length,
+              color: "text-amber-700 dark:text-amber-400",
+              c1: "rgba(180,83,9,0.12)",
+              c2: "rgba(180,83,9,0.06)",
+            },
+            {
+              label: "Pending Review",
+              value: counts.pending,
+              color: "text-amber-600 dark:text-amber-400",
+              c1: "rgba(217,119,6,0.12)",
+              c2: "rgba(217,119,6,0.06)",
+            },
           ].map((s) => (
-            <div key={s.label} className="relative bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-outline-variant/10 dark:border-zinc-700 shadow-sm overflow-hidden group">
-              <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full group-hover:scale-125 transition-transform duration-500" style={{ background: s.c1 }} />
-              <div className="absolute -right-2 -top-2 w-16 h-16 rounded-full group-hover:scale-110 transition-transform duration-500" style={{ background: s.c2 }} />
-              <p className={`relative text-2xl font-headline font-black ${s.color}`}>{isLoading ? "—" : s.value}</p>
-              <p className="relative text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 font-medium">{s.label}</p>
+            <div
+              key={s.label}
+              className="relative bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-outline-variant/10 dark:border-zinc-700 shadow-sm overflow-hidden group"
+            >
+              <div
+                className="absolute -right-6 -top-6 w-32 h-32 rounded-full group-hover:scale-125 transition-transform duration-500"
+                style={{ background: s.c1 }}
+              />
+              <div
+                className="absolute -right-2 -top-2 w-16 h-16 rounded-full group-hover:scale-110 transition-transform duration-500"
+                style={{ background: s.c2 }}
+              />
+              <p
+                className={`relative text-2xl font-headline font-black ${s.color}`}
+              >
+                {isLoading ? "—" : s.value}
+              </p>
+              <p className="relative text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 font-medium">
+                {s.label}
+              </p>
             </div>
           ))}
         </div>
@@ -600,18 +947,23 @@ export default function HostExperiences() {
         <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
           <div className="flex items-center gap-1 bg-surface-container-low dark:bg-zinc-800 rounded-xl p-1">
             {tabs.map((t) => (
-              <button key={t.key} onClick={() => setTab(t.key)}
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                   tab === t.key
                     ? "bg-white dark:bg-zinc-700 text-primary dark:text-green-400 shadow-sm"
                     : "text-on-surface-variant dark:text-zinc-400 hover:text-on-surface dark:hover:text-white"
-                }`}>
+                }`}
+              >
                 {t.label}
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                  tab === t.key
-                    ? "bg-primary/10 text-primary dark:bg-green-400/15 dark:text-green-400"
-                    : "bg-outline-variant/20 dark:bg-zinc-700 text-on-surface-variant dark:text-zinc-400"
-                }`}>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                    tab === t.key
+                      ? "bg-primary/10 text-primary dark:bg-green-400/15 dark:text-green-400"
+                      : "bg-outline-variant/20 dark:bg-zinc-700 text-on-surface-variant dark:text-zinc-400"
+                  }`}
+                >
                   {counts[t.key]}
                 </span>
               </button>
@@ -638,36 +990,49 @@ export default function HostExperiences() {
         ) : isError ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <AlertCircle className="h-12 w-12 text-error mb-4" />
-            <p className="font-headline font-bold text-on-surface dark:text-white mb-1">Failed to load experiences</p>
-            <p className="text-sm text-on-surface-variant dark:text-zinc-400">Please refresh the page to try again.</p>
+            <p className="font-headline font-bold text-on-surface dark:text-white mb-1">
+              Failed to load experiences
+            </p>
+            <p className="text-sm text-on-surface-variant dark:text-zinc-400">
+              Please refresh the page to try again.
+            </p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="w-16 h-16 rounded-2xl bg-surface-container dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
               <SlidersHorizontal className="h-6 w-6 text-on-surface-variant dark:text-zinc-500" />
             </div>
-            <p className="font-headline font-bold text-on-surface dark:text-white mb-1">No experiences found</p>
+            <p className="font-headline font-bold text-on-surface dark:text-white mb-1">
+              No experiences found
+            </p>
             <p className="text-sm text-on-surface-variant dark:text-zinc-400 mb-6">
               {search
                 ? "Try a different search term."
                 : tab === "all"
                   ? "You haven't added any experiences yet."
                   : tab === "approved"
-                    ? "No live listings with an upcoming date — check Expired or drafts."
+                    ? "No live listings with an upcoming date — check Needs Date or Pending."
                     : tab === "expired"
                       ? "No expired listings. Past or unset dates appear in this tab."
-                      : "No draft experiences yet."}
+                      : tab === "pending"
+                        ? "No experiences currently waiting for review."
+                        : "No rejected experiences."}
             </p>
-            {!search && tab !== "expired" && (
-              listingLocked ? (
-                <p className="text-xs text-on-surface-variant dark:text-zinc-500">New experiences can&apos;t be created while listing changes are limited.</p>
+            {!search &&
+              tab !== "expired" &&
+              (listingLocked ? (
+                <p className="text-xs text-on-surface-variant dark:text-zinc-500">
+                  New experiences can&apos;t be created while listing changes
+                  are limited.
+                </p>
               ) : (
-                <Link to="/host/experiences/create"
-                  className="inline-flex items-center gap-2 bg-primary text-white font-semibold px-6 py-2.5 rounded-xl text-sm hover:bg-primary/90 transition-colors">
+                <Link
+                  to="/host/experiences/create"
+                  className="inline-flex items-center gap-2 bg-primary text-white font-semibold px-6 py-2.5 rounded-xl text-sm hover:bg-primary/90 transition-colors"
+                >
                   <Plus className="h-4 w-4" /> Create Your First Experience
                 </Link>
-              )
-            )}
+              ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -677,6 +1042,7 @@ export default function HostExperiences() {
                 exp={exp}
                 onReschedule={setReschedule}
                 onStop={setStopExp}
+                onDelete={setDeleteExp}
                 hostListingLocked={listingLocked}
               />
             ))}

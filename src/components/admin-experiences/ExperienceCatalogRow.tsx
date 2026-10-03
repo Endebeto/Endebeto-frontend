@@ -5,7 +5,10 @@ import {
   MapPin,
   Timer,
 } from "lucide-react";
-import type { ExpStatus, TabKey } from "@/components/admin-experiences/experienceAdminUtils";
+import type {
+  ExpStatus,
+  TabKey,
+} from "@/components/admin-experiences/experienceAdminUtils";
 import {
   expiredBadge,
   fmtDuration,
@@ -28,7 +31,7 @@ export function ExperienceCatalogRow({
   isSelected: boolean;
   onToggle: () => void;
 }) {
-  const st = (exp.status ?? "draft") as ExpStatus;
+  const st = (exp.status ?? "pending") as ExpStatus;
   const rowExpired = isExpired(exp);
   const rowBadge =
     tab === "suspended" || exp.suspended

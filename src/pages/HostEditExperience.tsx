@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { hostQueryKeys } from "@/lib/hostQueryKeys";
 import {
   FileEdit,
   Banknote,
@@ -61,6 +62,13 @@ function SuccessModal({
   onDashboard: () => void;
   onList: () => void;
 }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onList();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onList]);
   return createPortal(
     <div
       className="fixed inset-0 bg-primary/20 backdrop-blur-sm flex items-center justify-center p-4"
@@ -308,8 +316,13 @@ export default function HostEditExperience() {
     try {
       await experiencesService.update(id, buildFormData(false));
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["my-experiences"] }),
-        queryClient.invalidateQueries({ queryKey: ["experience", id] }),
+        queryClient.invalidateQueries({
+          queryKey: hostQueryKeys.experiences.all(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: hostQueryKeys.experiences.detail(id),
+        }),
+        queryClient.invalidateQueries({ queryKey: hostQueryKeys.dashboard() }),
       ]);
       setSuccess(true);
     } catch (err: unknown) {
@@ -332,8 +345,13 @@ export default function HostEditExperience() {
     try {
       await experiencesService.update(id, buildFormData(true));
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["my-experiences"] }),
-        queryClient.invalidateQueries({ queryKey: ["experience", id] }),
+        queryClient.invalidateQueries({
+          queryKey: hostQueryKeys.experiences.all(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: hostQueryKeys.experiences.detail(id),
+        }),
+        queryClient.invalidateQueries({ queryKey: hostQueryKeys.dashboard() }),
       ]);
       const isAutoApproved =
         user?.hostStatus === "approved" || user?.role === "admin";

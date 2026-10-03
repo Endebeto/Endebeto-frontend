@@ -32,7 +32,7 @@ export function absoluteImageUrlForOg(
   image: string | undefined,
   pageUrl: string,
 ): string | null {
-  if (image == null || image === "" || image === "__draft__") return null;
+  if (image == null || image === "") return null;
   if (/^https?:\/\//i.test(image)) return image;
   const origin = new URL(pageUrl).origin;
   return image.startsWith("/") ? `${origin}${image}` : `${origin}/${image}`;
@@ -49,8 +49,7 @@ export function resolveExperienceMetaFetchUrl(
     viteApiUrl?: string | undefined;
   },
 ): string | null {
-  const raw =
-    env.experienceMetaApiUrl?.trim() || env.viteApiUrl?.trim() || "";
+  const raw = env.experienceMetaApiUrl?.trim() || env.viteApiUrl?.trim() || "";
   if (!raw) return null;
 
   const base = raw.replace(/\/$/, "");
@@ -59,23 +58,31 @@ export function resolveExperienceMetaFetchUrl(
     return `${base}${restPath}`;
   }
   const pathPrefix = base.startsWith("/") ? base : `/${base}`;
-  return new URL(`${pathPrefix}${restPath}`, new URL(deployPageUrl).origin).href;
+  return new URL(`${pathPrefix}${restPath}`, new URL(deployPageUrl).origin)
+    .href;
 }
 
 /** Parse pathname → Mongo ObjectId segment for `/experiences/:id`. */
-export function extractExperienceMongoIdFromPath(pathname: string): string | null {
+export function extractExperienceMongoIdFromPath(
+  pathname: string,
+): string | null {
   const segments = pathname.split("/").filter(Boolean);
   if (segments.length !== 2 || segments[0] !== "experiences") return null;
 
   const id = segments[1];
-  if (RESERVED_EXPERIENCE_PATH_SEGMENTS.has(id) || !/^[a-f0-9]{24}$/i.test(id)) {
+  if (
+    RESERVED_EXPERIENCE_PATH_SEGMENTS.has(id) ||
+    !/^[a-f0-9]{24}$/i.test(id)
+  ) {
     return null;
   }
   return id;
 }
 
 /** Body shape from `handlerFactory.getOne` → `{ data: { data: doc } }`. */
-export function parseExperienceFromGetOneJson(json: unknown): Record<string, unknown> | null {
+export function parseExperienceFromGetOneJson(
+  json: unknown,
+): Record<string, unknown> | null {
   const exp =
     json &&
     typeof json === "object" &&
@@ -97,8 +104,14 @@ export function buildOgHtml(props: {
   rawCover: string;
   defaultOgFallbackPath: string;
 }): string {
-  const { title, descriptionForMeta, canonicalHref, pageUrlStr, rawCover, defaultOgFallbackPath } =
-    props;
+  const {
+    title,
+    descriptionForMeta,
+    canonicalHref,
+    pageUrlStr,
+    rawCover,
+    defaultOgFallbackPath,
+  } = props;
 
   const ogImage =
     absoluteImageUrlForOg(rawCover, pageUrlStr) ??

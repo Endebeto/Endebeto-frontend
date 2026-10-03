@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { hostQueryKeys } from "@/lib/hostQueryKeys";
 import {
   Search,
   Mail,
@@ -171,7 +172,7 @@ export default function HostBookings() {
   const [page, setPage] = useState(1);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["host-bookings-list", tab, page, search],
+    queryKey: hostQueryKeys.bookings.list(tab, page, search),
     queryFn: () =>
       bookingsService.getHostBookings({
         page,
@@ -308,8 +309,122 @@ export default function HostBookings() {
           </button>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Mobile View: Cards */}
+        <div className="md:hidden divide-y divide-outline-variant/10 dark:divide-zinc-800">
+          {isLoading ? (
+            <div className="px-6 py-12 text-center">
+              <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-green-400 mx-auto mb-2" />
+              <p className="text-xs text-on-surface-variant dark:text-zinc-400">
+                Loading bookings…
+              </p>
+            </div>
+          ) : isError ? (
+            <div className="px-6 py-12 text-center">
+              <AlertCircle className="h-6 w-6 text-error mx-auto mb-2" />
+              <p className="text-xs text-error">Failed to load bookings.</p>
+            </div>
+          ) : bookings.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <CalendarDays className="h-8 w-8 text-on-surface-variant/30 dark:text-zinc-600 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-on-surface dark:text-white">
+                {search
+                  ? "No results found"
+                  : tab === "all"
+                    ? "No bookings yet"
+                    : `No ${tab} bookings`}
+              </p>
+            </div>
+          ) : (
+            bookings.map((b, i) => {
+              const u = b.user;
+              const exp =
+                typeof b.experience === "object" ? b.experience : null;
+              const cfg = STATUS_CFG[b.status] ?? STATUS_CFG.upcoming;
+              const colorCls =
+                AVATAR_COLORS[
+                  ((page - 1) * PAGE_SIZE + i) % AVATAR_COLORS.length
+                ];
+              const mailto = u?.email
+                ? `mailto:${u.email}?subject=${encodeURIComponent(`Your booking: ${exp?.title ?? "experience"}`)}`
+                : undefined;
+
+              return (
+                <div
+                  key={b._id}
+                  className="p-4 space-y-3 bg-white dark:bg-zinc-900"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <UserAvatar
+                        name={u?.name ?? "Guest"}
+                        photo={u?.photo}
+                        className={`w-9 h-9 rounded-full ring-2 ring-white dark:ring-zinc-800 font-headline font-bold text-xs ${colorCls}`}
+                        initialsClassName="text-xs"
+                        imgClassName="w-full h-full rounded-full object-cover"
+                        alt={u?.name ?? ""}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-on-surface dark:text-white truncate max-w-[150px]">
+                          {u?.name ?? "Guest"}
+                        </p>
+                        <p className="text-[11px] text-on-surface-variant dark:text-zinc-400 truncate max-w-[150px]">
+                          {u?.email ?? "—"}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${cfg.cls}`}
+                    >
+                      {cfg.label}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 text-xs">
+                    {exp?.imageCover && (
+                      <img
+                        src={exp.imageCover}
+                        alt=""
+                        className="w-8 h-8 rounded-lg object-cover shrink-0"
+                      />
+                    )}
+                    <span className="font-medium text-on-surface dark:text-white line-clamp-1">
+                      {exp?.title ?? "—"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-2 border-t border-outline-variant/10 dark:border-zinc-800">
+                    <div className="flex items-center gap-3 text-on-surface-variant dark:text-zinc-400">
+                      <span className="flex items-center gap-1">
+                        <CalendarDays className="h-3 w-3" />
+                        {fmtDate(b.experienceDate ?? b.createdAt)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {b.quantity ?? 1}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-primary dark:text-green-400">
+                        ETB {(b.price ?? 0).toLocaleString()}
+                      </span>
+                      {mailto && (
+                        <a
+                          href={mailto}
+                          className="flex items-center gap-1 font-semibold text-primary dark:text-green-400 hover:underline"
+                        >
+                          <Mail className="h-3.5 w-3.5" /> Email
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-surface-container-low dark:bg-zinc-800 text-on-surface-variant dark:text-zinc-400 text-[10px] uppercase tracking-widest font-bold">

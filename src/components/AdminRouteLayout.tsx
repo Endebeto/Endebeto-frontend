@@ -6,6 +6,7 @@ import type {
   AdminOutletContextType,
 } from "@/hooks/useSyncAdminHeader";
 import { RouteMainFallback } from "@/components/RouteMainFallback";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export default function AdminRouteLayout() {
   const [header, setHeader] = useState<AdminHeaderState | null>(null);
@@ -48,9 +49,11 @@ export default function AdminRouteLayout() {
       onSearch={header?.onSearch}
       onSearchImmediate={header?.onSearchImmediate}
     >
-      <Suspense fallback={<RouteMainFallback />}>
-        <Outlet context={outletCtx} />
-      </Suspense>
+      <ErrorBoundary scope="Admin Portal">
+        <Suspense fallback={<RouteMainFallback />}>
+          <Outlet context={outletCtx} />
+        </Suspense>
+      </ErrorBoundary>
     </AdminLayout>
   );
 }

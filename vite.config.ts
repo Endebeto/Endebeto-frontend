@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
       host: "::",
       port: 8080,
       hmr: {
-        overlay: false,
+        overlay: true,
       },
       // Same-origin API in dev so httpOnly auth cookies attach to the page host.
       // Strict browsers (Brave, some Safari settings) block or partition cross-port localhost cookies.

@@ -13,6 +13,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const Index = lazy(() => import("./pages/Index"));
 const Experiences = lazy(() => import("./pages/Experiences"));
@@ -181,6 +182,10 @@ const AppRoutes = () => (
       }
     >
       <Route path="/host-dashboard" element={<HostDashboard />} />
+      <Route
+        path="/host/dashboard"
+        element={<Navigate to="/host-dashboard" replace />}
+      />
       <Route path="/host/wallet" element={<HostWallet />} />
       <Route path="/host/experiences" element={<HostExperiences />} />
       <Route
@@ -229,9 +234,11 @@ const App = () => (
       >
         <AuthProvider>
           <AuthExpiredRedirect />
-          <Suspense fallback={<RouteFallback />}>
-            <AppRoutes />
-          </Suspense>
+          <ErrorBoundary scope="Application">
+            <Suspense fallback={<RouteFallback />}>
+              <AppRoutes />
+            </Suspense>
+          </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

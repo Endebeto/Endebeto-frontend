@@ -51,7 +51,7 @@ export function ExperienceDetailPanel({
   onReinstate: () => void;
   reinstatePending: boolean;
 }) {
-  const status = (exp.status ?? "draft") as ExpStatus;
+  const status = (exp.status ?? "pending") as ExpStatus;
 
   const { data: detailData, isLoading: detailLoading } = useQuery({
     queryKey: adminQueryKeys.experienceDetail(exp._id),

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   ArrowDownToLine,
@@ -119,6 +119,16 @@ export function WithdrawModal({
       );
     },
   });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !mutation.isPending) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, mutation.isPending]);
 
   const handleSubmit = () => {
     setSubmitAttempted(true);
@@ -302,8 +312,8 @@ export function WithdrawModal({
                     <>
                       Pre-filled from your approved host application. The
                       account holder name must match:{" "}
-                      <strong>{legalRef}</strong>. You can save bank details
-                      for next time by submitting a withdrawal.
+                      <strong>{legalRef}</strong>. You can save bank details for
+                      next time by submitting a withdrawal.
                     </>
                   )
                 ) : (

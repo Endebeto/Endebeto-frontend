@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { hostQueryKeys } from "@/lib/hostQueryKeys";
 import {
   FileEdit,
   Banknote,
@@ -17,7 +18,6 @@ import {
   Plus,
   Lock,
   AlertCircle,
-  Save,
   Info,
 } from "lucide-react";
 import LocationPicker, { type PinLocation } from "@/components/LocationPicker";
@@ -137,21 +137,21 @@ export default function HostCreateExperience() {
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [pin, setPin] = useState<PinLocation | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [savingDraft, setSavingDraft] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Fetch existing experiences to enforce one-per-category limit.
-  // Uses the same queryKey + raw queryFn as HostExperiences so the cache is shared correctly.
+  // Fetch existing experiences to enforce anti-clone title check.
   const { data: myExpData } = useQuery({
-    queryKey: ["my-experiences"],
+    queryKey: hostQueryKeys.experiences.list(),
     queryFn: () => experiencesService.getMyExperiences(),
     staleTime: 30_000,
   });
   const myExperiences = normalizeApiList<Experience>(myExpData?.data).items;
 
-  // Check if the currently selected category already has an active experience
-  const categoryTaken = myExperiences.some(
-    (e) => e.category === form.category && e.status !== "rejected",
+  // Anti-clone check: prevent duplicate titles by the same host
+  const duplicateTitle = myExperiences.some(
+    (e) =>
+      e.title.trim().toLowerCase() === form.title.trim().toLowerCase() &&
+      e.status !== "rejected",
   );
 
   const coverRef = useRef<HTMLInputElement>(null);
@@ -186,7 +186,7 @@ export default function HostCreateExperience() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit || categoryTaken) return;
+    if (!canSubmit || duplicateTitle) return;
     setSubmitting(true);
     try {
       const fd = new FormData();
@@ -206,7 +206,12 @@ export default function HostCreateExperience() {
       galleryFiles.forEach((f) => fd.append("images", f));
 
       await experiencesService.create(fd);
-      await queryClient.invalidateQueries({ queryKey: ["my-experiences"] });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: hostQueryKeys.experiences.all(),
+        }),
+        queryClient.invalidateQueries({ queryKey: hostQueryKeys.dashboard() }),
+      ]);
       setSuccess(true);
     } catch (err: unknown) {
       toast.error(
@@ -217,45 +222,6 @@ export default function HostCreateExperience() {
       );
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  /** Save the current form as a draft — only title + category required. */
-  const handleSaveDraft = async () => {
-    if (!form.title.trim()) {
-      toast.error("Please enter at least a title before saving a draft.");
-      return;
-    }
-    setSavingDraft(true);
-    try {
-      const fd = new FormData();
-      fd.append("status", "draft");
-      fd.append("title", form.title);
-      fd.append("category", form.category);
-      if (form.summary.trim()) fd.append("summary", form.summary);
-      if (form.description.trim()) fd.append("description", form.description);
-      if (form.price) fd.append("price", form.price);
-      if (form.duration.trim()) fd.append("duration", form.duration);
-      if (form.maxGuests) fd.append("maxGuests", form.maxGuests);
-      if (form.nextOccurrenceAt)
-        fd.append("nextOccurrenceAt", form.nextOccurrenceAt);
-      if (form.location.trim()) fd.append("location", form.location);
-      if (form.address.trim()) fd.append("address", form.address);
-      if (pin?.lat) fd.append("latitude", String(pin.lat));
-      if (pin?.lng) fd.append("longitude", String(pin.lng));
-      if (coverFile) fd.append("imageCover", coverFile);
-      galleryFiles.forEach((f) => fd.append("images", f));
-
-      await experiencesService.create(fd);
-      await queryClient.invalidateQueries({ queryKey: ["my-experiences"] });
-      toast.success(
-        "Draft saved! You can continue editing it from My Experiences.",
-      );
-      navigate("/host/experiences");
-    } catch (err: unknown) {
-      toast.error(getFriendlyErrorMessage(err, "Failed to save draft."));
-    } finally {
-      setSavingDraft(false);
     }
   };
 
@@ -348,6 +314,13 @@ export default function HostCreateExperience() {
                     onChange={set("title")}
                     className={inputCls}
                   />
+                  {duplicateTitle && (
+                    <p className="mt-1.5 text-xs text-error dark:text-red-400 flex items-center gap-1 font-medium">
+                      <AlertCircle className="h-3 w-3 shrink-0" />
+                      You already have an active experience with this title.
+                      Please choose a unique title.
+                    </p>
+                  )}
                   <p className="mt-1.5 text-xs text-on-surface-variant dark:text-zinc-400">
                     Keep it catchy and descriptive of the unique value.
                   </p>
@@ -367,25 +340,13 @@ export default function HostCreateExperience() {
                       {categoryOptions.map((c) => (
                         <option key={c} value={c}>
                           {c}
-                          {myExperiences.some(
-                            (e) => e.category === c && e.status !== "rejected",
-                          )
-                            ? " (already used)"
-                            : ""}
                         </option>
                       ))}
                     </select>
-                    {categoryTaken ? (
-                      <p className="mt-1.5 text-xs text-error dark:text-red-400 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3 shrink-0" />
-                        You already have an active experience in this category.
-                        Each category allows only one experience.
-                      </p>
-                    ) : (
-                      <p className="mt-1.5 text-xs text-on-surface-variant dark:text-zinc-400">
-                        Limited to your approved host categories.
-                      </p>
-                    )}
+                    <p className="mt-1.5 text-xs text-on-surface-variant dark:text-zinc-400">
+                      Limited to your approved host categories. You may host
+                      multiple distinct experiences.
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">
@@ -710,29 +671,10 @@ export default function HostCreateExperience() {
             </section>
 
             {/* ─ Form actions ─ */}
-            <div className="flex items-center justify-between pt-2 pb-8 gap-3 flex-wrap">
-              <button
-                type="button"
-                disabled={savingDraft || submitting || !form.title.trim()}
-                onClick={handleSaveDraft}
-                className="px-6 py-3 rounded-xl border border-outline-variant/40 dark:border-zinc-600 text-on-surface dark:text-white font-bold hover:bg-surface dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {savingDraft ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-                    Saving…
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Save as Draft
-                  </>
-                )}
-              </button>
-
+            <div className="flex items-center justify-end pt-2 pb-8 gap-3">
               <button
                 type="submit"
-                disabled={!canSubmit || submitting || categoryTaken}
+                disabled={!canSubmit || submitting || duplicateTitle}
                 className="px-10 py-4 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all flex items-center gap-3"
               >
                 {submitting ? (
@@ -743,7 +685,7 @@ export default function HostCreateExperience() {
                 ) : (
                   <>
                     <ShieldCheck className="h-5 w-5" />
-                    Post Experience
+                    Submit for Review
                   </>
                 )}
               </button>

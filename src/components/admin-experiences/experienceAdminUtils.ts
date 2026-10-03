@@ -3,8 +3,8 @@ import type {
   AdminExperience,
 } from "@/services/admin.service";
 
-export type ExpStatus = "pending" | "approved" | "rejected" | "draft";
-export type TabKey = "live" | "expired" | "suspended" | "draft";
+export type ExpStatus = "pending" | "approved" | "rejected";
+export type TabKey = "live" | "expired" | "suspended";
 
 export const CATALOG_PAGE_SIZE = 20;
 
@@ -60,8 +60,6 @@ export const statusBadge: Record<ExpStatus, string> = {
     "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-green-400 dark:border-emerald-800",
   rejected:
     "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
-  draft:
-    "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-600",
 };
 
 export const suspendedBadge =
@@ -74,7 +72,6 @@ export const TAB_LABEL: Record<TabKey, string> = {
   live: "Live",
   expired: "Expired",
   suspended: "Suspended",
-  draft: "Drafts",
 };
 
 export const BOOKING_FILTERS: {
@@ -110,5 +107,4 @@ export const CATALOG_TAB_ITEMS: { key: TabKey; label: string }[] = [
   { key: "live", label: TAB_LABEL.live },
   { key: "expired", label: TAB_LABEL.expired },
   { key: "suspended", label: TAB_LABEL.suspended },
-  { key: "draft", label: TAB_LABEL.draft },
 ];

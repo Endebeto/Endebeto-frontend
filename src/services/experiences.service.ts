@@ -38,7 +38,7 @@ export interface Experience {
   imageCover: string;
   ratingsAverage: number;
   ratingsQuantity: number;
-  status?: "draft" | "pending" | "approved" | "rejected";
+  status?: "pending" | "approved" | "rejected";
   /** When true, the listing is hidden from guests (platform suspension). */
   suspended?: boolean;
   suspensionReason?: string;
@@ -190,6 +190,10 @@ export const experiencesService = {
   // Host/admin Stop: clears the schedule without deleting the listing or reviews.
   stop: (id: string) =>
     api.patch<ExperienceResponse>(`/experiences/${id}/stop`),
+
+  // Permanently delete listing (only allowed if expired or stopped with no upcoming bookings)
+  delete: (id: string) =>
+    api.delete<{ status: string; data: null }>(`/experiences/${id}`),
 
   approve: (id: string) =>
     api.patch<ExperienceResponse>(`/experiences/${id}/approve`),

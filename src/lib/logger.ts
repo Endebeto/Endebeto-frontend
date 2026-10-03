@@ -17,8 +17,6 @@ const methodsToSilence: ConsoleMethod[] = [
   "log",
   "info",
   "debug",
-  "warn",
-  "error",
 ];
 
 export function initProductionLogger(): void {

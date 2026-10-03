@@ -8,13 +8,15 @@ import {
   ArrowUpFromLine,
   TrendingDown,
   Search,
+  Download,
+  CheckCircle2,
 } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { WithdrawModal } from "@/components/host-wallet/WithdrawModal";
 import { WalletEarningRow } from "@/components/host-wallet/WalletEarningRow";
 import { WalletWithdrawalRow } from "@/components/host-wallet/WalletWithdrawalRow";
 import { WithdrawalsPager } from "@/components/host-wallet/WithdrawalsPager";
-import { etb } from "@/components/host-wallet/walletFormatters";
+import { etb, fmtDate } from "@/components/host-wallet/walletFormatters";
 import { useHostWallet } from "@/hooks/useHostWallet";
 
 export default function HostWallet() {
@@ -59,6 +61,7 @@ export default function HostWallet() {
     invalidateAll,
     resetWithdrawalPaging,
     scrollToStatement,
+    exportEarningsCSV,
   } = useHostWallet();
 
   return (
@@ -293,8 +296,22 @@ export default function HostWallet() {
               ))}
             </div>
 
+            {activeTab === "earnings" && (
+              <button
+                type="button"
+                onClick={exportEarningsCSV}
+                disabled={earnings.length === 0}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant/30 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-on-surface dark:text-white hover:bg-surface-container-low dark:hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
+                title="Download earnings ledger as CSV"
+              >
+                <Download className="h-3.5 w-3.5 text-primary dark:text-green-400" />
+                <span className="hidden sm:inline">Export Statement</span>
+                <span className="sm:hidden">Export</span>
+              </button>
+            )}
+
             {activeTab === "withdrawals" && (
-              <div className="relative hidden md:block">
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-on-surface-variant dark:text-zinc-500" />
                 <input
                   type="text"
@@ -304,7 +321,7 @@ export default function HostWallet() {
                     resetWithdrawalPaging();
                   }}
                   placeholder="Search withdrawals…"
-                  className="pl-8 pr-3 py-1.5 bg-surface-container-low dark:bg-zinc-800 rounded-lg text-xs border-0 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white placeholder:text-on-surface-variant/50 dark:placeholder:text-zinc-500 w-48"
+                  className="pl-8 pr-3 py-1.5 bg-surface-container-low dark:bg-zinc-800 rounded-lg text-xs border-0 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white placeholder:text-on-surface-variant/50 dark:placeholder:text-zinc-500 w-36 sm:w-48"
                 />
               </div>
             )}
@@ -312,7 +329,57 @@ export default function HostWallet() {
 
           {activeTab === "earnings" && (
             <>
-              <div className="overflow-x-auto scrollbar-hide">
+              {/* Mobile Earnings Cards */}
+              <div className="md:hidden divide-y divide-outline-variant/10 dark:divide-zinc-800">
+                {earningsLoading ? (
+                  <div className="py-12 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-green-400 mx-auto" />
+                  </div>
+                ) : earnings.length === 0 ? (
+                  <p className="px-6 py-8 text-center text-sm text-on-surface-variant dark:text-zinc-400">
+                    No earnings yet — earnings appear here when guests book your experiences.
+                  </p>
+                ) : (
+                  earnings.map((row) => (
+                    <div key={row._id} className="p-4 space-y-2 bg-white dark:bg-zinc-900">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-on-surface-variant dark:text-zinc-400 font-medium">
+                          {fmtDate(row.date)}
+                        </span>
+                        {row.status === "held" ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 uppercase">
+                            <Clock className="h-2.5 w-2.5" /> Held
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-secondary-container dark:bg-emerald-900/40 text-on-secondary-fixed-variant dark:text-green-400 uppercase">
+                            <CheckCircle2 className="h-2.5 w-2.5" /> Released
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        {row.booking?.experience?.imageCover && (
+                          <img
+                            src={row.booking.experience.imageCover}
+                            alt=""
+                            className="w-8 h-8 rounded-lg object-cover shrink-0"
+                          />
+                        )}
+                        <p className="text-xs font-semibold text-on-surface dark:text-white line-clamp-2">
+                          {row.booking?.experience?.title ?? "Hosted Experience"}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-outline-variant/10 dark:border-zinc-800">
+                        <span className="text-on-surface-variant dark:text-zinc-400">Gross: ETB {etb(row.grossCents)}</span>
+                        <span className="text-error dark:text-red-400">Fee: −ETB {etb(row.feeCents)}</span>
+                        <span className="font-bold text-primary dark:text-green-400">Net: ETB {etb(row.netCents)}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Desktop Earnings Table */}
+              <div className="hidden md:block overflow-x-auto scrollbar-hide">
                 <table className="w-full text-left min-w-[640px]">
                   <thead>
                     <tr className="bg-surface-container-low dark:bg-zinc-800 text-on-surface-variant dark:text-zinc-400 text-[10px] uppercase tracking-widest font-bold">
