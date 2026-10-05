@@ -18,8 +18,10 @@ import {
   Megaphone,
   UserCheck,
   UserX,
+  FileText,
   X,
 } from "lucide-react";
+import { TaxInvoiceModal } from "@/components/tax-invoice/TaxInvoiceModal";
 import { UserAvatar } from "@/components/UserAvatar";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import {
@@ -268,6 +270,7 @@ function GuestRow({
   booking,
   idx,
   onAttendanceChange,
+  onViewInvoice,
 }: {
   booking: Booking;
   idx: number;
@@ -275,6 +278,7 @@ function GuestRow({
     bookingId: string,
     status: "unmarked" | "checked_in" | "no_show",
   ) => void;
+  onViewInvoice: (bookingId: string) => void;
 }) {
   const user = booking.user;
   const exp =
@@ -410,21 +414,33 @@ function GuestRow({
         )}
       </td>
 
-      {/* Contact */}
+      {/* Contact & Receipt */}
       <td className="px-6 py-4 whitespace-nowrap">
-        {mailto ? (
-          <a
-            href={mailto}
-            className="flex items-center gap-1.5 text-xs font-semibold text-primary dark:text-green-400 hover:underline"
-          >
-            <Mail className="h-3.5 w-3.5" />
-            Email Guest
-          </a>
-        ) : (
-          <span className="text-xs text-on-surface-variant dark:text-zinc-500">
-            —
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {mailto ? (
+            <a
+              href={mailto}
+              className="flex items-center gap-1.5 text-xs font-semibold text-primary dark:text-green-400 hover:underline"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Email Guest
+            </a>
+          ) : (
+            <span className="text-xs text-on-surface-variant dark:text-zinc-500">
+              —
+            </span>
+          )}
+          {booking.paid && (
+            <button
+              type="button"
+              onClick={() => onViewInvoice(booking._id)}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:text-primary dark:hover:text-green-400 hover:underline cursor-pointer"
+              title="View Ethiopian Tax Invoice & Receipt"
+            >
+              <FileText className="h-3.5 w-3.5 text-primary" /> Receipt
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   );
@@ -437,6 +453,7 @@ export default function HostBookings() {
   const [tab, setTab] = useState<Tab>("all");
   const [page, setPage] = useState(1);
   const [broadcastOpen, setBroadcastOpen] = useState(false);
+  const [selectedInvoiceBookingId, setSelectedInvoiceBookingId] = useState<string | null>(null);
 
   const { data: experiencesData } = useQuery({
     queryKey: hostQueryKeys.experiences.list(),
@@ -719,6 +736,15 @@ export default function HostBookings() {
                       <span className="font-bold text-primary dark:text-green-400">
                         ETB {(b.price ?? 0).toLocaleString()}
                       </span>
+                      {b.paid && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedInvoiceBookingId(b._id)}
+                          className="flex items-center gap-1 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-primary dark:hover:text-green-400 hover:underline cursor-pointer"
+                        >
+                          <FileText className="h-3.5 w-3.5 text-primary" /> Receipt
+                        </button>
+                      )}
                       {mailto && (
                         <a
                           href={mailto}
@@ -851,6 +877,7 @@ export default function HostBookings() {
                     booking={b}
                     idx={(page - 1) * PAGE_SIZE + i}
                     onAttendanceChange={handleAttendanceChange}
+                    onViewInvoice={setSelectedInvoiceBookingId}
                   />
                 ))
               )}
@@ -915,6 +942,13 @@ export default function HostBookings() {
         isOpen={broadcastOpen}
         onClose={() => setBroadcastOpen(false)}
         experiences={hostExperiences}
+      />
+
+      <TaxInvoiceModal
+        bookingId={selectedInvoiceBookingId}
+        isOpen={Boolean(selectedInvoiceBookingId)}
+        onClose={() => setSelectedInvoiceBookingId(null)}
+        viewerContext="host"
       />
     </main>
   );

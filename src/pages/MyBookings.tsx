@@ -19,7 +19,9 @@ import {
   Star,
   XCircle,
   Megaphone,
+  FileText,
 } from "lucide-react";
+import { TaxInvoiceModal } from "@/components/tax-invoice/TaxInvoiceModal";
 import Navbar from "@/components/Navbar";
 import { MY_BOOKINGS_REVIEW_BANNER_QUERY_KEY } from "@/components/reviewPendingBannerConstants";
 import { bookingsService, type Booking } from "@/services/bookings.service";
@@ -469,10 +471,12 @@ function BookingCard({
   booking,
   userId,
   userRole,
+  onViewInvoice,
 }: {
   booking: Booking;
   userId?: string;
   userRole?: string;
+  onViewInvoice?: (bookingId: string) => void;
 }) {
   const [showCancel, setShowCancel] = useState(false);
 
@@ -579,6 +583,17 @@ function BookingCard({
             </div>
           </Link>
           <div className="flex items-center justify-end sm:justify-center gap-2 shrink-0 border-t border-outline-variant/10 sm:border-t-0 pt-3 sm:pt-0">
+            {booking.paid && (
+              <button
+                type="button"
+                onClick={() => onViewInvoice?.(booking._id)}
+                className="flex items-center justify-center gap-1.5 min-h-11 text-xs font-semibold text-zinc-700 dark:text-zinc-200 border border-outline-variant/30 dark:border-zinc-700 px-3 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                title="View Official Ethiopian Tax Receipt & Invoice"
+              >
+                <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                Receipt
+              </button>
+            )}
             <ReviewCell booking={booking} userId={userId} userRole={userRole} />
             {canCancel && (
               <button
@@ -602,6 +617,7 @@ function BookingCard({
 export default function MyBookings() {
   useVerifyTxRef();
   const { user } = useAuth();
+  const [selectedInvoiceBookingId, setSelectedInvoiceBookingId] = useState<string | null>(null);
 
   const {
     data,
@@ -800,6 +816,7 @@ export default function MyBookings() {
                         booking={b}
                         userId={user?._id}
                         userRole={user?.role}
+                        onViewInvoice={setSelectedInvoiceBookingId}
                       />
                     ))}
                   </ul>
@@ -825,6 +842,7 @@ export default function MyBookings() {
                         booking={b}
                         userId={user?._id}
                         userRole={user?.role}
+                        onViewInvoice={setSelectedInvoiceBookingId}
                       />
                     ))}
                   </ul>
@@ -865,6 +883,13 @@ export default function MyBookings() {
             )}
         </div>
       </main>
+
+      <TaxInvoiceModal
+        bookingId={selectedInvoiceBookingId}
+        isOpen={Boolean(selectedInvoiceBookingId)}
+        onClose={() => setSelectedInvoiceBookingId(null)}
+        viewerContext="guest"
+      />
     </div>
   );
 }

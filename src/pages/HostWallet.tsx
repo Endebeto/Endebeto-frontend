@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Wallet,
   ArrowDownToLine,
@@ -16,10 +17,12 @@ import { WithdrawModal } from "@/components/host-wallet/WithdrawModal";
 import { WalletEarningRow } from "@/components/host-wallet/WalletEarningRow";
 import { WalletWithdrawalRow } from "@/components/host-wallet/WalletWithdrawalRow";
 import { WithdrawalsPager } from "@/components/host-wallet/WithdrawalsPager";
+import { TaxInvoiceModal } from "@/components/tax-invoice/TaxInvoiceModal";
 import { etb, fmtDate } from "@/components/host-wallet/walletFormatters";
 import { useHostWallet } from "@/hooks/useHostWallet";
 
 export default function HostWallet() {
+  const [selectedInvoiceBookingId, setSelectedInvoiceBookingId] = useState<string | null>(null);
   const {
     user,
     refreshUser,
@@ -388,20 +391,21 @@ export default function HostWallet() {
                       <th className="px-4 py-4">Gross</th>
                       <th className="px-4 py-4">Fee (15%)</th>
                       <th className="px-4 py-4">You Receive</th>
-                      <th className="px-8 py-4">Status</th>
+                      <th className="px-4 py-4">Status</th>
+                      <th className="px-6 py-4 text-right">Receipt</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/10 dark:divide-zinc-800">
                     {earningsLoading ? (
                       <tr>
-                        <td colSpan={6} className="px-8 py-12 text-center">
+                        <td colSpan={7} className="px-8 py-12 text-center">
                           <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-green-400 mx-auto" />
                         </td>
                       </tr>
                     ) : earnings.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={7}
                           className="px-8 py-12 text-center text-sm text-on-surface-variant dark:text-zinc-400"
                         >
                           No earnings yet — earnings appear here when guests
@@ -410,7 +414,11 @@ export default function HostWallet() {
                       </tr>
                     ) : (
                       earnings.map((row) => (
-                        <WalletEarningRow key={row._id} row={row} />
+                        <WalletEarningRow
+                          key={row._id}
+                          row={row}
+                          onViewInvoice={setSelectedInvoiceBookingId}
+                        />
                       ))
                     )}
                   </tbody>
@@ -543,6 +551,13 @@ export default function HostWallet() {
           )}
         </div>
       </main>
+
+      <TaxInvoiceModal
+        bookingId={selectedInvoiceBookingId}
+        isOpen={Boolean(selectedInvoiceBookingId)}
+        onClose={() => setSelectedInvoiceBookingId(null)}
+        viewerContext="host"
+      />
     </>
   );
 }

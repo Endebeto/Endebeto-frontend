@@ -126,4 +126,72 @@ export const bookingsService = {
       status: string;
       data: { booked: number; available: number; maxGuests: number; nextOccurrenceAt?: string };
     }>(`/bookings/availability/${experienceId}`),
+
+  getInvoice: (bookingId: string, context?: "guest" | "host") =>
+    api.get<TaxInvoiceResponse>(`/bookings/${bookingId}/invoice`, {
+      params: context ? { context } : undefined,
+    }),
 };
+
+export interface TaxInvoice {
+  invoiceNumber: string;
+  issueDate: string;
+  bookingId: string;
+  txRef?: string | null;
+  status: string;
+  paid: boolean;
+  paymentMethod: string;
+  currency: string;
+  viewerRole?: "guest" | "host" | "admin";
+  experience: {
+    id: string;
+    title: string;
+    slug?: string;
+    imageCover?: string;
+    location: string;
+    duration?: string;
+  };
+  host: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string | null;
+    tinNumber?: string | null;
+  };
+  guest: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string | null;
+  };
+  experienceDate?: string | null;
+  guestsCount: number;
+  pricePerGuest: number;
+  grossTotal: number;
+  breakdown: {
+    platformFeeRate?: number;
+    platformFee?: number;
+    taxType: string;
+    taxRate: number;
+    taxAmount: number;
+    taxInclusive: boolean;
+    netHostPayout?: number;
+  };
+  issuer: {
+    legalEntity: string;
+    tradeName: string;
+    tin: string;
+    vatNumber: string;
+    address: string;
+    supportEmail: string;
+    supportPhone: string;
+  };
+}
+
+export interface TaxInvoiceResponse {
+  status: string;
+  data: {
+    invoice: TaxInvoice;
+  };
+}
+
