@@ -135,6 +135,7 @@ export interface AdminHostApplication {
     name: string;
     email: string;
     photo?: string;
+    phone?: string;
   };
   status: "pending" | "approved" | "rejected" | "draft" | "submitted";
   createdAt: string;

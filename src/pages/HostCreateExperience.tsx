@@ -133,11 +133,33 @@ export default function HostCreateExperience() {
     location: "",
     address: "",
   });
+  const [durationValue, setDurationValue] = useState("");
+  const [durationUnit, setDurationUnit] = useState<"hours" | "days">("hours");
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [pin, setPin] = useState<PinLocation | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const handleDurationValueChange = (valStr: string) => {
+    setDurationValue(valStr);
+    const parsed = parseInt(valStr.trim(), 10);
+    const formatted =
+      parsed && parsed > 0
+        ? `${parsed} ${parsed === 1 ? durationUnit.slice(0, -1) : durationUnit}`
+        : "";
+    setForm((p) => ({ ...p, duration: formatted }));
+  };
+
+  const handleDurationUnitChange = (unit: "hours" | "days") => {
+    setDurationUnit(unit);
+    const parsed = parseInt(durationValue.trim(), 10);
+    const formatted =
+      parsed && parsed > 0
+        ? `${parsed} ${parsed === 1 ? unit.slice(0, -1) : unit}`
+        : "";
+    setForm((p) => ({ ...p, duration: formatted }));
+  };
 
   // Fetch existing experiences to enforce anti-clone title check.
   const { data: myExpData } = useQuery({
@@ -444,13 +466,41 @@ export default function HostCreateExperience() {
                   <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">
                     Duration <span className="text-error">*</span>
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 3 hours, Half day"
-                    value={form.duration}
-                    onChange={set("duration")}
-                    className={inputCls}
-                  />
+                  <div className="flex gap-3">
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        min="1"
+                        max="365"
+                        placeholder="e.g. 3"
+                        value={durationValue}
+                        onChange={(e) =>
+                          handleDurationValueChange(e.target.value)
+                        }
+                        className={inputCls}
+                      />
+                    </div>
+                    <select
+                      value={durationUnit}
+                      onChange={(e) =>
+                        handleDurationUnitChange(
+                          e.target.value as "hours" | "days",
+                        )
+                      }
+                      className="w-36 bg-white dark:bg-zinc-800 border border-outline-variant/40 dark:border-zinc-700 rounded-xl px-4 py-3.5 text-sm font-medium text-on-surface dark:text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+                    >
+                      <option value="hours">Hours</option>
+                      <option value="days">Days</option>
+                    </select>
+                  </div>
+                  {form.duration && (
+                    <p className="mt-1.5 text-xs text-on-surface-variant dark:text-zinc-400">
+                      Standardized format:{" "}
+                      <strong className="text-primary dark:text-green-400 font-semibold">
+                        {form.duration}
+                      </strong>
+                    </p>
+                  )}
                 </div>
 
                 <div>

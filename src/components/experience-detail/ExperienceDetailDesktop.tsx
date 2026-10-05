@@ -23,6 +23,7 @@ import { ExperienceDescriptionMarkdown } from "@/components/ExperienceDescriptio
 import { UnbookedMapPlaceholder } from "@/components/experience-detail/UnbookedMapPlaceholder";
 import { REVIEWS_PER_PAGE } from "@/components/experience-detail/experienceDetailUtils";
 import { UserAvatar } from "@/components/UserAvatar";
+import { HostNoteCallout } from "@/components/experience-detail/HostNoteCallout";
 import type { ExperienceDetailVM } from "@/hooks/useExperienceDetail";
 
 export function ExperienceDetailDesktop({ vm }: { vm: ExperienceDetailVM }) {
@@ -158,6 +159,11 @@ export function ExperienceDetailDesktop({ vm }: { vm: ExperienceDetailVM }) {
               Only share the public experience link.
             </p>
           </div>
+
+          <HostNoteCallout
+            experienceId={String(exp._id || exp.id || id || "")}
+            announcement={exp.latestAnnouncement}
+          />
 
           <div className="flex items-center justify-between p-4 bg-surface-container-low rounded-xl">
             <div className="flex items-center gap-3">

@@ -81,7 +81,9 @@ describe("experienceUrlStringEquals", () => {
 
 describe("buildApiParamsFromExperiencesUrl", () => {
   it("matches buildExperiencesBrowseParams for a complex URL", () => {
-    const p = new URLSearchParams("page=1&sort=rating&rating=3.5&category=History");
+    const p = new URLSearchParams(
+      "page=1&sort=rating&rating=3.5&category=History",
+    );
     const api = buildApiParamsFromExperiencesUrl(p, CATALOG, LIMIT);
     expect(api).toMatchObject({
       page: 1,
@@ -95,6 +97,6 @@ describe("buildApiParamsFromExperiencesUrl", () => {
   it("does not set onlyAvailable", () => {
     const p = new URLSearchParams("sort=soonest");
     const api = buildApiParamsFromExperiencesUrl(p, CATALOG, LIMIT);
-    expect(api.onlyAvailable).toBeUndefined();
+    expect((api as Record<string, unknown>).onlyAvailable).toBeUndefined();
   });
 });

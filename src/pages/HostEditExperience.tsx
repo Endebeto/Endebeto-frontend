@@ -143,6 +143,8 @@ export default function HostEditExperience() {
     address: "",
   });
 
+  const [durationValue, setDurationValue] = useState("");
+  const [durationUnit, setDurationUnit] = useState<"hours" | "days">("hours");
   const [pin, setPin] = useState<PinLocation | null>(null);
 
   /* existing image state — separate from new file uploads */
@@ -156,6 +158,26 @@ export default function HostEditExperience() {
   const coverRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleDurationValueChange = (valStr: string) => {
+    setDurationValue(valStr);
+    const parsed = parseInt(valStr.trim(), 10);
+    const formatted =
+      parsed && parsed > 0
+        ? `${parsed} ${parsed === 1 ? durationUnit.slice(0, -1) : durationUnit}`
+        : "";
+    setForm((p) => ({ ...p, duration: formatted }));
+  };
+
+  const handleDurationUnitChange = (unit: "hours" | "days") => {
+    setDurationUnit(unit);
+    const parsed = parseInt(durationValue.trim(), 10);
+    const formatted =
+      parsed && parsed > 0
+        ? `${parsed} ${parsed === 1 ? unit.slice(0, -1) : unit}`
+        : "";
+    setForm((p) => ({ ...p, duration: formatted }));
+  };
 
   /* ── load experience + check booking lock ── */
   useEffect(() => {
@@ -176,6 +198,25 @@ export default function HostEditExperience() {
           const pad = (n: number) => String(n).padStart(2, "0");
           return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
         };
+
+        const parseDuration = (
+          dStr?: string,
+        ): { val: string; unit: "hours" | "days" } => {
+          if (!dStr) return { val: "", unit: "hours" };
+          const s = dStr.trim();
+          if (/^full\s*day$/i.test(s)) return { val: "1", unit: "days" };
+          if (/^half\s*day$/i.test(s)) return { val: "4", unit: "hours" };
+          const m = s.match(/^(\d+)\s*(hours?|hrs?|days?)$/i);
+          if (!m) return { val: "", unit: "hours" };
+          return {
+            val: m[1],
+            unit: m[2].toLowerCase().startsWith("d") ? "days" : "hours",
+          };
+        };
+
+        const parsedDur = parseDuration(exp.duration);
+        setDurationValue(parsedDur.val);
+        setDurationUnit(parsedDur.unit);
 
         setForm({
           title: exp.title ?? "",
@@ -272,10 +313,8 @@ export default function HostEditExperience() {
   const fieldCls = (sensitive: boolean) =>
     effectiveLocked && sensitive ? lockedCls : inputCls;
 
-  const isDraft = experience?.status === "draft";
-
-  /** Builds the FormData payload shared by both save and post actions. */
-  const buildFormData = (publish = false) => {
+  /** Builds the FormData payload for saving edits. */
+  const buildFormData = () => {
     const fd = new FormData();
     fd.append("summary", form.summary);
     fd.append("description", form.description);
@@ -296,15 +335,6 @@ export default function HostEditExperience() {
     if (newCoverFile) fd.append("imageCover", newCoverFile);
     newGalleryFiles.forEach((f) => fd.append("images", f));
     existingImages.forEach((url) => fd.append("keepImages", url));
-    // Promote draft: approved hosts go directly live, others go to pending review
-    if (publish) {
-      fd.append(
-        "status",
-        user?.hostStatus === "approved" || user?.role === "admin"
-          ? "approved"
-          : "pending",
-      );
-    }
     return fd;
   };
 
@@ -314,7 +344,7 @@ export default function HostEditExperience() {
     if (!canSubmit || !id) return;
     setSubmitting(true);
     try {
-      await experiencesService.update(id, buildFormData(false));
+      await experiencesService.update(id, buildFormData());
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: hostQueryKeys.experiences.all(),
@@ -334,37 +364,6 @@ export default function HostEditExperience() {
       );
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  /* ── post draft → live ── */
-  const [posting, setPosting] = useState(false);
-  const handlePost = async () => {
-    if (!canSubmit || !id) return;
-    setPosting(true);
-    try {
-      await experiencesService.update(id, buildFormData(true));
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: hostQueryKeys.experiences.all(),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: hostQueryKeys.experiences.detail(id),
-        }),
-        queryClient.invalidateQueries({ queryKey: hostQueryKeys.dashboard() }),
-      ]);
-      const isAutoApproved =
-        user?.hostStatus === "approved" || user?.role === "admin";
-      toast.success(
-        isAutoApproved
-          ? "Experience published and is now live!"
-          : "Experience posted! It will go live after admin review.",
-      );
-      navigate("/host/experiences");
-    } catch (err: unknown) {
-      toast.error(getFriendlyErrorMessage(err, "Failed to post experience."));
-    } finally {
-      setPosting(false);
     }
   };
 
@@ -621,14 +620,47 @@ export default function HostEditExperience() {
                       <Lock className="h-3 w-3 text-amber-500" />
                     )}
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 3 hours, Half day"
-                    value={form.duration}
-                    onChange={set("duration")}
-                    disabled={effectiveLocked}
-                    className={fieldCls(true)}
-                  />
+                  <div className="flex gap-3">
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        min="1"
+                        max="365"
+                        placeholder="e.g. 3"
+                        value={durationValue}
+                        onChange={(e) =>
+                          handleDurationValueChange(e.target.value)
+                        }
+                        disabled={effectiveLocked}
+                        className={fieldCls(true)}
+                      />
+                    </div>
+                    <select
+                      value={durationUnit}
+                      onChange={(e) =>
+                        handleDurationUnitChange(
+                          e.target.value as "hours" | "days",
+                        )
+                      }
+                      disabled={effectiveLocked}
+                      className={`w-32 bg-white dark:bg-zinc-800 border rounded-xl px-3 py-3 text-sm font-medium text-on-surface dark:text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all ${
+                        effectiveLocked
+                          ? "opacity-60 cursor-not-allowed border-outline-variant/20 dark:border-zinc-700 bg-surface-container-low/50"
+                          : "border-outline-variant/40 dark:border-zinc-700 cursor-pointer"
+                      }`}
+                    >
+                      <option value="hours">Hours</option>
+                      <option value="days">Days</option>
+                    </select>
+                  </div>
+                  {form.duration && (
+                    <p className="mt-1.5 text-xs text-on-surface-variant dark:text-zinc-400">
+                      Standardized format:{" "}
+                      <strong className="text-primary dark:text-green-400 font-semibold">
+                        {form.duration}
+                      </strong>
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -887,7 +919,7 @@ export default function HostEditExperience() {
                 {/* Save draft changes without publishing */}
                 <button
                   type="submit"
-                  disabled={!canSubmit || submitting || posting}
+                  disabled={!canSubmit || submitting}
                   className="px-8 py-3 border border-outline-variant/40 dark:border-zinc-600 text-on-surface dark:text-white rounded-xl font-bold hover:bg-surface dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {submitting ? (
@@ -898,32 +930,10 @@ export default function HostEditExperience() {
                   ) : (
                     <>
                       <ShieldCheck className="h-5 w-5" />
-                      {isDraft ? "Save Draft" : "Save Changes"}
+                      Save Changes
                     </>
                   )}
                 </button>
-
-                {/* Post experience — only for drafts */}
-                {isDraft && (
-                  <button
-                    type="button"
-                    disabled={!canSubmit || posting || submitting}
-                    onClick={handlePost}
-                    className="px-10 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all flex items-center gap-3 text-sm"
-                  >
-                    {posting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Posting…
-                      </>
-                    ) : (
-                      <>
-                        <ShieldCheck className="h-5 w-5" />
-                        Post Experience
-                      </>
-                    )}
-                  </button>
-                )}
               </div>
             </div>
           </div>

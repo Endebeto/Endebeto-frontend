@@ -14,6 +14,11 @@ export interface Booking {
     suspended?: boolean;
     suspensionReason?: string;
     host?: { _id: string; name: string; email: string };
+    latestAnnouncement?: {
+      subject: string;
+      message: string;
+      sentAt: string;
+    };
   };
   user: {
     _id: string;
@@ -27,6 +32,8 @@ export interface Booking {
   experienceDate?: string;
   status: "upcoming" | "completed" | "paymentExpired" | "cancelled";
   paid: boolean;
+  attendanceStatus?: "unmarked" | "checked_in" | "no_show";
+  checkedInAt?: string;
   /** From GET /bookings/me: whether this user already left a review for this experience. */
   userHasReviewed?: boolean;
   completedAt?: string;
@@ -103,6 +110,15 @@ export const bookingsService = {
   cancelBooking: (bookingId: string) =>
     api.patch<{ status: string; message: string; data: { booking: Booking } }>(
       `/bookings/${bookingId}/cancel`
+    ),
+
+  updateAttendance: (
+    bookingId: string,
+    status: "unmarked" | "checked_in" | "no_show"
+  ) =>
+    api.patch<{ status: string; data: { data: Booking } }>(
+      `/bookings/${bookingId}/attendance`,
+      { status }
     ),
 
   getAvailability: (experienceId: string) =>

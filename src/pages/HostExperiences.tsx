@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { hostQueryKeys } from "@/lib/hostQueryKeys";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import {
   Plus,
   MapPin,
@@ -91,6 +92,8 @@ function RescheduleModal({
   exp: Experience;
   onClose: () => void;
 }) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(modalRef, true);
   const queryClient = useQueryClient();
   const [date, setDate] = useState("");
 
@@ -144,7 +147,11 @@ function RescheduleModal({
       aria-modal="true"
       aria-labelledby="reschedule-modal-title"
     >
-      <div className="relative z-10 my-auto w-full max-w-sm rounded-2xl border border-outline-variant/15 bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 max-h-[min(90vh,560px)] overflow-y-auto">
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        className="relative z-10 my-auto w-full max-w-sm rounded-2xl border border-outline-variant/15 bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 max-h-[min(90vh,560px)] overflow-y-auto outline-none"
+      >
         <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
             <RefreshCw className="h-5 w-5 text-primary dark:text-green-400" />
@@ -382,6 +389,9 @@ function StopModal({
   onConfirm: () => void;
   isPending: boolean;
 }) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(modalRef, true);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !isPending) onClose();
@@ -396,7 +406,11 @@ function StopModal({
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative z-10 my-auto w-full max-w-sm rounded-2xl border border-outline-variant/20 bg-white p-6 shadow-2xl dark:border-zinc-600 dark:bg-zinc-900 max-h-[min(90vh,520px)] overflow-y-auto">
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        className="relative z-10 my-auto w-full max-w-sm rounded-2xl border border-outline-variant/20 bg-white p-6 shadow-2xl dark:border-zinc-600 dark:bg-zinc-900 max-h-[min(90vh,520px)] overflow-y-auto outline-none"
+      >
         <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-xl bg-destructive/15 dark:bg-destructive/25 flex items-center justify-center shrink-0 ring-1 ring-destructive/25">
             <Ban className="h-5 w-5 text-destructive" />
@@ -458,6 +472,9 @@ function DeleteExperienceModal({
   onConfirm: () => void;
   isPending: boolean;
 }) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(modalRef, true);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !isPending) onClose();
@@ -473,7 +490,11 @@ function DeleteExperienceModal({
       aria-modal="true"
       aria-labelledby="delete-experience-modal-title"
     >
-      <div className="relative z-10 my-auto w-full max-w-sm rounded-2xl border border-outline-variant/20 bg-white p-6 shadow-2xl dark:border-zinc-600 dark:bg-zinc-900 max-h-[min(90vh,520px)] overflow-y-auto">
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        className="relative z-10 my-auto w-full max-w-sm rounded-2xl border border-outline-variant/20 bg-white p-6 shadow-2xl dark:border-zinc-600 dark:bg-zinc-900 max-h-[min(90vh,520px)] overflow-y-auto outline-none"
+      >
         <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-xl bg-destructive/15 dark:bg-destructive/25 flex items-center justify-center shrink-0 ring-1 ring-destructive/25">
             <Trash2 className="h-5 w-5 text-destructive" />
@@ -492,7 +513,8 @@ function DeleteExperienceModal({
         </div>
 
         <p className="text-sm text-on-surface-variant dark:text-zinc-300 leading-relaxed mb-6">
-          This will permanently delete this experience listing, photos, and associated details. This action cannot be undone.
+          This will permanently delete this experience listing, photos, and
+          associated details. This action cannot be undone.
         </p>
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-stretch border-t border-outline-variant/15 dark:border-zinc-700 pt-5 -mx-6 px-6 -mb-6 pb-6 bg-surface-container-low/80 dark:bg-zinc-800/80 rounded-b-2xl">

@@ -19,6 +19,8 @@ export interface Experience {
   price: number;
   priceDiscount?: number;
   duration: string;
+  durationValue?: number;
+  durationUnit?: "hours" | "days";
   maxGuests: number;
   nextOccurrenceAt?: string;
   host: {
@@ -49,6 +51,11 @@ export interface Experience {
   spotsLeft?: number | null;
   /** Upcoming bookings with a future date (used to lock schedule changes for hosts). */
   upcomingBookingsCount?: number;
+  latestAnnouncement?: {
+    subject: string;
+    message: string;
+    sentAt: string;
+  };
 }
 
 // §3.17: canonical paginated shape — { status, results, total, page, limit, data: T[] }
@@ -142,7 +149,10 @@ export function buildExperiencesBrowseParams(input: {
   if (input.minPrice > 0) {
     params["price[gte]"] = input.minPrice;
   }
-  if (input.maxPriceFilter > 0 && input.maxPriceFilter < input.catalogMaxPrice) {
+  if (
+    input.maxPriceFilter > 0 &&
+    input.maxPriceFilter < input.catalogMaxPrice
+  ) {
     params["price[lte]"] = input.maxPriceFilter;
   }
   if (input.minRating > 0) {
@@ -161,11 +171,9 @@ export const experiencesService = {
   getAll: (params?: ExperienceFilters) =>
     api.get<ExperienceListResponse>("/experiences", { params }),
 
-  getOne: (id: string) =>
-    api.get<ExperienceResponse>(`/experiences/${id}`),
+  getOne: (id: string) => api.get<ExperienceResponse>(`/experiences/${id}`),
 
-  getSummary: () =>
-    api.get<ExperienceListResponse>("/experiences/summary"),
+  getSummary: () => api.get<ExperienceListResponse>("/experiences/summary"),
 
   getCatalogPriceBounds: () =>
     api.get<CatalogPriceBoundsResponse>("/experiences/catalog-price-bounds"),
@@ -173,11 +181,9 @@ export const experiencesService = {
   getCatalogCategories: () =>
     api.get<CatalogCategoriesResponse>("/experiences/catalog-categories"),
 
-  getStats: () =>
-    api.get("/experiences/experience-stats"),
+  getStats: () => api.get("/experiences/experience-stats"),
 
-  getPending: () =>
-    api.get<ExperienceListResponse>("/experiences/pending"),
+  getPending: () => api.get<ExperienceListResponse>("/experiences/pending"),
 
   create: (data: FormData) =>
     api.post<ExperienceResponse>("/experiences", data, { timeout: 120_000 }),
@@ -195,6 +201,36 @@ export const experiencesService = {
   delete: (id: string) =>
     api.delete<{ status: string; data: null }>(`/experiences/${id}`),
 
+  // Broadcast announcement to confirmed upcoming session guests
+  broadcast: (id: string, payload: { subject: string; message: string }) =>
+    api.post<{
+      status: string;
+      data: {
+        sentCount: number;
+        message: string;
+        announcement?: {
+          subject: string;
+          message: string;
+          sentAt: string;
+        };
+      };
+    }>(`/experiences/${id}/broadcast`, payload),
+
+  getLatestAnnouncement: () =>
+    api.get<{
+      status: string;
+      data: {
+        experienceId: string;
+        title: string;
+        slug: string;
+        announcement: {
+          subject: string;
+          message: string;
+          sentAt: string;
+        };
+      } | null;
+    }>("/experiences/latest-announcement"),
+
   approve: (id: string) =>
     api.patch<ExperienceResponse>(`/experiences/${id}/approve`),
 
@@ -202,7 +238,9 @@ export const experiencesService = {
     api.patch<ExperienceResponse>(`/experiences/${id}/reject`, { reason }),
 
   updateNextOccurrence: (id: string, nextOccurrenceAt: string) =>
-    api.patch<ExperienceResponse>(`/experiences/${id}/next-occurrence`, { nextOccurrenceAt }),
+    api.patch<ExperienceResponse>(`/experiences/${id}/next-occurrence`, {
+      nextOccurrenceAt,
+    }),
 
   getMyExperiences: (params?: { page?: number; limit?: number }) =>
     api.get<ExperienceListResponse>("/experiences/mine", { params }),
@@ -213,12 +251,20 @@ export const experiencesService = {
   getAvailability: (id: string) =>
     api.get<{
       status: string;
-      data: { booked: number; available: number; maxGuests: number; nextOccurrenceAt?: string };
+      data: {
+        booked: number;
+        available: number;
+        maxGuests: number;
+        nextOccurrenceAt?: string;
+      };
     }>(`/bookings/availability/${id}`),
 
   // Paginated reviews for a single experience
   // GET /experiences/:experienceId/reviews?page=1&limit=5&sort=-createdAt
-  getReviews: (experienceId: string, params: { page?: number; limit?: number }) =>
+  getReviews: (
+    experienceId: string,
+    params: { page?: number; limit?: number },
+  ) =>
     api.get<ReviewListResponse>(`/experiences/${experienceId}/reviews`, {
       params: { sort: "-createdAt", ...params },
     }),

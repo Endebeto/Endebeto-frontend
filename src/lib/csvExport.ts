@@ -118,7 +118,7 @@ export function exportUsersCsv(users: AdminUser[], filenamePrefix = "users") {
     u.hostListingSuspended ? "Yes" : "No",
     u.isVerified ? "Yes" : "No",
     u.authProvider || "local",
-    u.phoneNumber || "",
+    u.phone || "",
     u.createdAt ? new Date(u.createdAt).toISOString() : "",
   ]);
 

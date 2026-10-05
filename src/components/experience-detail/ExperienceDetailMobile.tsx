@@ -21,6 +21,7 @@ import { ExperienceDescriptionMarkdown } from "@/components/ExperienceDescriptio
 import { UnbookedMapPlaceholder } from "@/components/experience-detail/UnbookedMapPlaceholder";
 import { REVIEWS_PER_PAGE } from "@/components/experience-detail/experienceDetailUtils";
 import { UserAvatar } from "@/components/UserAvatar";
+import { HostNoteCallout } from "@/components/experience-detail/HostNoteCallout";
 import type { ExperienceDetailVM } from "@/hooks/useExperienceDetail";
 
 export function ExperienceDetailMobile({ vm }: { vm: ExperienceDetailVM }) {
@@ -128,6 +129,12 @@ export function ExperienceDetailMobile({ vm }: { vm: ExperienceDetailVM }) {
                 </span>
               )}
             </div>
+
+            <HostNoteCallout
+              experienceId={String(exp._id || exp.id || "")}
+              announcement={exp.latestAnnouncement}
+              className="mt-4"
+            />
 
             <div className="flex items-center justify-between py-4 mt-3 border-t border-b border-outline-variant/15 dark:border-zinc-800">
               <div className="flex items-center gap-3">

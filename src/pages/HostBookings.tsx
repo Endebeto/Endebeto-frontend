@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { hostQueryKeys } from "@/lib/hostQueryKeys";
 import {
   Search,
@@ -11,9 +13,22 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  CheckCircle2,
+  XCircle,
+  Megaphone,
+  UserCheck,
+  UserX,
+  X,
 } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { bookingsService, type Booking } from "@/services/bookings.service";
+import {
+  experiencesService,
+  type Experience,
+} from "@/services/experiences.service";
+import { normalizeApiList } from "@/lib/normalizeApiList";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 /* ─── helpers ──────────────────────────────────────────── */
 const fmtDate = (iso?: string) => {
@@ -63,8 +78,204 @@ type Tab = (typeof TABS)[number];
 
 const PAGE_SIZE = 10;
 
+/* ─── broadcast announcement modal ────────────────────── */
+function BroadcastModal({
+  isOpen,
+  onClose,
+  experiences,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  experiences: Experience[];
+}) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(modalRef, isOpen);
+
+  const [selectedExpId, setSelectedExpId] = useState(
+    experiences[0]?._id ?? experiences[0]?.id ?? "",
+  );
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (experiences.length > 0 && !selectedExpId) {
+      setSelectedExpId(experiences[0]._id ?? experiences[0].id ?? "");
+    }
+  }, [experiences, selectedExpId]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const broadcastMutation = useMutation({
+    mutationFn: () =>
+      experiencesService.broadcast(selectedExpId, { subject, message }),
+    onSuccess: (res) => {
+      toast.success(res.data.data.message || "Broadcast announcement sent!");
+      onClose();
+      setSubject("");
+      setMessage("");
+    },
+    onError: (err: unknown) => {
+      toast.error(getFriendlyErrorMessage(err, "Failed to send broadcast."));
+    },
+  });
+
+  const canSubmit =
+    !!selectedExpId &&
+    subject.trim().length >= 3 &&
+    subject.trim().length <= 120 &&
+    message.trim().length >= 10 &&
+    message.trim().length <= 2000 &&
+    !broadcastMutation.isPending;
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/60 p-4 backdrop-blur-sm isolate [pointer-events:auto]"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="broadcast-modal-title"
+    >
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        className="relative z-10 my-auto w-full max-w-lg rounded-2xl border border-outline-variant/20 bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 max-h-[min(90vh,680px)] overflow-y-auto outline-none"
+      >
+        <div className="flex items-center justify-between pb-4 border-b border-outline-variant/15 dark:border-zinc-800 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary dark:text-green-400">
+              <Megaphone className="h-5 w-5" />
+            </div>
+            <div>
+              <h3
+                id="broadcast-modal-title"
+                className="font-headline font-bold text-lg text-on-surface dark:text-white"
+              >
+                Broadcast to Guests
+              </h3>
+              <p className="text-xs text-on-surface-variant dark:text-zinc-400">
+                Send an urgent update email to upcoming session attendees
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="block text-xs font-bold text-on-surface dark:text-white mb-2">
+              Select Experience Session
+            </label>
+            <select
+              value={selectedExpId}
+              onChange={(e) => setSelectedExpId(e.target.value)}
+              className="w-full bg-white dark:bg-zinc-800 border border-outline-variant/40 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm text-on-surface dark:text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+            >
+              {experiences.map((exp) => (
+                <option key={exp._id ?? exp.id} value={exp._id ?? exp.id}>
+                  {exp.title} (
+                  {exp.nextOccurrenceAt
+                    ? fmtDate(exp.nextOccurrenceAt)
+                    : "No date"}
+                  )
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-xs font-bold text-on-surface dark:text-white">
+                Announcement Subject
+              </label>
+              <span className="text-[11px] text-on-surface-variant dark:text-zinc-500">
+                {subject.length}/120
+              </span>
+            </div>
+            <input
+              type="text"
+              placeholder="e.g. Meeting point update for Saturday session"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              maxLength={120}
+              className="w-full bg-white dark:bg-zinc-800 border border-outline-variant/40 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm text-on-surface dark:text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+            />
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-xs font-bold text-on-surface dark:text-white">
+                Announcement Message
+              </label>
+              <span className="text-[11px] text-on-surface-variant dark:text-zinc-500">
+                {message.length}/2000
+              </span>
+            </div>
+            <textarea
+              rows={4}
+              placeholder="Write your announcement here. All guests booked for this upcoming run will receive this message via email."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              maxLength={2000}
+              className="w-full bg-white dark:bg-zinc-800 border border-outline-variant/40 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm text-on-surface dark:text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-3 border-t border-outline-variant/15 dark:border-zinc-800">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={broadcastMutation.isPending}
+            className="flex-1 py-3 rounded-xl border border-outline-variant/40 dark:border-zinc-700 text-sm font-semibold text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-800 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!canSubmit}
+            onClick={() => broadcastMutation.mutate()}
+            className="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-bold shadow-md hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+          >
+            {broadcastMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Megaphone className="h-4 w-4" />
+            )}
+            Send Announcement
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.getElementById("modal-root") ?? document.body,
+  );
+}
+
 /* ─── guest row ───────────────────────────────────────── */
-function GuestRow({ booking, idx }: { booking: Booking; idx: number }) {
+function GuestRow({
+  booking,
+  idx,
+  onAttendanceChange,
+}: {
+  booking: Booking;
+  idx: number;
+  onAttendanceChange: (
+    bookingId: string,
+    status: "unmarked" | "checked_in" | "no_show",
+  ) => void;
+}) {
   const user = booking.user;
   const exp =
     typeof booking.experience === "object" ? booking.experience : null;
@@ -145,6 +356,60 @@ function GuestRow({ booking, idx }: { booking: Booking; idx: number }) {
         </span>
       </td>
 
+      {/* Attendance Status & Action */}
+      <td className="px-4 py-4 whitespace-nowrap">
+        {booking.paid &&
+        (booking.status === "upcoming" || booking.status === "completed") ? (
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide ${
+                booking.attendanceStatus === "checked_in"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800"
+                  : booking.attendanceStatus === "no_show"
+                    ? "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800"
+                    : "bg-zinc-100 text-zinc-600 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700"
+              }`}
+            >
+              {booking.attendanceStatus === "checked_in" ? (
+                <>
+                  <CheckCircle2 className="h-3 w-3" /> Checked In
+                </>
+              ) : booking.attendanceStatus === "no_show" ? (
+                <>
+                  <XCircle className="h-3 w-3" /> No Show
+                </>
+              ) : (
+                "Unmarked"
+              )}
+            </span>
+            <div className="inline-flex rounded-lg border border-outline-variant/30 dark:border-zinc-700 overflow-hidden bg-white dark:bg-zinc-800">
+              <button
+                type="button"
+                title="Mark Checked In"
+                disabled={booking.attendanceStatus === "checked_in"}
+                onClick={() => onAttendanceChange(booking._id, "checked_in")}
+                className="p-1 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-on-surface-variant hover:text-emerald-600 disabled:opacity-30 disabled:cursor-default transition-colors"
+              >
+                <UserCheck className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                title="Mark No Show"
+                disabled={booking.attendanceStatus === "no_show"}
+                onClick={() => onAttendanceChange(booking._id, "no_show")}
+                className="p-1 border-l border-outline-variant/20 dark:border-zinc-700 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-on-surface-variant hover:text-amber-600 disabled:opacity-30 disabled:cursor-default transition-colors"
+              >
+                <UserX className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <span className="text-xs text-on-surface-variant dark:text-zinc-500">
+            —
+          </span>
+        )}
+      </td>
+
       {/* Contact */}
       <td className="px-6 py-4 whitespace-nowrap">
         {mailto ? (
@@ -167,9 +432,44 @@ function GuestRow({ booking, idx }: { booking: Booking; idx: number }) {
 
 /* ─── main component ──────────────────────────────────── */
 export default function HostBookings() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<Tab>("all");
   const [page, setPage] = useState(1);
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
+
+  const { data: experiencesData } = useQuery({
+    queryKey: hostQueryKeys.experiences.list(),
+    queryFn: () => experiencesService.getMyExperiences(),
+    staleTime: 60_000,
+  });
+  const hostExperiences: Experience[] = normalizeApiList<Experience>(
+    experiencesData?.data,
+  ).items;
+
+  const attendanceMutation = useMutation({
+    mutationFn: ({
+      bookingId,
+      status,
+    }: {
+      bookingId: string;
+      status: "unmarked" | "checked_in" | "no_show";
+    }) => bookingsService.updateAttendance(bookingId, status),
+    onSuccess: () => {
+      toast.success("Attendance updated");
+      queryClient.invalidateQueries({ queryKey: hostQueryKeys.bookings.all() });
+    },
+    onError: (err: unknown) => {
+      toast.error(getFriendlyErrorMessage(err, "Failed to update attendance."));
+    },
+  });
+
+  const handleAttendanceChange = (
+    bookingId: string,
+    status: "unmarked" | "checked_in" | "no_show",
+  ) => {
+    attendanceMutation.mutate({ bookingId, status });
+  };
 
   const { data, isLoading, isError } = useQuery({
     queryKey: hostQueryKeys.bookings.list(tab, page, search),
@@ -215,14 +515,26 @@ export default function HostBookings() {
   return (
     <main className="p-4 md:p-10 max-w-[1440px]">
       {/* Header */}
-      <header className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-headline font-extrabold text-primary dark:text-green-400 tracking-tight">
-          Guest Bookings
-        </h1>
-        <p className="text-on-surface-variant dark:text-zinc-400 mt-1 text-sm">
-          All bookings across your experiences — see who's coming and contact
-          them directly.
-        </p>
+      <header className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-headline font-extrabold text-primary dark:text-green-400 tracking-tight">
+            Guest Bookings
+          </h1>
+          <p className="text-on-surface-variant dark:text-zinc-400 mt-1 text-sm">
+            All bookings across your experiences — see who's coming and contact
+            them directly.
+          </p>
+        </div>
+        {hostExperiences.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setBroadcastOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-xs font-bold shadow hover:bg-primary/90 transition-all self-start sm:self-auto shrink-0"
+          >
+            <Megaphone className="h-4 w-4" />
+            Broadcast to Guests
+          </button>
+        )}
       </header>
 
       {/* Stats strip */}
@@ -417,6 +729,63 @@ export default function HostBookings() {
                       )}
                     </div>
                   </div>
+
+                  {b.paid &&
+                    (b.status === "upcoming" || b.status === "completed") && (
+                      <div className="flex items-center justify-between pt-2 border-t border-outline-variant/10 dark:border-zinc-800 text-xs">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide ${
+                            b.attendanceStatus === "checked_in"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800"
+                              : b.attendanceStatus === "no_show"
+                                ? "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800"
+                                : "bg-zinc-100 text-zinc-600 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700"
+                          }`}
+                        >
+                          {b.attendanceStatus === "checked_in" ? (
+                            <>
+                              <CheckCircle2 className="h-3 w-3" /> Checked In
+                            </>
+                          ) : b.attendanceStatus === "no_show" ? (
+                            <>
+                              <XCircle className="h-3 w-3" /> No Show
+                            </>
+                          ) : (
+                            "Unmarked"
+                          )}
+                        </span>
+                        <div className="inline-flex rounded-lg border border-outline-variant/30 dark:border-zinc-700 overflow-hidden bg-white dark:bg-zinc-800">
+                          <button
+                            type="button"
+                            title="Mark Checked In"
+                            disabled={
+                              b.attendanceStatus === "checked_in" ||
+                              attendanceMutation.isPending
+                            }
+                            onClick={() =>
+                              handleAttendanceChange(b._id, "checked_in")
+                            }
+                            className="px-2.5 py-1 flex items-center gap-1 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-on-surface-variant hover:text-emerald-600 disabled:opacity-30 disabled:cursor-default transition-colors text-[11px] font-semibold"
+                          >
+                            <UserCheck className="h-3.5 w-3.5" /> Check In
+                          </button>
+                          <button
+                            type="button"
+                            title="Mark No Show"
+                            disabled={
+                              b.attendanceStatus === "no_show" ||
+                              attendanceMutation.isPending
+                            }
+                            onClick={() =>
+                              handleAttendanceChange(b._id, "no_show")
+                            }
+                            className="px-2.5 py-1 border-l border-outline-variant/20 dark:border-zinc-700 flex items-center gap-1 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-on-surface-variant hover:text-amber-600 disabled:opacity-30 disabled:cursor-default transition-colors text-[11px] font-semibold"
+                          >
+                            <UserX className="h-3.5 w-3.5" /> No Show
+                          </button>
+                        </div>
+                      </div>
+                    )}
                 </div>
               );
             })
@@ -434,13 +803,14 @@ export default function HostBookings() {
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Amount</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Attendance</th>
                 <th className="px-6 py-3">Contact</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/10 dark:divide-zinc-800">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-8 py-16 text-center">
+                  <td colSpan={8} className="px-8 py-16 text-center">
                     <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-green-400 mx-auto mb-2" />
                     <p className="text-sm text-on-surface-variant dark:text-zinc-400">
                       Loading bookings…
@@ -449,7 +819,7 @@ export default function HostBookings() {
                 </tr>
               ) : isError ? (
                 <tr>
-                  <td colSpan={7} className="px-8 py-16 text-center">
+                  <td colSpan={8} className="px-8 py-16 text-center">
                     <AlertCircle className="h-6 w-6 text-error mx-auto mb-2" />
                     <p className="text-sm text-error">
                       Failed to load bookings.
@@ -458,7 +828,7 @@ export default function HostBookings() {
                 </tr>
               ) : bookings.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-8 py-16 text-center">
+                  <td colSpan={8} className="px-8 py-16 text-center">
                     <CalendarDays className="h-8 w-8 text-on-surface-variant/30 dark:text-zinc-600 mx-auto mb-3" />
                     <p className="text-sm font-semibold text-on-surface dark:text-white mb-1">
                       {search
@@ -480,6 +850,7 @@ export default function HostBookings() {
                     key={b._id}
                     booking={b}
                     idx={(page - 1) * PAGE_SIZE + i}
+                    onAttendanceChange={handleAttendanceChange}
                   />
                 ))
               )}
@@ -539,6 +910,12 @@ export default function HostBookings() {
           </div>
         )}
       </div>
+
+      <BroadcastModal
+        isOpen={broadcastOpen}
+        onClose={() => setBroadcastOpen(false)}
+        experiences={hostExperiences}
+      />
     </main>
   );
 }

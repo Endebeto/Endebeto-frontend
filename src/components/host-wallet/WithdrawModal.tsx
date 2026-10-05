@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 import { walletService } from "@/services/wallet.service";
 import { getFriendlyErrorMessage } from "@/lib/errors";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { etb, PAYOUT_BANKS } from "./walletFormatters";
 
 export function WithdrawModal({
@@ -31,6 +32,9 @@ export function WithdrawModal({
   onClose: () => void;
   onWithdrawComplete: () => Promise<void>;
 }) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(modalRef, true);
+
   const presetHolder =
     savedAccountName?.trim() || accountHolderLegalName.trim() || "";
 
@@ -145,13 +149,23 @@ export function WithdrawModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/20 dark:border-zinc-700 w-full max-w-md max-h-[90vh] flex flex-col">
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="withdraw-funds-title"
+        className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/20 dark:border-zinc-700 w-full max-w-md max-h-[90vh] flex flex-col outline-none"
+      >
         <div className="flex items-center justify-between px-6 py-5 border-b border-outline-variant/10 dark:border-zinc-700 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-[#ffddb8]/60 flex items-center justify-center">
               <ArrowDownToLine className="h-4 w-4 text-[#653e00]" />
             </div>
-            <h3 className="font-headline font-bold text-base text-on-surface dark:text-white">
+            <h3
+              id="withdraw-funds-title"
+              className="font-headline font-bold text-base text-on-surface dark:text-white"
+            >
               Withdraw Funds
             </h3>
           </div>
