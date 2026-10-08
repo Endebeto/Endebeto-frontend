@@ -23,6 +23,7 @@ import { ExperienceDescriptionMarkdown } from "@/components/ExperienceDescriptio
 import { UnbookedMapPlaceholder } from "@/components/experience-detail/UnbookedMapPlaceholder";
 import { REVIEWS_PER_PAGE } from "@/components/experience-detail/experienceDetailUtils";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ExperienceSlotSelector } from "@/components/experience-detail/ExperienceSlotSelector";
 import { HostNoteCallout } from "@/components/experience-detail/HostNoteCallout";
 import type { ExperienceDetailVM } from "@/hooks/useExperienceDetail";
 
@@ -54,6 +55,12 @@ export function ExperienceDetailDesktop({ vm }: { vm: ExperienceDetailVM }) {
     hasMore,
     occurrenceDate,
     occurrenceTime,
+    slots,
+    selectedSlot,
+    setSelectedSlot,
+    bookedSlotIds,
+    maxGuestsDisplay,
+    effectivePrice,
     totalGuestPrice,
   } = vm;
 
@@ -198,17 +205,27 @@ export function ExperienceDetailDesktop({ vm }: { vm: ExperienceDetailVM }) {
 
           <div className="grid grid-cols-3 gap-3">
             {[
-              { icon: Clock, label: "Duration", value: exp.duration },
-              { icon: Users, label: "Max Guests", value: `Up to ${exp.maxGuests}` },
-              { icon: Globe, label: "Languages", value: "English, Amharic" },
-            ].map(({ icon: Icon, label, value }) => (
+              { icon: Clock, label: "Duration", value: exp.duration, subtext: undefined },
+              {
+                icon: Users,
+                label: "Max Guests",
+                value: maxGuestsDisplay,
+                subtext: slots.length > 0 ? (selectedSlot ? "For selected session" : "Varies by session") : undefined,
+              },
+              { icon: Globe, label: "Languages", value: "English, Amharic", subtext: undefined },
+            ].map(({ icon: Icon, label, value, subtext }) => (
               <div
                 key={label}
-                className="bg-white dark:bg-[#2d3133] p-4 rounded-xl shadow-sm"
+                className="bg-white dark:bg-[#2d3133] p-4 rounded-xl shadow-sm transition-all"
               >
                 <Icon className="h-4 w-4 text-primary mb-1.5" />
                 <p className="text-xs text-on-surface-variant">{label}</p>
                 <p className="font-headline font-bold text-sm mt-0.5">{value}</p>
+                {subtext && (
+                  <p className="text-[10px] text-primary/80 dark:text-green-400 font-medium mt-0.5">
+                    {subtext}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -394,7 +411,7 @@ export function ExperienceDetailDesktop({ vm }: { vm: ExperienceDetailVM }) {
               <div>
                 <p className="text-xs text-on-surface-variant">Price per guest</p>
                 <p className="font-headline font-extrabold text-2xl text-primary">
-                  {exp.price.toLocaleString()} ETB
+                  {effectivePrice.toLocaleString()} ETB
                 </p>
               </div>
               {exp.ratingsAverage >= 4.9 && (
@@ -403,7 +420,16 @@ export function ExperienceDetailDesktop({ vm }: { vm: ExperienceDetailVM }) {
                 </span>
               )}
             </div>
-            {occurrenceDate && (
+
+            {slots.length > 0 ? (
+              <ExperienceSlotSelector
+                slots={slots}
+                selectedSlot={selectedSlot}
+                onSelectSlot={setSelectedSlot}
+                defaultPrice={exp.price}
+                bookedSlotIds={bookedSlotIds}
+              />
+            ) : occurrenceDate ? (
               <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20 mb-3">
                 <p className="text-[10px] font-bold text-primary/60 uppercase tracking-widest mb-1">
                   Next Occurrence
@@ -413,7 +439,8 @@ export function ExperienceDetailDesktop({ vm }: { vm: ExperienceDetailVM }) {
                   <p className="text-xs text-on-surface-variant">{occurrenceTime}</p>
                 )}
               </div>
-            )}
+            ) : null}
+
             <div className="flex items-center gap-2 p-2.5 bg-tertiary-fixed/30 rounded-xl mb-4 text-xs font-medium text-on-tertiary-fixed-variant">
               <AlertCircle className="h-3.5 w-3.5 shrink-0" /> Limited spots
               available
@@ -421,7 +448,14 @@ export function ExperienceDetailDesktop({ vm }: { vm: ExperienceDetailVM }) {
             {hasUpcomingBookingHere && (
               <div className="mb-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 text-xs text-amber-950 dark:text-amber-100">
                 <p className="font-headline font-bold">
-                  You already have an upcoming booking for this experience.
+                  {slots.length > 0
+                    ? "You are already booked for this session."
+                    : "You already have an upcoming booking for this experience."}
+                </p>
+                <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5">
+                  {slots.length > 0
+                    ? "Choose a different date or time slot above to book another session."
+                    : "Check My Bookings for details."}
                 </p>
                 <Link
                   to="/my-bookings"
@@ -478,20 +512,22 @@ export function ExperienceDetailDesktop({ vm }: { vm: ExperienceDetailVM }) {
               {!isAuthenticated
                 ? "Sign in to Book"
                 : hasUpcomingBookingHere
-                  ? "Already booked"
+                  ? "Booked for this date"
                   : "Book Now — Pay with Chapa"}
             </button>
             <p className="text-center text-[10px] text-on-surface-variant mt-2">
               {!isAuthenticated
                 ? "Sign in to book and pay."
                 : hasUpcomingBookingHere
-                  ? "You can’t book the same experience again until this booking is no longer upcoming."
+                  ? slots.length > 0
+                    ? "You already have a booking for this session. Choose another session above to book again."
+                    : "You can’t book the same experience again until this booking is no longer upcoming."
                   : "You’ll go to Chapa’s secure page to complete payment. After paying, you’ll return to My Bookings."}
             </p>
             <div className="mt-4 pt-4 border-t border-outline-variant/20 space-y-2.5 text-xs">
               <div className="flex justify-between text-on-surface-variant">
                 <span>
-                  {exp.price.toLocaleString()} ETB × {guests} guest
+                  {effectivePrice.toLocaleString()} ETB × {guests} guest
                   {guests > 1 ? "s" : ""}
                 </span>
                 <span>{totalGuestPrice.toLocaleString()} ETB</span>

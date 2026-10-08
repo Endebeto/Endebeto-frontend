@@ -45,6 +45,9 @@ export function ExperienceDetailMobile({ vm }: { vm: ExperienceDetailVM }) {
     setReviewPage,
     totalReviews,
     hasMore,
+    slots,
+    selectedSlot,
+    maxGuestsDisplay,
   } = vm;
 
   return (
@@ -197,13 +200,14 @@ export function ExperienceDetailMobile({ vm }: { vm: ExperienceDetailVM }) {
 
             <div className="grid grid-cols-2 gap-3 pb-5 border-b border-outline-variant/15 dark:border-zinc-800">
               {[
-                { icon: Clock, label: "DURATION", value: exp.duration },
+                { icon: Clock, label: "DURATION", value: exp.duration, subtext: undefined },
                 {
                   icon: Users,
                   label: "GROUP SIZE",
-                  value: `Up to ${exp.maxGuests}`,
+                  value: maxGuestsDisplay,
+                  subtext: slots.length > 0 ? (selectedSlot ? "For selected session" : "Varies by session") : undefined,
                 },
-                { icon: Globe, label: "LANGUAGES", value: "English, Amharic" },
+                { icon: Globe, label: "LANGUAGES", value: "English, Amharic", subtext: undefined },
                 {
                   icon: Star,
                   label: "RATING",
@@ -211,8 +215,9 @@ export function ExperienceDetailMobile({ vm }: { vm: ExperienceDetailVM }) {
                     exp.ratingsAverage !== null
                       ? `${exp.ratingsAverage.toFixed(1)} / 5.0`
                       : "New",
+                  subtext: undefined,
                 },
-              ].map(({ icon: Icon, label, value }) => (
+              ].map(({ icon: Icon, label, value, subtext }) => (
                 <div key={label} className="flex items-start gap-2.5 py-2">
                   <Icon className="h-4 w-4 text-on-surface-variant dark:text-zinc-500 mt-0.5 shrink-0" />
                   <div>
@@ -222,6 +227,11 @@ export function ExperienceDetailMobile({ vm }: { vm: ExperienceDetailVM }) {
                     <p className="font-headline font-bold text-sm text-on-surface dark:text-white mt-0.5">
                       {value}
                     </p>
+                    {subtext && (
+                      <p className="text-[9px] text-primary/80 dark:text-green-400 font-medium">
+                        {subtext}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -391,15 +401,17 @@ export function ExperienceDetailMobile({ vm }: { vm: ExperienceDetailVM }) {
           <div className="flex flex-col items-stretch gap-1 flex-1 max-w-[200px]">
             <button
               type="button"
-              disabled={hasUpcomingBookingHere || maxBookable === 0}
+              disabled={slots.length === 0 && (hasUpcomingBookingHere || maxBookable === 0)}
               onClick={openMobileBookingSheet}
               className="w-full py-2.5 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md shadow-primary/20 disabled:opacity-50 disabled:pointer-events-none"
             >
-              {hasUpcomingBookingHere
+              {slots.length === 0 && hasUpcomingBookingHere
                 ? "Already booked"
-                : maxBookable === 0
-                  ? "Sold out"
-                  : "Book Now"}
+                : slots.length > 0
+                  ? "Select Date & Book"
+                  : maxBookable === 0
+                    ? "Sold out"
+                    : "Book Now"}
             </button>
             {hasUpcomingBookingHere && (
               <Link

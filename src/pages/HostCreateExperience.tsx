@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,14 +19,20 @@ import {
   Lock,
   AlertCircle,
   Info,
+  Calendar,
+  Repeat,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import LocationPicker, { type PinLocation } from "@/components/LocationPicker";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import {
   experiencesService,
   type Experience,
 } from "@/services/experiences.service";
+import { slotsService } from "@/services/slots.service";
 import { normalizeApiList } from "@/lib/normalizeApiList";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { HOST_EXPERIENCE_CATEGORY_OPTIONS } from "@/lib/hostExperienceCategories";
@@ -47,6 +53,16 @@ interface FormData {
   address: string;
 }
 
+const DAYS_OF_WEEK = [
+  { label: "Sun", value: 0 },
+  { label: "Mon", value: 1 },
+  { label: "Tue", value: 2 },
+  { label: "Wed", value: 3 },
+  { label: "Thu", value: 4 },
+  { label: "Fri", value: 5 },
+  { label: "Sat", value: 6 },
+];
+
 const STEPS = ["Info", "Schedule", "Media", "Location"];
 
 /** Mount above host layout + Leaflet (see index.html `#modal-root`, z-index in index.css). */
@@ -58,45 +74,61 @@ function getHostModalContainer(): HTMLElement {
 function SuccessModal({
   onDashboard,
   onPreview,
+  onManageSchedule,
+  sessionsCreated,
 }: {
   onDashboard: () => void;
   onPreview: () => void;
+  onManageSchedule: () => void;
+  sessionsCreated?: number;
 }) {
   return createPortal(
     <div
-      className="fixed inset-0 bg-primary/20 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 bg-primary/20 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="host-create-success-title"
     >
-      <div className="bg-white dark:bg-zinc-900 max-w-md w-full rounded-2xl p-8 text-center shadow-2xl border border-outline-variant/10 dark:border-zinc-700">
-        <div className="w-20 h-20 bg-secondary-container/50 dark:bg-emerald-900/40 text-primary rounded-full flex items-center justify-center mx-auto mb-6">
+      <div className="bg-white dark:bg-zinc-900 max-w-md w-full rounded-3xl p-8 text-center shadow-2xl border border-outline-variant/10 dark:border-zinc-700">
+        <div className="w-20 h-20 bg-secondary-container/50 dark:bg-emerald-900/40 text-primary rounded-full flex items-center justify-center mx-auto mb-5">
           <CheckCircle2 className="h-10 w-10 text-primary dark:text-green-400" />
         </div>
         <h2
           id="host-create-success-title"
-          className="text-3xl font-headline font-extrabold text-primary dark:text-green-400 mb-3"
+          className="text-2xl font-headline font-extrabold text-primary dark:text-green-400 mb-2"
         >
-          Pending Approval
+          Experience Submitted!
         </h2>
-        <p className="text-on-surface-variant dark:text-zinc-400 mb-8 leading-relaxed">
-          Your experience has been submitted! Our editorial team will review the
-          details and notify you within 48 hours.
+        {sessionsCreated != null && sessionsCreated > 0 ? (
+          <div className="inline-flex items-center gap-1.5 text-xs font-bold text-primary dark:text-green-400 bg-primary/10 dark:bg-primary/20 py-1.5 px-3.5 rounded-full mb-3">
+            <Repeat className="h-3.5 w-3.5" /> {sessionsCreated} {sessionsCreated === 1 ? "session" : "sessions"} pre-scheduled
+          </div>
+        ) : null}
+        <p className="text-on-surface-variant dark:text-zinc-400 mb-6 leading-relaxed text-xs">
+          Your listing has been submitted for review. Our editorial team will review the
+          details and notify you within 48 hours. Your scheduled dates are active and saved!
         </p>
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <button
             type="button"
-            onClick={onDashboard}
-            className="w-full py-4 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold transition-colors"
+            onClick={onManageSchedule}
+            className="w-full py-3.5 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-sm shadow-md"
           >
-            Go to Dashboard
+            <Calendar className="h-4 w-4" /> View &amp; Manage Schedule
           </button>
           <button
             type="button"
             onClick={onPreview}
-            className="w-full py-4 text-primary dark:text-green-400 font-bold hover:bg-surface dark:hover:bg-zinc-800 rounded-xl transition-colors"
+            className="w-full py-3 text-primary dark:text-green-400 font-bold hover:bg-surface dark:hover:bg-zinc-800 rounded-xl transition-colors text-sm"
           >
             View My Experiences
+          </button>
+          <button
+            type="button"
+            onClick={onDashboard}
+            className="w-full py-2.5 text-on-surface-variant dark:text-zinc-400 hover:text-on-surface text-xs font-semibold transition-colors"
+          >
+            Go to Host Dashboard
           </button>
         </div>
       </div>
@@ -141,6 +173,111 @@ export default function HostCreateExperience() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // ── Schedule Mode & Recurring Configuration ──
+  const [scheduleMode, setScheduleMode] = useState<"recurring" | "single">("recurring");
+  const [recurringDays, setRecurringDays] = useState<number[]>([0, 6]); // Default weekends: Sunday (0) & Saturday (6)
+  const [recurringTime, setRecurringTime] = useState("10:00");
+  const [recurringStartDate, setRecurringStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1); // Tomorrow
+    return d.toISOString().slice(0, 10);
+  });
+  const [recurringEndDate, setRecurringEndDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 28); // 4 weeks ahead
+    return d.toISOString().slice(0, 10);
+  });
+  const [createdExperienceId, setCreatedExperienceId] = useState<string | null>(null);
+  const [generatedSessionsCount, setGeneratedSessionsCount] = useState<number>(0);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const toggleDay = (dayVal: number) => {
+    setRecurringDays((prev) =>
+      prev.includes(dayVal)
+        ? prev.filter((d) => d !== dayVal)
+        : [...prev, dayVal].sort(),
+    );
+    if (errors.schedule) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.schedule;
+        return next;
+      });
+    }
+  };
+
+  // Computes the earliest matching occurrence at least 24h from now
+  const computedFirstOccurrenceIso = useMemo(() => {
+    if (scheduleMode === "single") {
+      return form.nextOccurrenceAt
+        ? new Date(form.nextOccurrenceAt).toISOString()
+        : "";
+    }
+    if (
+      recurringDays.length === 0 ||
+      !recurringTime ||
+      !recurringStartDate ||
+      !recurringEndDate
+    ) {
+      return "";
+    }
+    const [h, m] = recurringTime.split(":").map(Number);
+    const start = new Date(`${recurringStartDate}T00:00:00`);
+    const end = new Date(`${recurringEndDate}T23:59:59`);
+    const minFutureMs = Date.now() + 24 * 60 * 60 * 1000; // backend requires >= 24h
+    const cur = new Date(start);
+    while (cur <= end) {
+      if (recurringDays.includes(cur.getDay())) {
+        const slotDate = new Date(cur);
+        slotDate.setHours(h, m, 0, 0);
+        if (slotDate.getTime() >= minFutureMs) {
+          return slotDate.toISOString();
+        }
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    return "";
+  }, [
+    scheduleMode,
+    form.nextOccurrenceAt,
+    recurringDays,
+    recurringTime,
+    recurringStartDate,
+    recurringEndDate,
+  ]);
+
+  const estimatedRecurringCount = useMemo(() => {
+    if (
+      scheduleMode !== "recurring" ||
+      recurringDays.length === 0 ||
+      !recurringStartDate ||
+      !recurringEndDate
+    ) {
+      return 0;
+    }
+    const start = new Date(`${recurringStartDate}T00:00:00`);
+    const end = new Date(`${recurringEndDate}T23:59:59`);
+    const minFutureMs = Date.now() + 24 * 60 * 60 * 1000;
+    const [h, m] = (recurringTime || "10:00").split(":").map(Number);
+    let count = 0;
+    const cur = new Date(start);
+    while (cur <= end) {
+      if (recurringDays.includes(cur.getDay())) {
+        const d = new Date(cur);
+        d.setHours(h, m, 0, 0);
+        if (d.getTime() >= minFutureMs) count++;
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    return count;
+  }, [
+    scheduleMode,
+    recurringDays,
+    recurringStartDate,
+    recurringEndDate,
+    recurringTime,
+  ]);
+
   const handleDurationValueChange = (valStr: string) => {
     setDurationValue(valStr);
     const parsed = parseInt(valStr.trim(), 10);
@@ -149,6 +286,13 @@ export default function HostCreateExperience() {
         ? `${parsed} ${parsed === 1 ? durationUnit.slice(0, -1) : durationUnit}`
         : "";
     setForm((p) => ({ ...p, duration: formatted }));
+    if (errors.duration) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.duration;
+        return next;
+      });
+    }
   };
 
   const handleDurationUnitChange = (unit: "hours" | "days") => {
@@ -159,6 +303,13 @@ export default function HostCreateExperience() {
         ? `${parsed} ${parsed === 1 ? unit.slice(0, -1) : unit}`
         : "";
     setForm((p) => ({ ...p, duration: formatted }));
+    if (errors.duration) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.duration;
+        return next;
+      });
+    }
   };
 
   // Fetch existing experiences to enforce anti-clone title check.
@@ -186,8 +337,16 @@ export default function HostCreateExperience() {
       e: React.ChangeEvent<
         HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
       >,
-    ) =>
+    ) => {
       setForm((p) => ({ ...p, [k]: e.target.value }));
+      if (errors[k]) {
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next[k];
+          return next;
+        });
+      }
+    };
 
   const coverPreview = coverFile ? URL.createObjectURL(coverFile) : null;
   const galleryPreview = galleryFiles.map((f) => URL.createObjectURL(f));
@@ -196,38 +355,252 @@ export default function HostCreateExperience() {
     setGalleryFiles((p) => p.filter((_, idx) => idx !== i));
 
   /* determine which sections have content (for step indicator) */
-  const infoFilled = !!form.title && !!form.description;
+  const infoFilled =
+    !!form.title.trim() &&
+    form.title.trim().length >= 10 &&
+    !!form.description.trim() &&
+    form.description.trim().length >= 20;
   const scheduleFilled =
-    !!form.price && !!form.duration && !!form.nextOccurrenceAt;
+    !!form.price &&
+    Number(form.price) > 0 &&
+    !!form.duration &&
+    !!form.maxGuests &&
+    Number(form.maxGuests) >= 1 &&
+    (scheduleMode === "single"
+      ? !!form.nextOccurrenceAt &&
+        new Date(form.nextOccurrenceAt).getTime() >=
+          Date.now() + 24 * 60 * 60 * 1000
+      : !!computedFirstOccurrenceIso && estimatedRecurringCount > 0);
   const mediaFilled = !!coverFile;
-  const locationFilled = !!form.location;
+  const locationFilled = !!form.location.trim();
   const stepStatus = [infoFilled, scheduleFilled, mediaFilled, locationFilled];
 
-  const canSubmit =
-    infoFilled && scheduleFilled && mediaFilled && locationFilled;
+  const validateForm = (): {
+    isValid: boolean;
+    firstErrorId?: string;
+    missingLabels: string[];
+  } => {
+    const errs: Record<string, string> = {};
+    const missing: string[] = [];
+    let firstId: string | undefined = undefined;
+
+    // 1. Title
+    const trimmedTitle = form.title.trim();
+    if (!trimmedTitle) {
+      errs.title = "Experience title is required";
+      missing.push("Title");
+      if (!firstId) firstId = "field-title";
+    } else if (trimmedTitle.length < 10) {
+      errs.title = `Title must be at least 10 characters (currently ${trimmedTitle.length})`;
+      missing.push("Title (at least 10 chars)");
+      if (!firstId) firstId = "field-title";
+    } else if (trimmedTitle.length > 100) {
+      errs.title = "Title must be 100 characters or less";
+      missing.push("Title (max 100 chars)");
+      if (!firstId) firstId = "field-title";
+    } else if (duplicateTitle) {
+      errs.title = "You already have an active experience with this title";
+      missing.push("Unique title");
+      if (!firstId) firstId = "field-title";
+    }
+
+    // 2. Category
+    if (!form.category) {
+      errs.category = "Please select an experience category";
+      missing.push("Category");
+      if (!firstId) firstId = "field-category";
+    }
+
+    // 3. Max Guests
+    const maxG = Number(form.maxGuests);
+    if (!form.maxGuests || isNaN(maxG) || maxG < 1) {
+      errs.maxGuests = "Max guests must be at least 1";
+      missing.push("Max Guests");
+      if (!firstId) firstId = "field-maxGuests";
+    }
+
+    // 4. Description
+    const trimmedDesc = form.description.trim();
+    if (!trimmedDesc) {
+      errs.description = "Full description is required";
+      missing.push("Description");
+      if (!firstId) firstId = "field-description";
+    } else if (trimmedDesc.length < 20) {
+      errs.description = `Description must be at least 20 characters (currently ${trimmedDesc.length})`;
+      missing.push("Description (min 20 chars)");
+      if (!firstId) firstId = "field-description";
+    }
+
+    // 5. Price
+    const priceNum = Number(form.price);
+    if (!form.price || isNaN(priceNum) || priceNum <= 0) {
+      errs.price = "Price must be greater than 0 ETB";
+      missing.push("Price");
+      if (!firstId) firstId = "field-price";
+    }
+
+    // 6. Duration
+    const durNum = parseInt(durationValue.trim(), 10);
+    if (!durationValue || isNaN(durNum) || durNum <= 0) {
+      errs.duration = "Please enter a valid duration (e.g. 3 hours)";
+      missing.push("Duration");
+      if (!firstId) firstId = "field-duration";
+    } else if (durNum > 365) {
+      errs.duration = "Duration cannot exceed 365";
+      missing.push("Duration (max 365)");
+      if (!firstId) firstId = "field-duration";
+    }
+
+    // 7. Schedule
+    if (scheduleMode === "recurring") {
+      if (recurringDays.length === 0) {
+        errs.schedule = "Please select at least one day of the week";
+        missing.push("Recurring weekdays");
+        if (!firstId) firstId = "field-schedule";
+      } else if (!recurringTime) {
+        errs.schedule = "Please specify a session start time";
+        missing.push("Session time");
+        if (!firstId) firstId = "field-schedule";
+      } else if (!recurringStartDate || !recurringEndDate) {
+        errs.schedule = "Please specify both start date and end date";
+        missing.push("Schedule dates");
+        if (!firstId) firstId = "field-schedule";
+      } else if (new Date(recurringEndDate) < new Date(recurringStartDate)) {
+        errs.schedule = "End date must be after start date";
+        missing.push("Valid schedule date range");
+        if (!firstId) firstId = "field-schedule";
+      } else if (!computedFirstOccurrenceIso || estimatedRecurringCount === 0) {
+        errs.schedule =
+          "No upcoming sessions found matching these days. The first session must be at least 24 hours in the future.";
+        missing.push("Upcoming sessions (min 24h ahead)");
+        if (!firstId) firstId = "field-schedule";
+      }
+    } else {
+      if (!form.nextOccurrenceAt) {
+        errs.schedule = "Please select a date and start time";
+        missing.push("Schedule date & time");
+        if (!firstId) firstId = "field-schedule";
+      } else {
+        const occTime = new Date(form.nextOccurrenceAt).getTime();
+        if (isNaN(occTime) || occTime < Date.now() + 24 * 60 * 60 * 1000) {
+          errs.schedule = "Next occurrence must be at least 24 hours in the future";
+          missing.push("Occurrence date (min 24h ahead)");
+          if (!firstId) firstId = "field-schedule";
+        }
+      }
+    }
+
+    // 8. Cover Photo
+    if (!coverFile) {
+      errs.coverFile = "Please upload a cover photo for your listing";
+      missing.push("Cover photo");
+      if (!firstId) firstId = "field-cover";
+    }
+
+    // 9. Location
+    if (!form.location.trim()) {
+      errs.location = "Please enter a location or drop a pin on the map";
+      missing.push("Location");
+      if (!firstId) firstId = "field-location";
+    }
+
+    setErrors(errs);
+    return {
+      isValid: Object.keys(errs).length === 0,
+      firstErrorId: firstId,
+      missingLabels: missing,
+    };
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit || duplicateTitle) return;
+
+    const validation = validateForm();
+    if (!validation.isValid) {
+      toast.error(
+        `Please complete required fields: ${validation.missingLabels.slice(0, 3).join(", ")}${validation.missingLabels.length > 3 ? "..." : ""}`,
+      );
+      if (validation.firstErrorId) {
+        const el = document.getElementById(validation.firstErrorId);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          const focusable = el.querySelector(
+            "input, textarea, select",
+          ) as HTMLElement;
+          if (focusable) focusable.focus();
+        }
+      }
+      return;
+    }
+
+    const nextOccIso =
+      scheduleMode === "recurring"
+        ? computedFirstOccurrenceIso
+        : form.nextOccurrenceAt
+        ? new Date(form.nextOccurrenceAt).toISOString()
+        : "";
+
     setSubmitting(true);
     try {
       const fd = new FormData();
-      fd.append("title", form.title);
-      fd.append("summary", form.summary);
-      fd.append("description", form.description);
+      fd.append("title", form.title.trim());
+      // Auto-generate summary from description / title to satisfy backend requirement
+      const autoSummary =
+        (form.description.trim().split("\n")[0] || form.title.trim()).slice(0, 140) ||
+        "Authentic local Ethiopian experience";
+      fd.append("summary", autoSummary);
+      fd.append("description", form.description.trim());
       fd.append("category", form.category);
       fd.append("price", form.price);
       fd.append("duration", form.duration);
       fd.append("maxGuests", form.maxGuests);
-      fd.append("nextOccurrenceAt", form.nextOccurrenceAt);
-      fd.append("location", form.location);
-      if (form.address) fd.append("address", form.address);
+      fd.append("nextOccurrenceAt", nextOccIso);
+      fd.append("location", form.location.trim());
+      if (form.address) fd.append("address", form.address.trim());
       if (pin?.lat) fd.append("latitude", String(pin.lat));
       if (pin?.lng) fd.append("longitude", String(pin.lng));
       if (coverFile) fd.append("imageCover", coverFile);
       galleryFiles.forEach((f) => fd.append("images", f));
 
-      await experiencesService.create(fd);
+      const res = await experiencesService.create(fd);
+      const createdExp = (res.data?.data as any)?.data || (res.data as any)?.data || res.data;
+      const expId = createdExp?._id || createdExp?.id;
+
+      if (expId) {
+        setCreatedExperienceId(expId);
+        if (scheduleMode === "recurring" && recurringDays.length > 0) {
+          try {
+            const batchRes = await slotsService.createRecurringSlots(expId, {
+              recurring: {
+                daysOfWeek: recurringDays,
+                timeOfDay: recurringTime,
+                startDate: recurringStartDate,
+                endDate: recurringEndDate,
+              },
+              maxGuests: Number(form.maxGuests) || undefined,
+              price: Number(form.price) || undefined,
+            });
+            const createdCount =
+              batchRes.data?.results || estimatedRecurringCount;
+            setGeneratedSessionsCount(createdCount);
+            toast.success(`Generated ${createdCount} recurring sessions!`);
+          } catch (slotErr) {
+            console.warn("Could not batch-generate slots immediately:", slotErr);
+          }
+        } else if (nextOccIso) {
+          try {
+            await slotsService.createSingleSlot(expId, {
+              startTime: nextOccIso,
+              maxGuests: Number(form.maxGuests) || undefined,
+              price: Number(form.price) || undefined,
+            });
+            setGeneratedSessionsCount(1);
+          } catch (slotErr) {
+            console.warn("Could not create initial slot:", slotErr);
+          }
+        }
+      }
+
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: hostQueryKeys.experiences.all(),
@@ -236,7 +609,9 @@ export default function HostCreateExperience() {
       ]);
       setSuccess(true);
     } catch (err: unknown) {
+      const backendMsg = (err as any)?.response?.data?.message;
       toast.error(
+        backendMsg ||
         getFriendlyErrorMessage(
           err,
           "Failed to submit experience. Please try again.",
@@ -257,6 +632,14 @@ export default function HostCreateExperience() {
         <SuccessModal
           onDashboard={() => navigate("/host-dashboard")}
           onPreview={() => navigate("/host/experiences")}
+          onManageSchedule={() =>
+            navigate(
+              createdExperienceId
+                ? `/host/experiences?scheduleExp=${createdExperienceId}`
+                : "/host/experiences",
+            )
+          }
+          sessionsCreated={generatedSessionsCount}
         />
       )}
 
@@ -314,7 +697,10 @@ export default function HostCreateExperience() {
           {/* ── LEFT: form sections ── */}
           <div className="lg:col-span-8 space-y-8">
             {/* ─ Basic Information ─ */}
-            <section className="bg-white dark:bg-zinc-900 rounded-2xl p-6 md:p-10 shadow-sm border border-outline-variant/10 dark:border-zinc-700">
+            <section
+              id="section-info"
+              className="bg-white dark:bg-zinc-900 rounded-2xl p-6 md:p-10 shadow-sm border border-outline-variant/10 dark:border-zinc-700"
+            >
               <div className="flex items-center gap-4 mb-8">
                 <div className="p-3 rounded-xl bg-secondary-container/40 dark:bg-emerald-900/30 text-primary dark:text-green-400">
                   <FileEdit className="h-5 w-5" />
@@ -325,7 +711,7 @@ export default function HostCreateExperience() {
               </div>
 
               <div className="space-y-6">
-                <div>
+                <div id="field-title">
                   <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">
                     Experience Title <span className="text-error">*</span>
                   </label>
@@ -334,9 +720,19 @@ export default function HostCreateExperience() {
                     placeholder="e.g. Traditional Coffee Ceremony in the Simien Foothills"
                     value={form.title}
                     onChange={set("title")}
-                    className={inputCls}
+                    className={cn(
+                      inputCls,
+                      errors.title &&
+                        "border-red-500 focus:border-red-500 focus:ring-red-500/20 bg-red-50/20 dark:bg-red-950/20",
+                    )}
                   />
-                  {duplicateTitle && (
+                  {errors.title && (
+                    <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      {errors.title}
+                    </p>
+                  )}
+                  {duplicateTitle && !errors.title && (
                     <p className="mt-1.5 text-xs text-error dark:text-red-400 flex items-center gap-1 font-medium">
                       <AlertCircle className="h-3 w-3 shrink-0" />
                       You already have an active experience with this title.
@@ -344,20 +740,24 @@ export default function HostCreateExperience() {
                     </p>
                   )}
                   <p className="mt-1.5 text-xs text-on-surface-variant dark:text-zinc-400">
-                    Keep it catchy and descriptive of the unique value.
+                    Keep it catchy and descriptive (minimum 10 characters).
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
+                  <div id="field-category">
                     <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface dark:text-white mb-2">
-                      Category
+                      Category <span className="text-error">*</span>
                       <Lock className="h-3 w-3 text-on-surface-variant dark:text-zinc-500" />
                     </label>
                     <select
                       value={form.category}
                       onChange={set("category")}
-                      className={inputCls}
+                      className={cn(
+                        inputCls,
+                        errors.category &&
+                          "border-red-500 focus:border-red-500 focus:ring-red-500/20 bg-red-50/20 dark:bg-red-950/20",
+                      )}
                     >
                       {categoryOptions.map((c) => (
                         <option key={c} value={c}>
@@ -365,12 +765,17 @@ export default function HostCreateExperience() {
                         </option>
                       ))}
                     </select>
+                    {errors.category && (
+                      <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        {errors.category}
+                      </p>
+                    )}
                     <p className="mt-1.5 text-xs text-on-surface-variant dark:text-zinc-400">
-                      Limited to your approved host categories. You may host
-                      multiple distinct experiences.
+                      Limited to your approved host categories.
                     </p>
                   </div>
-                  <div>
+                  <div id="field-maxGuests">
                     <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">
                       Max Guests <span className="text-error">*</span>
                     </label>
@@ -381,28 +786,22 @@ export default function HostCreateExperience() {
                       placeholder="e.g. 8"
                       value={form.maxGuests}
                       onChange={set("maxGuests")}
-                      className={inputCls}
+                      className={cn(
+                        inputCls,
+                        errors.maxGuests &&
+                          "border-red-500 focus:border-red-500 focus:ring-red-500/20 bg-red-50/20 dark:bg-red-950/20",
+                      )}
                     />
+                    {errors.maxGuests && (
+                      <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        {errors.maxGuests}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">
-                    Short Summary{" "}
-                    <span className="text-on-surface-variant dark:text-zinc-400 font-normal">
-                      (shown on listing cards)
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="One sentence describing the core experience…"
-                    value={form.summary}
-                    onChange={set("summary")}
-                    className={inputCls}
-                  />
-                </div>
-
-                <div>
+                <div id="field-description">
                   <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">
                     Full Description <span className="text-error">*</span>
                   </label>
@@ -419,10 +818,20 @@ export default function HostCreateExperience() {
                     placeholder="Describe the soul of your experience. What will guests smell, see, and feel?"
                     value={form.description}
                     onChange={set("description")}
-                    className={`${inputCls} resize-y min-h-[140px]`}
+                    className={cn(
+                      `${inputCls} resize-y min-h-[140px]`,
+                      errors.description &&
+                        "border-red-500 focus:border-red-500 focus:ring-red-500/20 bg-red-50/20 dark:bg-red-950/20",
+                    )}
                   />
+                  {errors.description && (
+                    <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      {errors.description}
+                    </p>
+                  )}
                   <p className="mt-1.5 text-xs text-on-surface-variant dark:text-zinc-400">
-                    {form.description.length} characters
+                    {form.description.length} characters (minimum 20 characters)
                   </p>
                   <p className="mt-1.5 text-[11px] text-on-surface-variant dark:text-zinc-500 leading-snug">
                     {EXPERIENCE_DESCRIPTION_FORMAT_HINT}
@@ -432,7 +841,10 @@ export default function HostCreateExperience() {
             </section>
 
             {/* ─ Schedule & Pricing ─ */}
-            <section className="bg-white dark:bg-zinc-900 rounded-2xl p-6 md:p-10 shadow-sm border border-outline-variant/10 dark:border-zinc-700">
+            <section
+              id="section-schedule"
+              className="bg-white dark:bg-zinc-900 rounded-2xl p-6 md:p-10 shadow-sm border border-outline-variant/10 dark:border-zinc-700"
+            >
               <div className="flex items-center gap-4 mb-8">
                 <div className="p-3 rounded-xl bg-[#ffddb8]/40 text-[#653e00]">
                   <Banknote className="h-5 w-5" />
@@ -442,10 +854,10 @@ export default function HostCreateExperience() {
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div id="field-price">
                   <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">
-                    Price (ETB) <span className="text-error">*</span>
+                    Price Per Guest (ETB) <span className="text-error">*</span>
                   </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-on-surface-variant dark:text-zinc-400">
@@ -453,21 +865,31 @@ export default function HostCreateExperience() {
                     </span>
                     <input
                       type="number"
-                      min={0}
+                      min={1}
                       placeholder="1200"
                       value={form.price}
                       onChange={set("price")}
-                      className={`${inputCls} pl-14`}
+                      className={cn(
+                        `${inputCls} pl-14`,
+                        errors.price &&
+                          "border-red-500 focus:border-red-500 focus:ring-red-500/20 bg-red-50/20 dark:bg-red-950/20",
+                      )}
                     />
                   </div>
+                  {errors.price && (
+                    <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      {errors.price}
+                    </p>
+                  )}
                 </div>
 
-                <div>
+                <div id="field-duration">
                   <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">
                     Duration <span className="text-error">*</span>
                   </label>
-                  <div className="flex gap-3">
-                    <div className="relative flex-1">
+                  <div className="flex gap-2.5">
+                    <div className="relative flex-1 min-w-0">
                       <input
                         type="number"
                         min="1"
@@ -477,7 +899,12 @@ export default function HostCreateExperience() {
                         onChange={(e) =>
                           handleDurationValueChange(e.target.value)
                         }
-                        className={inputCls}
+                        className={cn(
+                          inputCls,
+                          "w-full min-w-0 px-3.5 py-3.5",
+                          errors.duration &&
+                            "border-red-500 focus:border-red-500 focus:ring-red-500/20 bg-red-50/20 dark:bg-red-950/20",
+                        )}
                       />
                     </div>
                     <select
@@ -487,33 +914,262 @@ export default function HostCreateExperience() {
                           e.target.value as "hours" | "days",
                         )
                       }
-                      className="w-36 bg-white dark:bg-zinc-800 border border-outline-variant/40 dark:border-zinc-700 rounded-xl px-4 py-3.5 text-sm font-medium text-on-surface dark:text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+                      className="w-28 sm:w-32 shrink-0 bg-white dark:bg-zinc-800 border border-outline-variant/40 dark:border-zinc-700 rounded-xl px-4 py-3.5 text-sm font-medium text-on-surface dark:text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
                     >
                       <option value="hours">Hours</option>
                       <option value="days">Days</option>
                     </select>
                   </div>
-                  {form.duration && (
+                  {errors.duration ? (
+                    <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      {errors.duration}
+                    </p>
+                  ) : form.duration ? (
                     <p className="mt-1.5 text-xs text-on-surface-variant dark:text-zinc-400">
                       Standardized format:{" "}
                       <strong className="text-primary dark:text-green-400 font-semibold">
                         {form.duration}
                       </strong>
                     </p>
-                  )}
+                  ) : null}
                 </div>
+              </div>
 
+              {/* ── Schedule Configuration & Recurrence ── */}
+              <div
+                id="field-schedule"
+                className="pt-6 border-t border-outline-variant/20 dark:border-zinc-800 space-y-6"
+              >
                 <div>
                   <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">
-                    Next Occurrence <span className="text-error">*</span>
+                    How do you want to schedule this experience? <span className="text-error">*</span>
                   </label>
-                  <input
-                    type="datetime-local"
-                    value={form.nextOccurrenceAt}
-                    onChange={set("nextOccurrenceAt")}
-                    className={inputCls}
-                  />
+                  <p className="text-xs text-on-surface-variant dark:text-zinc-400 mb-4">
+                    Choose whether this experience repeats regularly or starts on a single date.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setScheduleMode("recurring");
+                        if (errors.schedule) {
+                          setErrors((prev) => {
+                            const n = { ...prev };
+                            delete n.schedule;
+                            return n;
+                          });
+                        }
+                      }}
+                      className={`p-4 rounded-2xl border text-left transition-all ${
+                        scheduleMode === "recurring"
+                          ? "border-primary bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/40 shadow-sm"
+                          : "border-outline-variant/30 hover:border-primary/40 bg-surface-container-lowest dark:bg-zinc-800/40"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Repeat className="h-4 w-4 text-primary" />
+                        <span className="font-headline font-bold text-sm text-on-surface dark:text-white">
+                          Recurring Schedule (Recommended)
+                        </span>
+                      </div>
+                      <p className="text-xs text-on-surface-variant dark:text-zinc-400 leading-relaxed">
+                        Automatically generates sessions across selected weekdays within your date window.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setScheduleMode("single");
+                        if (errors.schedule) {
+                          setErrors((prev) => {
+                            const n = { ...prev };
+                            delete n.schedule;
+                            return n;
+                          });
+                        }
+                      }}
+                      className={`p-4 rounded-2xl border text-left transition-all ${
+                        scheduleMode === "single"
+                          ? "border-primary bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/40 shadow-sm"
+                          : "border-outline-variant/30 hover:border-primary/40 bg-surface-container-lowest dark:bg-zinc-800/40"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        <span className="font-headline font-bold text-sm text-on-surface dark:text-white">
+                          Single Date Only
+                        </span>
+                      </div>
+                      <p className="text-xs text-on-surface-variant dark:text-zinc-400 leading-relaxed">
+                        Pick one specific date &amp; time now. You can add more sessions later from Manage Schedule.
+                      </p>
+                    </button>
+                  </div>
                 </div>
+
+                {errors.schedule && (
+                  <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 flex items-start gap-2.5 text-xs text-red-600 dark:text-red-400">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span className="font-medium">{errors.schedule}</span>
+                  </div>
+                )}
+
+                {/* ─ Mode A: Recurring Schedule Builder ─ */}
+                {scheduleMode === "recurring" && (
+                  <div className="p-5 rounded-2xl bg-surface-container-lowest dark:bg-zinc-800/40 border border-outline-variant/20 dark:border-zinc-700/60 space-y-5">
+                    {/* Repeat on Days */}
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface dark:text-white uppercase tracking-wider mb-2">
+                        Repeat On Days of Week *
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {DAYS_OF_WEEK.map((d) => {
+                          const isSelected = recurringDays.includes(d.value);
+                          return (
+                            <button
+                              key={d.value}
+                              type="button"
+                              onClick={() => toggleDay(d.value)}
+                              className={`w-12 h-11 rounded-xl font-headline text-xs font-bold transition-all border ${
+                                isSelected
+                                    ? "bg-primary text-white border-primary shadow-sm"
+                                  : "bg-white dark:bg-zinc-800 border-outline-variant/30 text-on-surface dark:text-zinc-200 hover:border-primary/40"
+                              }`}
+                            >
+                              {d.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Time & Date Range */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-on-surface-variant dark:text-zinc-400 mb-1.5">
+                          Session Start Time (24h) *
+                        </label>
+                        <input
+                          type="time"
+                          value={recurringTime}
+                          onChange={(e) => {
+                            setRecurringTime(e.target.value);
+                            if (errors.schedule) {
+                              setErrors((prev) => {
+                                const n = { ...prev };
+                                delete n.schedule;
+                                return n;
+                              });
+                            }
+                          }}
+                          className={inputCls}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-on-surface-variant dark:text-zinc-400 mb-1.5">
+                          Start Date *
+                        </label>
+                        <input
+                          type="date"
+                          min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
+                          value={recurringStartDate}
+                          onChange={(e) => {
+                            setRecurringStartDate(e.target.value);
+                            if (errors.schedule) {
+                              setErrors((prev) => {
+                                const n = { ...prev };
+                                delete n.schedule;
+                                return n;
+                              });
+                            }
+                          }}
+                          className={inputCls}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-on-surface-variant dark:text-zinc-400 mb-1.5">
+                          End Date *
+                        </label>
+                        <input
+                          type="date"
+                          min={recurringStartDate}
+                          value={recurringEndDate}
+                          onChange={(e) => {
+                            setRecurringEndDate(e.target.value);
+                            if (errors.schedule) {
+                              setErrors((prev) => {
+                                const n = { ...prev };
+                                delete n.schedule;
+                                return n;
+                              });
+                            }
+                          }}
+                          className={inputCls}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Live Calculation / Schedule Summary Preview */}
+                    <div className="p-3.5 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20 flex items-start gap-2.5 text-xs text-primary dark:text-green-300">
+                      <Sparkles className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div>
+                        {estimatedRecurringCount > 0 && computedFirstOccurrenceIso ? (
+                          <span>
+                            <strong>{estimatedRecurringCount} sessions</strong> will be automatically scheduled, starting on{" "}
+                            <strong>
+                              {new Date(computedFirstOccurrenceIso).toLocaleDateString(undefined, {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                              })}{" "}
+                              at {recurringTime}
+                            </strong>.
+                          </span>
+                        ) : (
+                          <span>
+                            Please select at least one weekday and ensure start date is at least 1 day from today.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ─ Mode B: Single Date Picker ─ */}
+                {scheduleMode === "single" && (
+                  <div className="p-5 rounded-2xl bg-surface-container-lowest dark:bg-zinc-800/40 border border-outline-variant/20 dark:border-zinc-700/60 space-y-3">
+                    <label className="block text-xs font-bold text-on-surface dark:text-white uppercase tracking-wider mb-1">
+                      Next Occurrence Date &amp; Time *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={form.nextOccurrenceAt}
+                      onChange={(e) => {
+                        setForm((p) => ({ ...p, nextOccurrenceAt: e.target.value }));
+                        if (errors.schedule) {
+                          setErrors((prev) => {
+                            const n = { ...prev };
+                            delete n.schedule;
+                            return n;
+                          });
+                        }
+                      }}
+                      className={cn(
+                        inputCls,
+                        errors.schedule &&
+                          "border-red-500 focus:border-red-500 focus:ring-red-500/20 bg-red-50/20 dark:bg-red-950/20",
+                      )}
+                    />
+                    <p className="text-xs text-on-surface-variant dark:text-zinc-400">
+                      Must be at least 24 hours from now. You can manage and add more sessions anytime.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="mt-5 p-4 bg-surface-container-low dark:bg-zinc-800 rounded-xl flex items-start gap-3">
@@ -531,7 +1187,10 @@ export default function HostCreateExperience() {
             </section>
 
             {/* ─ Gallery ─ */}
-            <section className="bg-white dark:bg-zinc-900 rounded-2xl p-6 md:p-10 shadow-sm border border-outline-variant/10 dark:border-zinc-700">
+            <section
+              id="section-media"
+              className="bg-white dark:bg-zinc-900 rounded-2xl p-6 md:p-10 shadow-sm border border-outline-variant/10 dark:border-zinc-700"
+            >
               <div className="flex items-center gap-4 mb-8">
                 <div className="p-3 rounded-xl bg-secondary-container/40 dark:bg-emerald-900/30 text-primary dark:text-green-400">
                   <ImageIcon className="h-5 w-5" />
@@ -543,53 +1202,74 @@ export default function HostCreateExperience() {
 
               <div className="space-y-6">
                 {/* cover upload */}
-                {coverPreview ? (
-                  <div className="relative rounded-2xl overflow-hidden aspect-video border border-outline-variant/20 dark:border-zinc-700 group">
-                    <img
-                      src={coverPreview}
-                      alt="Cover"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <button
-                        type="button"
-                        onClick={() => setCoverFile(null)}
-                        className="bg-white/90 text-error rounded-full px-4 py-2 text-xs font-bold flex items-center gap-1.5 shadow"
-                      >
-                        <X className="h-3.5 w-3.5" /> Remove Cover
-                      </button>
+                <div id="field-cover">
+                  {coverPreview ? (
+                    <div className="relative rounded-2xl overflow-hidden aspect-video border border-outline-variant/20 dark:border-zinc-700 group">
+                      <img
+                        src={coverPreview}
+                        alt="Cover"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => setCoverFile(null)}
+                          className="bg-white/90 text-error rounded-full px-4 py-2 text-xs font-bold flex items-center gap-1.5 shadow"
+                        >
+                          <X className="h-3.5 w-3.5" /> Remove Cover
+                        </button>
+                      </div>
+                      <span className="absolute top-3 left-3 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded-full">
+                        Cover Image
+                      </span>
                     </div>
-                    <span className="absolute top-3 left-3 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded-full">
-                      Cover Image
-                    </span>
-                  </div>
-                ) : (
-                  <div
-                    onClick={() => coverRef.current?.click()}
-                    className="relative border-2 border-dashed border-outline-variant/50 dark:border-zinc-600 rounded-2xl p-12 text-center hover:border-primary/40 dark:hover:border-green-400/40 hover:bg-primary/3 dark:hover:bg-primary/10 transition-all cursor-pointer"
-                  >
-                    <Upload className="h-10 w-10 text-primary dark:text-green-400 mx-auto mb-3 opacity-60" />
-                    <p className="text-base font-headline font-bold text-primary dark:text-green-400">
-                      Upload Cover Image
+                  ) : (
+                    <div
+                      onClick={() => coverRef.current?.click()}
+                      className={cn(
+                        "relative border-2 border-dashed border-outline-variant/50 dark:border-zinc-600 rounded-2xl p-12 text-center hover:border-primary/40 dark:hover:border-green-400/40 hover:bg-primary/3 dark:hover:bg-primary/10 transition-all cursor-pointer",
+                        errors.coverFile &&
+                          "border-red-500 bg-red-50/20 dark:bg-red-950/20 hover:border-red-500",
+                      )}
+                    >
+                      <Upload className="h-10 w-10 text-primary dark:text-green-400 mx-auto mb-3 opacity-60" />
+                      <p className="text-base font-headline font-bold text-primary dark:text-green-400">
+                        Upload Cover Image <span className="text-error">*</span>
+                      </p>
+                      <p className="text-sm text-on-surface-variant dark:text-zinc-400 mt-1">
+                        Required · Recommended: 1600×900px, JPG or PNG
+                      </p>
+                      <span className="inline-block mt-3 px-4 py-1.5 bg-primary/10 dark:bg-primary/20 text-primary dark:text-green-400 rounded-full text-xs font-semibold">
+                        Browse files
+                      </span>
+                    </div>
+                  )}
+                  {errors.coverFile && (
+                    <p className="mt-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      {errors.coverFile}
                     </p>
-                    <p className="text-sm text-on-surface-variant dark:text-zinc-400 mt-1">
-                      Required · Recommended: 1600×900px, JPG or PNG
-                    </p>
-                    <span className="inline-block mt-3 px-4 py-1.5 bg-primary/10 dark:bg-primary/20 text-primary dark:text-green-400 rounded-full text-xs font-semibold">
-                      Browse files
-                    </span>
-                  </div>
-                )}
-                <input
-                  ref={coverRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) setCoverFile(f);
-                  }}
-                />
+                  )}
+                  <input
+                    ref={coverRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        setCoverFile(f);
+                        if (errors.coverFile) {
+                          setErrors((prev) => {
+                            const n = { ...prev };
+                            delete n.coverFile;
+                            return n;
+                          });
+                        }
+                      }
+                    }}
+                  />
+                </div>
 
                 {/* gallery grid */}
                 <div>
@@ -648,7 +1328,10 @@ export default function HostCreateExperience() {
             </section>
 
             {/* ─ Location ─ */}
-            <section className="bg-white dark:bg-zinc-900 rounded-2xl p-6 md:p-10 shadow-sm border border-outline-variant/10 dark:border-zinc-700">
+            <section
+              id="section-location"
+              className="bg-white dark:bg-zinc-900 rounded-2xl p-6 md:p-10 shadow-sm border border-outline-variant/10 dark:border-zinc-700"
+            >
               <div className="flex items-center gap-4 mb-8">
                 <div className="p-3 rounded-xl bg-[#ffddb8]/40 text-[#653e00]">
                   <MapPin className="h-5 w-5" />
@@ -659,7 +1342,7 @@ export default function HostCreateExperience() {
               </div>
 
               <div className="space-y-5">
-                <div>
+                <div id="field-location">
                   <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">
                     Location Name <span className="text-error">*</span>
                   </label>
@@ -668,8 +1351,18 @@ export default function HostCreateExperience() {
                     placeholder="e.g. Tomoca Coffee Roasters, Piazza — Addis Ababa"
                     value={form.location}
                     onChange={set("location")}
-                    className={inputCls}
+                    className={cn(
+                      inputCls,
+                      errors.location &&
+                        "border-red-500 focus:border-red-500 focus:ring-red-500/20 bg-red-50/20 dark:bg-red-950/20",
+                    )}
                   />
+                  {errors.location && (
+                    <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      {errors.location}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -715,6 +1408,13 @@ export default function HostCreateExperience() {
                           .trim(),
                       }));
                     }
+                    if (errors.location) {
+                      setErrors((prev) => {
+                        const n = { ...prev };
+                        delete n.location;
+                        return n;
+                      });
+                    }
                   }}
                 />
               </div>
@@ -724,8 +1424,8 @@ export default function HostCreateExperience() {
             <div className="flex items-center justify-end pt-2 pb-8 gap-3">
               <button
                 type="submit"
-                disabled={!canSubmit || submitting || duplicateTitle}
-                className="px-10 py-4 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all flex items-center gap-3"
+                disabled={submitting}
+                className="px-10 py-4 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-3 cursor-pointer"
               >
                 {submitting ? (
                   <>
@@ -818,23 +1518,74 @@ export default function HostCreateExperience() {
               </h3>
               <div className="space-y-2.5">
                 {[
-                  { label: "Basic Information", done: infoFilled },
-                  { label: "Schedule & Pricing", done: scheduleFilled },
-                  { label: "Cover Photo", done: mediaFilled },
-                  { label: "Location", done: locationFilled },
+                  {
+                    id: "section-info",
+                    label: "Basic Information",
+                    done: infoFilled,
+                    hasError: !!(
+                      errors.title ||
+                      errors.category ||
+                      errors.maxGuests ||
+                      errors.description
+                    ),
+                  },
+                  {
+                    id: "section-schedule",
+                    label: "Schedule & Pricing",
+                    done: scheduleFilled,
+                    hasError: !!(
+                      errors.price ||
+                      errors.duration ||
+                      errors.schedule
+                    ),
+                  },
+                  {
+                    id: "section-media",
+                    label: "Cover Photo",
+                    done: mediaFilled,
+                    hasError: !!errors.coverFile,
+                  },
+                  {
+                    id: "section-location",
+                    label: "Location",
+                    done: locationFilled,
+                    hasError: !!errors.location,
+                  },
                 ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-3">
-                    {item.done ? (
-                      <CheckCircle2 className="h-4 w-4 text-primary dark:text-green-400 shrink-0" />
-                    ) : (
-                      <Circle className="h-4 w-4 text-outline-variant dark:text-zinc-600 shrink-0" />
-                    )}
-                    <span
-                      className={`text-sm ${item.done ? "text-on-surface dark:text-white font-medium" : "text-on-surface-variant dark:text-zinc-400"}`}
-                    >
-                      {item.label}
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => {
+                      document
+                        .getElementById(item.id)
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                    className="w-full flex items-center justify-between text-left group p-1.5 -mx-1.5 rounded-lg hover:bg-surface-container transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      {item.hasError ? (
+                        <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+                      ) : item.done ? (
+                        <CheckCircle2 className="h-4 w-4 text-primary dark:text-green-400 shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-outline-variant dark:text-zinc-600 shrink-0" />
+                      )}
+                      <span
+                        className={`text-sm ${
+                          item.hasError
+                            ? "text-red-600 dark:text-red-400 font-semibold"
+                            : item.done
+                            ? "text-on-surface dark:text-white font-medium"
+                            : "text-on-surface-variant dark:text-zinc-400"
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-primary dark:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity font-semibold">
+                      Jump to &rarr;
                     </span>
-                  </div>
+                  </button>
                 ))}
               </div>
               <div className="mt-4 h-1.5 bg-outline-variant/20 dark:bg-zinc-700 rounded-full overflow-hidden">

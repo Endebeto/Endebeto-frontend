@@ -316,7 +316,11 @@ export default function HostEditExperience() {
   /** Builds the FormData payload for saving edits. */
   const buildFormData = () => {
     const fd = new FormData();
-    fd.append("summary", form.summary);
+    const summaryToSave =
+      form.summary.trim() ||
+      (form.description.trim().split("\n")[0] || form.title.trim()).slice(0, 140) ||
+      "Authentic local Ethiopian experience";
+    fd.append("summary", summaryToSave);
     fd.append("description", form.description);
     if (!effectiveLocked) {
       fd.append("title", form.title);
@@ -356,7 +360,9 @@ export default function HostEditExperience() {
       ]);
       setSuccess(true);
     } catch (err: unknown) {
+      const backendMsg = (err as any)?.response?.data?.message;
       toast.error(
+        backendMsg ||
         getFriendlyErrorMessage(
           err,
           "Failed to save changes. Please try again.",
@@ -535,22 +541,6 @@ export default function HostEditExperience() {
 
                 <div>
                   <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">
-                    Short Summary{" "}
-                    <span className="text-on-surface-variant dark:text-zinc-400 font-normal">
-                      (shown on listing cards)
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="One sentence describing the core experience…"
-                    value={form.summary}
-                    onChange={set("summary")}
-                    className={inputCls}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">
                     Full Description <span className="text-error">*</span>
                   </label>
                   <HostExperienceDescriptionToolbar
@@ -589,7 +579,7 @@ export default function HostEditExperience() {
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface dark:text-white mb-2">
                     Price (ETB) <span className="text-error">*</span>
@@ -620,8 +610,8 @@ export default function HostEditExperience() {
                       <Lock className="h-3 w-3 text-amber-500" />
                     )}
                   </label>
-                  <div className="flex gap-3">
-                    <div className="relative flex-1">
+                  <div className="flex gap-2.5">
+                    <div className="relative flex-1 min-w-0">
                       <input
                         type="number"
                         min="1"
@@ -632,7 +622,7 @@ export default function HostEditExperience() {
                           handleDurationValueChange(e.target.value)
                         }
                         disabled={effectiveLocked}
-                        className={fieldCls(true)}
+                        className={`${fieldCls(true)} w-full min-w-0 px-3.5 py-3`}
                       />
                     </div>
                     <select
@@ -643,7 +633,7 @@ export default function HostEditExperience() {
                         )
                       }
                       disabled={effectiveLocked}
-                      className={`w-32 bg-white dark:bg-zinc-800 border rounded-xl px-3 py-3 text-sm font-medium text-on-surface dark:text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all ${
+                      className={`w-28 sm:w-32 shrink-0 bg-white dark:bg-zinc-800 border rounded-xl px-3 py-3 text-sm font-medium text-on-surface dark:text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all ${
                         effectiveLocked
                           ? "opacity-60 cursor-not-allowed border-outline-variant/20 dark:border-zinc-700 bg-surface-container-low/50"
                           : "border-outline-variant/40 dark:border-zinc-700 cursor-pointer"
@@ -663,7 +653,7 @@ export default function HostEditExperience() {
                   )}
                 </div>
 
-                <div>
+                <div className="md:col-span-2">
                   <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface dark:text-white mb-2">
                     Next Occurrence <span className="text-error">*</span>
                     {effectiveLocked && (

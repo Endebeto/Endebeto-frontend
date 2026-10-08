@@ -30,6 +30,15 @@ export interface Booking {
   price: number;
   txRef?: string;
   experienceDate?: string;
+  slot?:
+    | string
+    | {
+        _id: string;
+        startTime: string;
+        endTime: string;
+        maxGuests?: number;
+        bookedGuests?: number;
+      };
   status: "upcoming" | "completed" | "paymentExpired" | "cancelled";
   paid: boolean;
   attendanceStatus?: "unmarked" | "checked_in" | "no_show";
@@ -81,10 +90,10 @@ export interface VerifyPaymentResponse {
 }
 
 export const bookingsService = {
-  getCheckoutSession: (experienceId: string, qty = 1) =>
+  getCheckoutSession: (experienceId: string, qty = 1, slotId?: string) =>
     api.get<CheckoutSessionResponse>(
       `/bookings/checkout-session/${experienceId}`,
-      { params: { qty } }
+      { params: { qty, ...(slotId ? { slotId } : {}) } }
     ),
 
   /** Chapa return / callback: confirms payment and may create booking (requires matching gateway meta). */

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { hostQueryKeys } from "@/lib/hostQueryKeys";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import {
@@ -24,6 +24,7 @@ import {
   AlertCircle,
   MegaphoneOff,
   Trash2,
+  CalendarDays,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -32,6 +33,7 @@ import {
   experiencesService,
   type Experience,
 } from "@/services/experiences.service";
+import { HostScheduleManagerModal } from "@/components/host-schedule/HostScheduleManagerModal";
 import { normalizeApiList } from "@/lib/normalizeApiList";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
@@ -212,6 +214,7 @@ function RescheduleModal({
 function ActionMenu({
   exp,
   onReschedule,
+  onManageSchedule,
   onStop,
   onDelete,
   hostListingLocked,
@@ -219,6 +222,7 @@ function ActionMenu({
 }: {
   exp: Experience;
   onReschedule: (exp: Experience) => void;
+  onManageSchedule: (exp: Experience) => void;
   onStop: (exp: Experience) => void;
   onDelete: (exp: Experience) => void;
   hostListingLocked: boolean;
@@ -292,31 +296,46 @@ function ActionMenu({
           <div
             role="menu"
             aria-orientation="vertical"
-            className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-44 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-outline-variant/20 dark:border-zinc-700 overflow-hidden py-1"
+            className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-52 min-w-[13.5rem] bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-outline-variant/20 dark:border-zinc-700 overflow-hidden py-1"
           >
             {isPubliclyVisible && (
               <Link
                 to={`/experiences/${id}`}
-                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors"
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-left whitespace-nowrap text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors"
               >
-                <Eye className="h-3.5 w-3.5 text-on-surface-variant" /> View
-                Listing
+                <Eye className="h-3.5 w-3.5 shrink-0 text-on-surface-variant" />
+                <span>View Listing</span>
               </Link>
             )}
             {hostListingLocked ? (
               <div
-                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface-variant/50 dark:text-zinc-500 cursor-not-allowed"
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-left whitespace-nowrap text-on-surface-variant/50 dark:text-zinc-500 cursor-not-allowed"
                 title="Editing is temporarily disabled for your account."
               >
-                <Pencil className="h-3.5 w-3.5" /> Edit
+                <Pencil className="h-3.5 w-3.5 shrink-0" />
+                <span>Edit</span>
               </div>
             ) : (
               <Link
                 to={`/host/experiences/${id}/edit`}
-                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors"
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-left whitespace-nowrap text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors"
               >
-                <Pencil className="h-3.5 w-3.5 text-on-surface-variant" /> Edit
+                <Pencil className="h-3.5 w-3.5 shrink-0 text-on-surface-variant" />
+                <span>Edit</span>
               </Link>
+            )}
+            {exp.status === "approved" && (
+              <button
+                type="button"
+                onClick={() => {
+                  onManageSchedule(exp);
+                  setOpen(false);
+                }}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left whitespace-nowrap text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors"
+              >
+                <CalendarDays className="h-3.5 w-3.5 shrink-0 text-on-surface-variant" />
+                <span>Manage Schedule</span>
+              </button>
             )}
             {exp.status === "approved" && !expired && (
               <button
@@ -327,11 +346,11 @@ function ActionMenu({
                   onReschedule(exp);
                   setOpen(false);
                 }}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left whitespace-nowrap text-on-surface dark:text-white hover:bg-surface dark:hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 title={scheduleLocked ? scheduleLockTitle : undefined}
               >
-                <Calendar className="h-3.5 w-3.5 text-on-surface-variant" /> Set
-                Next Date
+                <Calendar className="h-3.5 w-3.5 shrink-0 text-on-surface-variant" />
+                <span>Set Next Date</span>
               </button>
             )}
             {canStop && (
@@ -345,10 +364,11 @@ function ActionMenu({
                     onStop(exp);
                     setOpen(false);
                   }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-error hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left whitespace-nowrap text-error hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   title={stopLockTitle}
                 >
-                  <Ban className="h-3.5 w-3.5" /> Stop
+                  <Ban className="h-3.5 w-3.5 shrink-0" />
+                  <span>Stop</span>
                 </button>
               </>
             )}
@@ -363,10 +383,11 @@ function ActionMenu({
                     onDelete(exp);
                     setOpen(false);
                   }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-error hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left whitespace-nowrap text-error hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   title={deleteLockTitle}
                 >
-                  <Trash2 className="h-3.5 w-3.5" /> Delete listing
+                  <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                  <span>Delete listing</span>
                 </button>
               </>
             )}
@@ -550,12 +571,14 @@ function DeleteExperienceModal({
 function ExpCard({
   exp,
   onReschedule,
+  onManageSchedule,
   onStop,
   onDelete,
   hostListingLocked,
 }: {
   exp: Experience;
   onReschedule: (e: Experience) => void;
+  onManageSchedule: (e: Experience) => void;
   onStop: (e: Experience) => void;
   onDelete: (e: Experience) => void;
   hostListingLocked: boolean;
@@ -606,6 +629,7 @@ function ExpCard({
           <ActionMenu
             exp={exp}
             onReschedule={onReschedule}
+            onManageSchedule={onManageSchedule}
             onStop={onStop}
             onDelete={onDelete}
             hostListingLocked={hostListingLocked}
@@ -708,6 +732,17 @@ function ExpCard({
                 )}
               </div>
             )}
+
+            <div className="mt-2.5 pt-2 border-t border-outline-variant/10 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => onManageSchedule(exp)}
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary dark:text-green-400 text-xs font-bold transition-colors"
+              >
+                <CalendarDays className="h-3.5 w-3.5" />
+                Schedule &amp; Availability Slots
+              </button>
+            </div>
           </div>
         )}
 
@@ -756,8 +791,10 @@ export default function HostExperiences() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<TabFilter>("all");
   const [rescheduleExp, setReschedule] = useState<Experience | null>(null);
+  const [scheduleExp, setScheduleExp] = useState<Experience | null>(null);
   const [stopExp, setStopExp] = useState<Experience | null>(null);
   const [deleteExp, setDeleteExp] = useState<Experience | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data, isLoading, isError } = useQuery({
     queryKey: hostQueryKeys.experiences.list(),
@@ -765,6 +802,24 @@ export default function HostExperiences() {
   });
 
   const exps: Experience[] = normalizeApiList<Experience>(data?.data).items;
+
+  useEffect(() => {
+    const targetId = searchParams.get("scheduleExp");
+    if (targetId && exps.length > 0) {
+      const match = exps.find((e) => (e._id || e.id) === targetId);
+      if (match) {
+        setScheduleExp(match);
+        setSearchParams(
+          (p) => {
+            const next = new URLSearchParams(p);
+            next.delete("scheduleExp");
+            return next;
+          },
+          { replace: true },
+        );
+      }
+    }
+  }, [searchParams, exps, setSearchParams]);
 
   const stopMutation = useMutation({
     mutationFn: (id: string) => experiencesService.stop(id),
@@ -841,6 +896,12 @@ export default function HostExperiences() {
         <RescheduleModal
           exp={rescheduleExp}
           onClose={() => setReschedule(null)}
+        />
+      )}
+      {scheduleExp && (
+        <HostScheduleManagerModal
+          experience={scheduleExp}
+          onClose={() => setScheduleExp(null)}
         />
       )}
       {stopExp && (
@@ -1063,6 +1124,7 @@ export default function HostExperiences() {
                 key={exp._id ?? exp.id}
                 exp={exp}
                 onReschedule={setReschedule}
+                onManageSchedule={setScheduleExp}
                 onStop={setStopExp}
                 onDelete={setDeleteExp}
                 hostListingLocked={listingLocked}

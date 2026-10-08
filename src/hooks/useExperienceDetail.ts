@@ -26,6 +26,7 @@ import {
   type Experience,
   type Review,
 } from "@/services/experiences.service";
+import { slotsService, type ExperienceSlot } from "@/services/slots.service";
 
 export interface ExperienceDetailVM {
   id: string;
@@ -58,6 +59,13 @@ export interface ExperienceDetailVM {
   unbookedApproxMapImageUrl: string | null;
   occurrenceDate: string | null;
   occurrenceTime: string | null;
+  slots: ExperienceSlot[];
+  selectedSlot: ExperienceSlot | null;
+  setSelectedSlot: (slot: ExperienceSlot | null) => void;
+  slotsLoading: boolean;
+  bookedSlotIds: Set<string>;
+  maxGuestsDisplay: string;
+  effectivePrice: number;
   totalGuestPrice: number;
   handleCopyPublicLink: () => Promise<void>;
   handleShareExperience: () => Promise<void>;
@@ -104,22 +112,116 @@ export function useExperienceDetail(): {
     staleTime: 30_000,
   });
 
+  const { data: slotsData, isLoading: slotsLoading } = useQuery({
+    queryKey: ["experience-slots", id],
+    queryFn: () => slotsService.getExperienceSlots(id!),
+    enabled: !!id,
+    staleTime: 30_000,
+  });
+
+  const slots = useMemo(
+    () => slotsData?.data?.data?.slots ?? [],
+    [slotsData],
+  );
+  const [selectedSlot, setSelectedSlot] = useState<ExperienceSlot | null>(null);
+  const userManuallySelectedRef = useRef(false);
+
+  const bookedSlotIds = useMemo(() => {
+    if (!isAuthenticated || !myBookingsPayload) return new Set<string>();
+    const set = new Set<string>();
+    myBookingsPayload.forEach((b) => {
+      if (bookingExperienceId(b) === id && b.status === "upcoming") {
+        const slotId =
+          typeof b.slot === "object" && b.slot !== null ? b.slot._id : b.slot;
+        if (slotId) set.add(String(slotId));
+      }
+    });
+    return set;
+  }, [isAuthenticated, myBookingsPayload, id]);
+
+  const handleSelectSlot = useCallback((slot: ExperienceSlot | null) => {
+    userManuallySelectedRef.current = true;
+    setSelectedSlot(slot);
+  }, []);
+
+  useEffect(() => {
+    if (slots.length === 0) return;
+
+    // Check if the currently selected slot is one the user has already booked
+    const currentIsBooked =
+      selectedSlot && bookedSlotIds.has(String(selectedSlot._id));
+
+    // If no slot selected yet, or if current selection was auto-selected and is booked by user
+    if (!selectedSlot || (!userManuallySelectedRef.current && currentIsBooked)) {
+      const unbooked = slots.find(
+        (s) => s.isBookable && !bookedSlotIds.has(String(s._id)),
+      );
+      const fallback = slots.find((s) => s.isBookable) || slots[0];
+      if (unbooked) setSelectedSlot(unbooked);
+      else if (!selectedSlot && fallback) setSelectedSlot(fallback);
+    }
+  }, [slots, selectedSlot, bookedSlotIds]);
+
+  const effectivePrice = useMemo(() => {
+    if (
+      selectedSlot &&
+      selectedSlot.price != null &&
+      Number.isFinite(Number(selectedSlot.price)) &&
+      Number(selectedSlot.price) > 0
+    ) {
+      return Number(selectedSlot.price);
+    }
+    return expForAvail?.price ?? 0;
+  }, [selectedSlot, expForAvail?.price]);
+
+  const totalGuestPrice = useMemo(
+    () => effectivePrice * guests,
+    [effectivePrice, guests],
+  );
+
   const maxBookable = useMemo(() => {
+    if (selectedSlot) {
+      return Math.max(0, selectedSlot.availableSpots);
+    }
     if (!expForAvail) return 1;
     const cap = Math.min(
       expForAvail.maxGuests,
       availPayload?.available ?? expForAvail.maxGuests,
     );
     return Math.max(0, cap);
-  }, [expForAvail, availPayload?.available]);
+  }, [selectedSlot, expForAvail, availPayload?.available]);
 
+  const maxGuestsDisplay = useMemo(() => {
+    if (selectedSlot && selectedSlot.maxGuests) {
+      return `Up to ${selectedSlot.maxGuests}`;
+    }
+    if (slots.length > 0) {
+      const capacities = slots.map(
+        (s) => Number(s.maxGuests) || expForAvail?.maxGuests || 1,
+      );
+      const min = Math.min(...capacities);
+      const max = Math.max(...capacities);
+      if (min !== max) {
+        return `${min} – ${max} guests`;
+      }
+      return `Up to ${max}`;
+    }
+    return `Up to ${expForAvail?.maxGuests ?? 1}`;
+  }, [selectedSlot, slots, expForAvail?.maxGuests]);
+
+  // True only if the CURRENTLY SELECTED session is already booked by the user
   const hasUpcomingBookingHere = useMemo(() => {
     if (!isAuthenticated || !id) return false;
     const list = myBookingsPayload ?? [];
-    return list.some(
-      (b) => bookingExperienceId(b) === id && b.status === "upcoming",
-    );
-  }, [isAuthenticated, id, myBookingsPayload]);
+    if (slots.length > 0) {
+      if (!selectedSlot) return false;
+      return bookedSlotIds.has(String(selectedSlot._id));
+    }
+    // Legacy single occurrence listing
+    return list.some((b) => {
+      return bookingExperienceId(b) === id && b.status === "upcoming";
+    });
+  }, [isAuthenticated, id, myBookingsPayload, slots.length, selectedSlot, bookedSlotIds]);
 
   const openMobileBookingSheet = useCallback(() => {
     if (!id) return;
@@ -127,13 +229,9 @@ export function useExperienceDetail(): {
       navigate("/login", { state: { from: `/experiences/${id}` } });
       return;
     }
-    if (hasUpcomingBookingHere) return;
+    if (slots.length === 0 && hasUpcomingBookingHere) return;
     setShowBookingModal(true);
-  }, [id, isAuthenticated, navigate, hasUpcomingBookingHere]);
-
-  useEffect(() => {
-    if (hasUpcomingBookingHere && showBookingModal) setShowBookingModal(false);
-  }, [hasUpcomingBookingHere, showBookingModal]);
+  }, [id, isAuthenticated, navigate, slots.length, hasUpcomingBookingHere]);
 
   useEffect(() => {
     setGuests((g) => {
@@ -148,12 +246,20 @@ export function useExperienceDetail(): {
       navigate("/login", { state: { from: `/experiences/${id}` } });
       return;
     }
+    if (slots.length > 0 && !selectedSlot) {
+      toast.error("Please choose a date and time slot first.");
+      return;
+    }
     if (hasUpcomingBookingHere) {
-      toast.info("You already have an upcoming booking for this experience.");
+      toast.info(
+        selectedSlot
+          ? "You already have an upcoming booking for this session. Pick a different date."
+          : "You already have an upcoming booking for this experience.",
+      );
       return;
     }
     if (maxBookable === 0) {
-      toast.error("No spots available for the next date.");
+      toast.error("No spots available for the selected session.");
       return;
     }
     if (guests < 1 || guests > maxBookable) {
@@ -162,7 +268,11 @@ export function useExperienceDetail(): {
     }
     setCheckoutLoading(true);
     try {
-      const res = await bookingsService.getCheckoutSession(id, guests);
+      const res = await bookingsService.getCheckoutSession(
+        id,
+        guests,
+        selectedSlot?._id,
+      );
       const url = res.data.checkout_url;
       if (!url) {
         toast.error("Payment link was not returned. Please try again.");
@@ -181,6 +291,7 @@ export function useExperienceDetail(): {
     navigate,
     hasUpcomingBookingHere,
     maxBookable,
+    selectedSlot,
   ]);
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -249,13 +360,16 @@ export function useExperienceDetail(): {
     () => getGalleryPreviewSlots(allGalleryImages),
     [allGalleryImages],
   );
+  const activeOccurrenceIso = selectedSlot
+    ? selectedSlot.startTime
+    : exp?.nextOccurrenceAt;
   const occurrenceDate = useMemo(
-    () => fmtDate(exp?.nextOccurrenceAt),
-    [exp?.nextOccurrenceAt],
+    () => fmtDate(activeOccurrenceIso),
+    [activeOccurrenceIso],
   );
   const occurrenceTime = useMemo(
-    () => fmtTime(exp?.nextOccurrenceAt),
-    [exp?.nextOccurrenceAt],
+    () => fmtTime(activeOccurrenceIso),
+    [activeOccurrenceIso],
   );
 
   const mapsSearchHref = useMemo(() => {
@@ -325,7 +439,14 @@ export function useExperienceDetail(): {
       unbookedApproxMapImageUrl,
       occurrenceDate,
       occurrenceTime,
-      totalGuestPrice: exp.price * guests,
+      slots,
+      selectedSlot,
+      setSelectedSlot: handleSelectSlot,
+      slotsLoading,
+      bookedSlotIds,
+      maxGuestsDisplay,
+      effectivePrice,
+      totalGuestPrice,
       handleCopyPublicLink,
       handleShareExperience,
     };
@@ -354,6 +475,14 @@ export function useExperienceDetail(): {
     unbookedApproxMapImageUrl,
     occurrenceDate,
     occurrenceTime,
+    slots,
+    selectedSlot,
+    handleSelectSlot,
+    slotsLoading,
+    bookedSlotIds,
+    maxGuestsDisplay,
+    effectivePrice,
+    totalGuestPrice,
     handleCopyPublicLink,
     handleShareExperience,
   ]);
