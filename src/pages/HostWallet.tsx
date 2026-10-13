@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Wallet,
   ArrowDownToLine,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { WithdrawModal } from "@/components/host-wallet/WithdrawModal";
+import { PayoutAccountCard } from "@/components/host-wallet/PayoutAccountCard";
 import { WalletEarningRow } from "@/components/host-wallet/WalletEarningRow";
 import { WalletWithdrawalRow } from "@/components/host-wallet/WalletWithdrawalRow";
 import { WithdrawalsPager } from "@/components/host-wallet/WithdrawalsPager";
@@ -23,6 +24,8 @@ import { useHostWallet } from "@/hooks/useHostWallet";
 
 export default function HostWallet() {
   const [selectedInvoiceBookingId, setSelectedInvoiceBookingId] = useState<string | null>(null);
+  const [payoutEditing, setPayoutEditing] = useState(false);
+  const payoutSectionRef = useRef<HTMLElement>(null);
   const {
     user,
     refreshUser,
@@ -73,10 +76,16 @@ export default function HostWallet() {
         <WithdrawModal
           key={withdrawModalKey}
           availableETB={availableETB}
-          accountHolderLegalName={legalHostName}
-          savedBankName={user?.hostPayoutBankName}
-          savedAccountName={user?.hostPayoutAccountName}
-          savedAccountNumber={user?.hostPayoutAccountNumber}
+          onChangeAccount={() => {
+            setShowWithdraw(false);
+            setPayoutEditing(true);
+            requestAnimationFrame(() =>
+              payoutSectionRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              }),
+            );
+          }}
           onClose={() => setShowWithdraw(false)}
           onWithdrawComplete={async () => {
             await refreshUser();
@@ -255,6 +264,13 @@ export default function HostWallet() {
             </p>
           </div>
         </div>
+
+        <PayoutAccountCard
+          sectionRef={payoutSectionRef}
+          editing={payoutEditing}
+          onEditingChange={setPayoutEditing}
+          legalHostName={legalHostName}
+        />
 
         <div
           ref={walletActivityRef}

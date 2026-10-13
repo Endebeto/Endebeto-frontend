@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { consumeOAuthRedirect } from "@/lib/redirect";
 
 /**
  * Landing page for OAuth redirects.
@@ -17,11 +18,12 @@ const OAuthSuccess = () => {
     if (handled.current) return;
     handled.current = true;
 
+    const target = consumeOAuthRedirect("/");
     refreshUser()
       .then((freshUser) => {
         if (freshUser) {
           toast.success("Signed in with Google!");
-          navigate("/", { replace: true });
+          navigate(target, { replace: true });
         } else {
           toast.error("Could not load your account. Please try again.");
           navigate("/login", { replace: true });

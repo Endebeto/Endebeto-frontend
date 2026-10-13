@@ -1,9 +1,10 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import {
   BrowserRouter,
   Navigate,
   Route,
   Routes,
+  useLocation,
   useNavigate,
 } from "react-router-dom";
 import AdminRouteLayout from "@/components/AdminRouteLayout";
@@ -59,10 +60,19 @@ const NotFound = lazy(() => import("./pages/NotFound"));
  */
 function AuthExpiredRedirect() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationRef = useRef(location);
+  locationRef.current = location;
   useEffect(() => {
     const handler = (e: Event) => {
       const message = (e as CustomEvent<{ message?: string }>).detail?.message;
-      const state = message ? { authSessionMessage: message } : undefined;
+      const loc = locationRef.current;
+      const onAuthPage =
+        loc.pathname === "/login" || loc.pathname === "/signup";
+      const state = {
+        ...(message ? { authSessionMessage: message } : {}),
+        ...(onAuthPage ? {} : { from: loc }),
+      };
       navigate("/login", { replace: true, state });
     };
     window.addEventListener("auth:expired", handler);
@@ -93,6 +103,7 @@ function ProtectedRoute({
   allowedRoles?: string[];
 }) {
   const { isAuthenticated, loading, user } = useAuth();
+  const location = useLocation();
   if (loading)
     return (
       <div
@@ -103,7 +114,8 @@ function ProtectedRoute({
         <div className="h-9 w-9 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated)
+    return <Navigate to="/login" replace state={{ from: location }} />;
 
   if (allowedRoles && user) {
     const isAdmin = user.role === "admin";

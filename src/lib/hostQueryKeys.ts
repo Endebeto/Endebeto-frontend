@@ -23,6 +23,8 @@ export const hostQueryKeys = {
     all: () => ["host", "wallet"] as const,
     summary: () => ["host", "wallet", "summary"] as const,
     earnings: (page?: number) => ["host", "wallet", "earnings", page] as const,
+    payoutAccount: (userId?: string) =>
+      ["host", "wallet", "payout-account", userId ?? "anon"] as const,
     withdrawals: (tab: string, page: number, search?: string) =>
       ["host", "wallet", "withdrawals", { tab, page, search }] as const,
   },

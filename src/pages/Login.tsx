@@ -11,12 +11,14 @@ import authSideImage from "@/assets/hero-coffee.jpg";
 import { useAuth } from "@/context/AuthContext";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { API_BASE_URL } from "@/lib/config";
+import { resolveFrom, saveOAuthRedirect } from "@/lib/redirect";
 import { BrandLogo } from "@/components/BrandLogo";
 
 const Login = () => {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const from = resolveFrom(location.state);
   const [searchParams] = useSearchParams();
   const [showPass, setShowPass] = useState(false);
   const [oauthError, setOauthError] = useState("");
@@ -48,13 +50,13 @@ const Login = () => {
     toast.error(msg);
     navigate(location.pathname + location.search, {
       replace: true,
-      state: null,
+      state: from === "/" ? null : { from },
     });
-  }, [location.state, location.pathname, location.search, navigate]);
+  }, [location.state, location.pathname, location.search, navigate, from]);
 
   useEffect(() => {
-    if (isAuthenticated) navigate("/", { replace: true });
-  }, [isAuthenticated, navigate]);
+    if (isAuthenticated) navigate(from, { replace: true });
+  }, [isAuthenticated, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +65,7 @@ const Login = () => {
     try {
       await login(email, password);
       toast.success("Welcome back!");
-      navigate("/");
+      navigate(from, { replace: true });
     } catch (err: unknown) {
       toast.error(getFriendlyErrorMessage(err, "Invalid email or password."));
     } finally {
@@ -189,6 +191,7 @@ const Login = () => {
           <div className="space-y-2.5">
             <a
               href={`${API_BASE_URL}/auth/google`}
+              onClick={() => saveOAuthRedirect(from)}
               className="flex items-center justify-center gap-2.5 w-full py-2.5 border border-outline-variant/50 rounded-xl text-sm font-headline font-semibold text-on-surface-variant hover:bg-surface-container transition-colors"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24">
@@ -217,6 +220,7 @@ const Login = () => {
             Don't have an account?{" "}
             <Link
               to="/signup"
+              state={location.state}
               className="font-bold text-primary hover:underline"
             >
               Sign up

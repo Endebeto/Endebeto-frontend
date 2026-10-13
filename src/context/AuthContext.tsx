@@ -5,9 +5,11 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import { authService, type User } from "@/services/auth.service";
+import { queryClient } from "@/lib/query-client";
 
 interface AuthContextValue {
   user: User | null;
@@ -50,6 +52,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
+  // Never let one account's cached private data (wallet, bookings, ...) leak
+  // to the next: clear the cache whenever the signed-in user id changes.
+  const lastUserIdRef = useRef<string | null>(user?._id ?? null);
+  useEffect(() => {
+    const id = user?._id ?? null;
+    if (lastUserIdRef.current !== id) {
+      queryClient.clear();
+      lastUserIdRef.current = id;
+    }
+  }, [user?._id]);
+
   const refreshUser = useCallback(async (): Promise<User | null> => {
     try {
       const res = await authService.getMe();
@@ -61,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return freshUser;
     } catch {
       localStorage.removeItem("user");
+      queryClient.clear();
       setUser(null);
       setServerConfirmed(false);
       return null;
@@ -93,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // (expired JWT, failed refresh, or inactive/suspended account 403).
   useEffect(() => {
     const onSessionEnded = () => {
+      queryClient.clear();
       setUser(null);
       setServerConfirmed(false);
       setLoading(false);
@@ -122,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     authService.logout().catch(() => {});
     localStorage.removeItem("user");
+    queryClient.clear();
     setUser(null);
     setServerConfirmed(false);
   };

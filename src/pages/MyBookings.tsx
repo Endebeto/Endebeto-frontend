@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Review as ExperienceReview } from "@/services/experiences.service";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -92,31 +92,42 @@ function apiErrMessage(e: unknown): string {
 
 /* ─── Chapa tx_ref handling ─────────────────────────────── */
 
+/** A response the server will never change its mind about (safe to drop tx_ref). */
+function isDefinitiveVerifyError(e: unknown): boolean {
+  const status = (e as { response?: { status?: number } })?.response?.status;
+  if (typeof status !== "number") return false; // network error / timeout
+  if (status >= 500 || status === 408 || status === 429) return false;
+  return status >= 400; // 400/402/404/409/... are definitive
+}
+
 function useVerifyTxRef() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const handledRef = useRef<string | null>(null);
+  const inFlightRef = useRef(false);
+  const [needsRetry, setNeedsRetry] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const txRefParam = searchParams.get("tx_ref");
 
-  useEffect(() => {
-    if (!txRefParam) return;
-    if (handledRef.current === txRefParam) return;
-    handledRef.current = txRefParam;
+  const verify = useCallback(
+    async (txRef: string) => {
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
+      setVerifying(true);
+      setNeedsRetry(false);
 
-    const clearParam = () => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.delete("tx_ref");
-          return next;
-        },
-        { replace: true },
-      );
-    };
+      const clearParam = () => {
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete("tx_ref");
+            return next;
+          },
+          { replace: true },
+        );
+      };
 
-    (async () => {
       try {
-        const { data } = await bookingsService.verifyPayment(txRefParam);
+        const { data } = await bookingsService.verifyPayment(txRef);
         if (data.status === "success" && data.booking) {
           toast.success("Payment confirmed — your booking is saved.");
           await queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
@@ -131,13 +142,40 @@ function useVerifyTxRef() {
           toast.success("Verification finished.");
           await queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
         }
-      } catch (e) {
-        toast.error(apiErrMessage(e));
-      } finally {
         clearParam();
+      } catch (e) {
+        if (isDefinitiveVerifyError(e)) {
+          toast.error(apiErrMessage(e));
+          clearParam();
+        } else {
+          // Network error / 5xx: keep tx_ref so the user can retry.
+          setNeedsRetry(true);
+        }
+      } finally {
+        inFlightRef.current = false;
+        setVerifying(false);
       }
-    })();
-  }, [txRefParam, setSearchParams, queryClient]);
+    },
+    [setSearchParams, queryClient],
+  );
+
+  const handledRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!txRefParam) {
+      handledRef.current = null;
+      setNeedsRetry(false);
+      return;
+    }
+    if (handledRef.current === txRefParam) return;
+    handledRef.current = txRefParam;
+    void verify(txRefParam);
+  }, [txRefParam, verify]);
+
+  const retry = useCallback(() => {
+    if (txRefParam) void verify(txRefParam);
+  }, [txRefParam, verify]);
+
+  return { needsRetry: needsRetry && !!txRefParam, verifying, retry };
 }
 
 /* ─── Review dialog ─────────────────────────────────────── */
@@ -531,7 +569,8 @@ function BookingCard({
               <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-500/20 dark:bg-amber-500/30 text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-200">
-                    Host Update {expObj?.host?.name ? `• ${expObj.host.name}` : ""}
+                    Host Update{" "}
+                    {expObj?.host?.name ? `• ${expObj.host.name}` : ""}
                   </span>
                 </div>
                 {announcement.sentAt && (
@@ -615,9 +654,11 @@ function BookingCard({
 /* ─── page ──────────────────────────────────────────────── */
 
 export default function MyBookings() {
-  useVerifyTxRef();
+  const txVerify = useVerifyTxRef();
   const { user } = useAuth();
-  const [selectedInvoiceBookingId, setSelectedInvoiceBookingId] = useState<string | null>(null);
+  const [selectedInvoiceBookingId, setSelectedInvoiceBookingId] = useState<
+    string | null
+  >(null);
 
   const {
     data,
@@ -660,6 +701,31 @@ export default function MyBookings() {
           <ArrowLeft className="h-4 w-4 shrink-0" />
           Back to profile
         </Link>
+
+        {(txVerify.needsRetry || txVerify.verifying) && (
+          <div
+            role="alert"
+            className="mb-4 flex flex-col gap-3 rounded-2xl border border-amber-300/60 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-900/20 dark:text-amber-200 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <span>
+              {txVerify.verifying
+                ? "Verifying your payment…"
+                : "Payment verification didn't complete. If you already paid, your booking will appear once it is verified."}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={txVerify.retry}
+              disabled={txVerify.verifying}
+            >
+              {txVerify.verifying ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Verify again"
+              )}
+            </Button>
+          </div>
+        )}
 
         <div className="bg-white dark:bg-[#2d3133] rounded-2xl p-4 sm:p-6 shadow-sm border border-outline-variant/10 dark:border-zinc-600/40">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-5 sm:mb-6">

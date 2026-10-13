@@ -19,3 +19,6 @@ export function createQueryClient() {
     },
   });
 }
+
+/** App-wide singleton so non-React code (AuthContext) can clear private cache. */
+export const queryClient = createQueryClient();

@@ -6,10 +6,21 @@ import {
 import { logger } from "./logger";
 import { API_BASE_URL } from "./config";
 
+declare module "axios" {
+  interface InternalAxiosRequestConfig {
+    /** Set once a request has been replayed after a token refresh. */
+    _retry?: boolean;
+  }
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "Content-Type": "application/json",
+    // CSRF defence: cross-site forms cannot set custom headers.
+    "X-Requested-With": "XMLHttpRequest",
+  },
   timeout: 15000,
 });
 
@@ -29,22 +40,24 @@ let failedQueue: {
   reject: (e: unknown) => void;
 }[] = [];
 
-// Track request keys that have already been retried to avoid infinite loops
-// when Axios drops custom config properties during internal cloning.
-const retriedKeys = new Set<string>();
-
 const processQueue = (error: unknown) => {
   failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve()));
   failedQueue = [];
 };
 
-// Paths where a 401 must NOT trigger a refresh attempt (would cause loops or
-// are already handling credential errors themselves).
-const NO_REFRESH_PATHS = [
+// Endpoints where a 401 must NOT trigger a refresh attempt (would loop, or the
+// 401 is a credential error the caller handles itself). `/users/me` is
+// deliberately NOT listed: an expired 15-min jwt cookie with a valid refresh
+// cookie is recovered by one refresh + retry.
+export const NO_REFRESH_PATHS = [
   "/users/refresh",
   "/users/login",
   "/users/signup",
+  "/users/logout",
   "/users/forgotPassword",
+  "/users/resetPassword",
+  "/users/verifyEmail",
+  "/users/verify",
   "/users/updateMyPassword",
 ];
 
@@ -57,7 +70,8 @@ api.interceptors.response.use(
     const originalConfig = error.config as InternalAxiosRequestConfig;
 
     // Log only to our dev-only logger — production builds silence it.
-    const isSessionProbe401 = status === 401 && url.includes("/users/me");
+    const isSessionProbe = url.includes("/users/me");
+    const isSessionProbe401 = status === 401 && isSessionProbe;
     if (!isSessionProbe401) {
       logger.error("[api]", url, status);
     }
@@ -68,23 +82,22 @@ api.interceptors.response.use(
         return Promise.reject(decorateError(error));
       }
 
-      // Do not retry refresh endpoint or other public auth endpoints.
       const skipRefresh = NO_REFRESH_PATHS.some((p) => url.includes(p));
-      const requestKey = `${originalConfig.method}:${originalConfig.url}`;
-      // Also skip if we already retried once (avoid infinite loop).
-      if (skipRefresh || retriedKeys.has(requestKey)) {
-        retriedKeys.delete(requestKey);
-        redirectToLogin();
+      if (skipRefresh) {
+        // A failed login/signup etc. is a credential error, not an expired
+        // session: don't wipe storage or announce expiry. (A failed refresh
+        // is handled by the single-flight catch block below.)
         return Promise.reject(decorateError(error));
       }
 
-      // NOTE: /users/me is used as a session probe on app load — a 401 is
-      // expected when the user is not logged in. Don't try to refresh here
-      // as it would generate a spurious /refresh call for every unauthenticated
-      // page load.
-      if (url.includes("/users/me")) {
+      // Already replayed once — give up cleanly (no loops).
+      if (!originalConfig || originalConfig._retry) {
+        // The /users/me session probe is handled by AuthContext (no redirect
+        // away from public pages for guests with stale storage).
+        if (!isSessionProbe) redirectToLogin();
         return Promise.reject(decorateError(error));
       }
+      originalConfig._retry = true;
 
       if (isRefreshing) {
         // Queue this request until the in-flight refresh completes.
@@ -95,7 +108,6 @@ api.interceptors.response.use(
           .catch((e) => Promise.reject(decorateError(e as AxiosError)));
       }
 
-      retriedKeys.add(requestKey);
       isRefreshing = true;
 
       try {
@@ -104,10 +116,11 @@ api.interceptors.response.use(
         return api(originalConfig);
       } catch (refreshError) {
         processQueue(refreshError);
-        const inactiveMsg = extractInactiveAccountForbiddenMessage(
-          refreshError,
-        );
-        redirectToLogin(inactiveMsg ?? undefined);
+        const inactiveMsg =
+          extractInactiveAccountForbiddenMessage(refreshError);
+        if (!isSessionProbe || inactiveMsg) {
+          redirectToLogin(inactiveMsg ?? undefined);
+        }
         return Promise.reject(decorateError(refreshError as AxiosError));
       } finally {
         isRefreshing = false;

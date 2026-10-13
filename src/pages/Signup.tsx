@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import authSideImage from "@/assets/hero-highlands.jpg";
 import { useAuth } from "@/context/AuthContext";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { API_BASE_URL } from "@/lib/config";
+import { resolveFrom, saveOAuthRedirect } from "@/lib/redirect";
 import { BrandLogo } from "@/components/BrandLogo";
 
 const Signup = () => {
   const { signup, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const from = resolveFrom(useLocation().state);
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -24,8 +26,8 @@ const Signup = () => {
   const passwordWeak = password.length > 0 && password.length < 8;
 
   useEffect(() => {
-    if (isAuthenticated) navigate("/", { replace: true });
-  }, [isAuthenticated, navigate]);
+    if (isAuthenticated) navigate(from, { replace: true });
+  }, [isAuthenticated, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +63,7 @@ const Signup = () => {
           </p>
           <Link
             to="/login"
+            state={from === "/" ? undefined : { from }}
             className="mt-6 inline-block text-sm font-bold text-primary hover:underline"
           >
             Back to Sign In →
@@ -243,6 +246,7 @@ const Signup = () => {
           <div className="space-y-2.5">
             <a
               href={`${API_BASE_URL}/auth/google`}
+              onClick={() => saveOAuthRedirect(from)}
               className="flex items-center justify-center gap-2.5 w-full py-2.5 border border-outline-variant/50 rounded-xl text-sm font-headline font-semibold text-on-surface-variant hover:bg-surface-container transition-colors"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24">
@@ -271,6 +275,7 @@ const Signup = () => {
             Already have an account?{" "}
             <Link
               to="/login"
+              state={from === "/" ? undefined : { from }}
               className="font-bold text-primary hover:underline"
             >
               Sign in

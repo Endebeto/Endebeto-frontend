@@ -58,6 +58,32 @@ export interface WithdrawalRequest {
   paymentReceiptUrl?: string;
 }
 
+export interface PayoutAccount {
+  hasAccount: boolean;
+  bankName: string | null;
+  accountName: string | null;
+  /** e.g. "•••• 1234" */
+  accountNumberMasked: string | null;
+  accountNumberLast4: string | null;
+  updatedAt: string | null;
+  /** ISO; withdrawals are blocked until then after a change of an existing account. */
+  holdUntil: string | null;
+  /** True when an account exists and the user is a local-password user. */
+  requiresPassword: boolean;
+  /** True when an account exists and the user signs in with OAuth/passwordless (requires Email OTP). */
+  requiresOtp: boolean;
+  allowedBanks: string[];
+}
+
+export interface SavePayoutAccountInput {
+  bankName: string;
+  accountName: string;
+  /** Digits only, 8-20 */
+  accountNumber: string;
+  currentPassword?: string;
+  otp?: string;
+}
+
 export const walletService = {
   getWallet: () =>
     api.get<{ status: string; data: { wallet: Wallet } }>("/wallet"),
@@ -83,11 +109,9 @@ export const walletService = {
 
   // amountETB: the human-readable amount in ETB (e.g. 500)
   // The backend expects amountCents, so we multiply by 100 here.
+  // The payout destination is the saved payout account (server-side).
   createWithdrawal: (payload: {
     amountETB: number;
-    bankName: string;
-    accountName: string;
-    accountNumber: string;
     /** Idempotency: same id + same host reuses one request if still pending (backend may enforce). */
     clientRequestId?: string;
   }) =>
@@ -95,13 +119,25 @@ export const walletService = {
       "/withdrawals",
       {
         amountCents: Math.round(payload.amountETB * 100),
-        ...(payload.clientRequestId ? { clientRequestId: payload.clientRequestId } : {}),
-        destination: {
-          bankName:           payload.bankName,
-          accountName:        payload.accountName,
-          accountNumberLast4: payload.accountNumber.slice(-4),
-          accountNumber:      payload.accountNumber.replace(/\s/g, ""),
-        },
-      }
+        ...(payload.clientRequestId
+          ? { clientRequestId: payload.clientRequestId }
+          : {}),
+      },
+    ),
+
+  getPayoutAccount: () =>
+    api.get<{ status: string; data: { payoutAccount: PayoutAccount } }>(
+      "/users/me/payout-account",
+    ),
+
+  savePayoutAccount: (payload: SavePayoutAccountInput) =>
+    api.put<{ status: string; data: { payoutAccount: PayoutAccount } }>(
+      "/users/me/payout-account",
+      payload,
+    ),
+
+  sendPayoutAccountOtp: () =>
+    api.post<{ status: string; message: string }>(
+      "/users/me/payout-account/send-otp",
     ),
 };

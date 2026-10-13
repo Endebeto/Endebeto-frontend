@@ -37,3 +37,12 @@ export const PAYOUT_BANKS = [
   "Bank of Abyssinia (BOA)",
   "Awash Bank",
 ] as const;
+
+export const fmtDateTime = (iso: string) =>
+  new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });

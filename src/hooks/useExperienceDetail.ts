@@ -12,7 +12,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { NavigateFunction } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { buildGalleryUrls, getGalleryPreviewSlots } from "@/components/experience/ExperienceGallery";
+import {
+  buildGalleryUrls,
+  getGalleryPreviewSlots,
+} from "@/components/experience/ExperienceGallery";
 import {
   apiErrMessage,
   bookingExperienceId,
@@ -21,6 +24,7 @@ import {
 import { fmtDate, fmtTime } from "@/components/experience/ExperienceReviewCard";
 import { useAuth } from "@/context/AuthContext";
 import { bookingsService } from "@/services/bookings.service";
+import { isValidChapaCheckoutUrl } from "@/lib/checkoutUrl";
 import {
   experiencesService,
   type Experience,
@@ -81,6 +85,18 @@ export function useExperienceDetail(): {
   const { isAuthenticated } = useAuth();
 
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const checkoutInFlightRef = useRef(false);
+  useEffect(() => {
+    // Back button from Chapa may restore this page from bfcache while locked.
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        checkoutInFlightRef.current = false;
+        setCheckoutLoading(false);
+      }
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
   const [guests, setGuests] = useState(1);
   const [showBookingModal, setShowBookingModal] = useState(false);
 
@@ -119,10 +135,7 @@ export function useExperienceDetail(): {
     staleTime: 30_000,
   });
 
-  const slots = useMemo(
-    () => slotsData?.data?.data?.slots ?? [],
-    [slotsData],
-  );
+  const slots = useMemo(() => slotsData?.data?.data?.slots ?? [], [slotsData]);
   const [selectedSlot, setSelectedSlot] = useState<ExperienceSlot | null>(null);
   const userManuallySelectedRef = useRef(false);
 
@@ -152,7 +165,10 @@ export function useExperienceDetail(): {
       selectedSlot && bookedSlotIds.has(String(selectedSlot._id));
 
     // If no slot selected yet, or if current selection was auto-selected and is booked by user
-    if (!selectedSlot || (!userManuallySelectedRef.current && currentIsBooked)) {
+    if (
+      !selectedSlot ||
+      (!userManuallySelectedRef.current && currentIsBooked)
+    ) {
       const unbooked = slots.find(
         (s) => s.isBookable && !bookedSlotIds.has(String(s._id)),
       );
@@ -221,7 +237,14 @@ export function useExperienceDetail(): {
     return list.some((b) => {
       return bookingExperienceId(b) === id && b.status === "upcoming";
     });
-  }, [isAuthenticated, id, myBookingsPayload, slots.length, selectedSlot, bookedSlotIds]);
+  }, [
+    isAuthenticated,
+    id,
+    myBookingsPayload,
+    slots.length,
+    selectedSlot,
+    bookedSlotIds,
+  ]);
 
   const openMobileBookingSheet = useCallback(() => {
     if (!id) return;
@@ -266,6 +289,8 @@ export function useExperienceDetail(): {
       toast.error("Choose a valid number of guests for the remaining spots.");
       return;
     }
+    if (checkoutInFlightRef.current) return;
+    checkoutInFlightRef.current = true;
     setCheckoutLoading(true);
     try {
       const res = await bookingsService.getCheckoutSession(
@@ -276,12 +301,21 @@ export function useExperienceDetail(): {
       const url = res.data.checkout_url;
       if (!url) {
         toast.error("Payment link was not returned. Please try again.");
+        checkoutInFlightRef.current = false;
+        setCheckoutLoading(false);
         return;
       }
+      if (!isValidChapaCheckoutUrl(url)) {
+        toast.error("Received an invalid payment link. Please try again.");
+        checkoutInFlightRef.current = false;
+        setCheckoutLoading(false);
+        return;
+      }
+      // Success: stay locked/disabled while the browser navigates away.
       window.location.assign(url);
     } catch (e) {
       toast.error(apiErrMessage(e));
-    } finally {
+      checkoutInFlightRef.current = false;
       setCheckoutLoading(false);
     }
   }, [
@@ -338,9 +372,10 @@ export function useExperienceDetail(): {
 
   useEffect(() => {
     if (!hasUpcomingBookingHere || loadMapEmbeds || isLoading) return;
-    const nodes = [mobileMapMountRef.current, desktopMapMountRef.current].filter(
-      (n): n is HTMLDivElement => n !== null,
-    );
+    const nodes = [
+      mobileMapMountRef.current,
+      desktopMapMountRef.current,
+    ].filter((n): n is HTMLDivElement => n !== null);
     if (nodes.length === 0) return;
     const ob = new IntersectionObserver(
       (entries) => {

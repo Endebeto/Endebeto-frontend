@@ -170,7 +170,11 @@ export function useHostWallet() {
     toast.success("Statement CSV exported successfully.");
   };
 
-  const legalHostName = (user?.hostApplicationData?.fullName ?? "").trim();
+  const legalHostName = (
+    user?.hostApplicationData?.fullName ||
+    user?.name ||
+    ""
+  ).trim();
 
   return {
     user,

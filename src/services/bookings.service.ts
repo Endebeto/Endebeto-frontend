@@ -68,7 +68,12 @@ export interface BookingListResponse {
   limit: number;
   pages: number;
   // §5A: cancelled added to match backend summarizeBookings output
-  summary?: { upcoming: number; completed: number; paymentExpired: number; cancelled: number };
+  summary?: {
+    upcoming: number;
+    completed: number;
+    paymentExpired: number;
+    cancelled: number;
+  };
   totalEarnings?: number;
   totalRevenue?: number;
   data: Booking[];
@@ -91,9 +96,9 @@ export interface VerifyPaymentResponse {
 
 export const bookingsService = {
   getCheckoutSession: (experienceId: string, qty = 1, slotId?: string) =>
-    api.get<CheckoutSessionResponse>(
+    api.post<CheckoutSessionResponse>(
       `/bookings/checkout-session/${experienceId}`,
-      { params: { qty, ...(slotId ? { slotId } : {}) } }
+      { qty, ...(slotId ? { slotId } : {}) },
     ),
 
   /** Chapa return / callback: confirms payment and may create booking (requires matching gateway meta). */
@@ -113,27 +118,35 @@ export const bookingsService = {
     recentLimit?: number;
   }) => api.get<BookingListResponse>("/bookings/host/bookings", { params }),
 
-  getAllBookings: (params?: { page?: number; limit?: number; status?: string }) =>
-    api.get<BookingListResponse>("/bookings", { params }),
+  getAllBookings: (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }) => api.get<BookingListResponse>("/bookings", { params }),
 
   cancelBooking: (bookingId: string) =>
     api.patch<{ status: string; message: string; data: { booking: Booking } }>(
-      `/bookings/${bookingId}/cancel`
+      `/bookings/${bookingId}/cancel`,
     ),
 
   updateAttendance: (
     bookingId: string,
-    status: "unmarked" | "checked_in" | "no_show"
+    status: "unmarked" | "checked_in" | "no_show",
   ) =>
     api.patch<{ status: string; data: { data: Booking } }>(
       `/bookings/${bookingId}/attendance`,
-      { status }
+      { status },
     ),
 
   getAvailability: (experienceId: string) =>
     api.get<{
       status: string;
-      data: { booked: number; available: number; maxGuests: number; nextOccurrenceAt?: string };
+      data: {
+        booked: number;
+        available: number;
+        maxGuests: number;
+        nextOccurrenceAt?: string;
+      };
     }>(`/bookings/availability/${experienceId}`),
 
   getInvoice: (bookingId: string, context?: "guest" | "host") =>
@@ -203,4 +216,3 @@ export interface TaxInvoiceResponse {
     invoice: TaxInvoice;
   };
 }
-

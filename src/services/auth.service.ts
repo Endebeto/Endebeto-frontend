@@ -43,7 +43,7 @@ export interface User {
   /** Set when Google account is linked (same email merges on OAuth). */
   googleId?: string;
   facebookId?: string;
-  /** Persisted payout profile (filled on first withdrawal); bank must be one of CBE / BOA / Awash */
+  /** @deprecated Legacy fields; the saved payout account now comes from GET /users/me/payout-account. */
   hostPayoutBankName?: string;
   hostPayoutAccountName?: string;
   hostPayoutAccountNumber?: string;
