@@ -2,6 +2,7 @@
 # Do not commit public/_redirects.
 
 [build]
+  base = "."
   command = "npm run build"
   publish = "dist"
 
