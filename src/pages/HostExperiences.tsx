@@ -11,6 +11,7 @@ import HostLayout from "@/components/HostLayout";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { experiencesService, type Experience } from "@/services/experiences.service";
+import { EXPERIENCE_TIME_ZONE, formatExperienceDateTime, localDateTimeToUtcIso, utcIsoToLocalDateTime } from "@/lib/timezone";
 
 /* ─── helpers ────────────────────────────────────────── */
 const isExpired = (exp: Experience) => {
@@ -20,7 +21,7 @@ const isExpired = (exp: Experience) => {
 
 const fmtDate = (iso?: string) => {
   if (!iso) return "No date set";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return formatExperienceDateTime(iso, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
 
 /* ─── types ──────────────────────────────────────────── */
@@ -41,14 +42,11 @@ function RescheduleModal({ exp, onClose }: { exp: Experience; onClose: () => voi
   const [date, setDate] = useState("");
 
   const minDateTime = (() => {
-    const d = new Date();
-    d.setMinutes(d.getMinutes() + 5);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return utcIsoToLocalDateTime(new Date(Date.now() + 5 * 60 * 1000).toISOString());
   })();
 
   const mutation = useMutation({
-    mutationFn: (iso: string) => experiencesService.updateNextOccurrence(exp._id ?? exp.id, iso),
+    mutationFn: (iso: string) => experiencesService.updateNextOccurrence(exp._id ?? exp.id, iso, EXPERIENCE_TIME_ZONE),
     onSuccess: () => {
       toast.success("Experience rescheduled successfully.");
       queryClient.invalidateQueries({ queryKey: ["my-experiences"] });
@@ -89,7 +87,7 @@ function RescheduleModal({ exp, onClose }: { exp: Experience; onClose: () => voi
           </button>
           <button type="button"
             disabled={!date || mutation.isPending}
-            onClick={() => mutation.mutate(new Date(date).toISOString())}
+            onClick={() => mutation.mutate(localDateTimeToUtcIso(date))}
             className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
             {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Reschedule

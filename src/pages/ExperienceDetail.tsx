@@ -11,6 +11,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { experiencesService, type Review } from "@/services/experiences.service";
 import { bookingsService, type Booking } from "@/services/bookings.service";
+import { formatExperienceDateTime } from "@/lib/timezone";
 import { useAuth } from "@/context/AuthContext";
 
 function apiErrMessage(e: unknown): string {
@@ -208,14 +209,14 @@ function GalleryLightbox({
 
 function fmtDate(iso?: string) {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString("en-US", {
+  return formatExperienceDateTime(iso, {
     weekday: "short", year: "numeric", month: "short", day: "numeric",
   });
 }
 
 function fmtTime(iso?: string) {
   if (!iso) return null;
-  return new Date(iso).toLocaleTimeString("en-US", {
+  return formatExperienceDateTime(iso, {
     hour: "2-digit", minute: "2-digit",
   });
 }
@@ -443,7 +444,7 @@ const ExperienceDetail = () => {
     );
   }, [isAuthenticated, id, myBookingsPayload]);
 
-  /** Chapa: GET /bookings/checkout-session/:experienceId → redirect to checkout_url; return lands on /my-bookings?tx_ref= (Phase 5). */
+  /** Chapa: POST /bookings/checkout-session/:experienceId → redirect to checkout_url; return lands on /my-bookings?tx_ref=. */
   const startCheckout = useCallback(async () => {
     if (!id) return;
     if (!isAuthenticated) {

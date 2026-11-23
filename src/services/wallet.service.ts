@@ -5,6 +5,8 @@ import api from "@/lib/api";
 
 export interface Wallet {
   availableBalanceCents: number;
+  withdrawalReserveCents: number;
+  /** @deprecated use withdrawalReserveCents */
   pendingPayoutCents:    number;
   heldEarningsCents:     number;
   payoutInTransitCents:  number;
@@ -50,7 +52,7 @@ export interface WithdrawalRequest {
   _id:         string;
   amountCents: number;
   currency:    string;
-  status:      "pending_transfer" | "paid" | "failed" | "canceled";
+  status:      "pending_transfer" | "processing" | "paid" | "failed" | "canceled";
   destination?: WithdrawalDestination;
   createdAt:   string;
   processedAt?: string;

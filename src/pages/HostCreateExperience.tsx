@@ -11,6 +11,7 @@ import LocationPicker, { type PinLocation } from "@/components/LocationPicker";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { experiencesService } from "@/services/experiences.service";
+import { EXPERIENCE_TIME_ZONE, localDateTimeToUtcIso } from "@/lib/timezone";
 
 /* ─── types ──────────────────────────────────────────── */
 interface FormData {
@@ -136,7 +137,8 @@ export default function HostCreateExperience() {
       fd.append("price", form.price);
       fd.append("duration", form.duration);
       fd.append("maxGuests", form.maxGuests);
-      fd.append("nextOccurrenceAt", form.nextOccurrenceAt);
+      fd.append("nextOccurrenceAt", localDateTimeToUtcIso(form.nextOccurrenceAt));
+      fd.append("timeZone", EXPERIENCE_TIME_ZONE);
       fd.append("location", form.location);
       if (form.address) fd.append("address", form.address);
       if (pin?.lat) fd.append("latitude", String(pin.lat));
@@ -171,7 +173,10 @@ export default function HostCreateExperience() {
       if (form.price) fd.append("price", form.price);
       if (form.duration.trim()) fd.append("duration", form.duration);
       if (form.maxGuests) fd.append("maxGuests", form.maxGuests);
-      if (form.nextOccurrenceAt) fd.append("nextOccurrenceAt", form.nextOccurrenceAt);
+      if (form.nextOccurrenceAt) {
+        fd.append("nextOccurrenceAt", localDateTimeToUtcIso(form.nextOccurrenceAt));
+        fd.append("timeZone", EXPERIENCE_TIME_ZONE);
+      }
       if (form.location.trim()) fd.append("location", form.location);
       if (form.address.trim()) fd.append("address", form.address);
       if (pin?.lat) fd.append("latitude", String(pin.lat));

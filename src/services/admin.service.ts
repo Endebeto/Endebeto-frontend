@@ -121,7 +121,7 @@ export interface AdminWithdrawal {
   };
   amountCents: number;
   amountETB?: number;
-  status: "pending_transfer" | "paid" | "failed";
+  status: "pending_transfer" | "processing" | "paid" | "failed" | "canceled";
   destination?: {
     bankName?: string;
     accountName?: string;

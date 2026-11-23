@@ -21,6 +21,7 @@ export interface Experience {
   duration: string;
   maxGuests: number;
   nextOccurrenceAt?: string;
+  timeZone?: string;
   host: {
     _id: string;
     name: string;
@@ -112,8 +113,8 @@ export const experiencesService = {
   reject: (id: string, reason?: string) =>
     api.patch<ExperienceResponse>(`/experiences/${id}/reject`, { reason }),
 
-  updateNextOccurrence: (id: string, nextOccurrenceAt: string) =>
-    api.patch<ExperienceResponse>(`/experiences/${id}/next-occurrence`, { nextOccurrenceAt }),
+  updateNextOccurrence: (id: string, nextOccurrenceAt: string, timeZone = "Africa/Addis_Ababa") =>
+    api.patch<ExperienceResponse>(`/experiences/${id}/next-occurrence`, { nextOccurrenceAt, timeZone }),
 
   getMyExperiences: (params?: { page?: number; limit?: number }) =>
     api.get<ExperienceListResponse>("/experiences/mine", { params }),

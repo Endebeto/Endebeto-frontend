@@ -61,9 +61,9 @@ export interface VerifyPaymentResponse {
 
 export const bookingsService = {
   getCheckoutSession: (experienceId: string, qty = 1) =>
-    api.get<CheckoutSessionResponse>(
+    api.post<CheckoutSessionResponse>(
       `/bookings/checkout-session/${experienceId}`,
-      { params: { qty } }
+      { qty }
     ),
 
   /** Chapa return / callback: confirms payment and may create booking (requires matching gateway meta). */

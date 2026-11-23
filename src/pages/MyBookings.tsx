@@ -14,6 +14,7 @@ import Navbar from "@/components/Navbar";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import { experiencesService } from "@/services/experiences.service";
 import { reviewsService } from "@/services/reviews.service";
+import { formatExperienceDateTime } from "@/lib/timezone";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,7 +36,7 @@ const BOOKINGS_PAGE_SIZE = 20;
 function formatDate(iso?: string) {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString(undefined, {
+    return formatExperienceDateTime(iso, {
       year: "numeric",
       month: "short",
       day: "numeric",

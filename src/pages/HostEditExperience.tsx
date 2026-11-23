@@ -10,6 +10,7 @@ import LocationPicker, { type PinLocation } from "@/components/LocationPicker";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { experiencesService, type Experience } from "@/services/experiences.service";
+import { EXPERIENCE_TIME_ZONE, localDateTimeToUtcIso, utcIsoToLocalDateTime } from "@/lib/timezone";
 
 /* ─── types ──────────────────────────────────────────── */
 interface FormFields {
@@ -99,9 +100,7 @@ export default function HostEditExperience() {
         /* Pre-fill form */
         const toLocal = (iso?: string) => {
           if (!iso) return "";
-          const d = new Date(iso);
-          const pad = (n: number) => String(n).padStart(2, "0");
-          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+          return utcIsoToLocalDateTime(iso);
         };
 
         setForm({
@@ -185,7 +184,8 @@ export default function HostEditExperience() {
       fd.append("price", form.price);
       fd.append("duration", form.duration);
       fd.append("maxGuests", form.maxGuests);
-      fd.append("nextOccurrenceAt", form.nextOccurrenceAt);
+      fd.append("nextOccurrenceAt", localDateTimeToUtcIso(form.nextOccurrenceAt));
+      fd.append("timeZone", EXPERIENCE_TIME_ZONE);
       fd.append("location", form.location);
       if (form.address) fd.append("address", form.address);
     }

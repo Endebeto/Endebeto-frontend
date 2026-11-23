@@ -8,11 +8,12 @@ import HostLayout from "@/components/HostLayout";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/context/AuthContext";
 import { bookingsService, type Booking } from "@/services/bookings.service";
+import { formatExperienceDateTime } from "@/lib/timezone";
 
 /* ─── helpers ──────────────────────────────────────────── */
 const fmtDate = (iso?: string) => {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return formatExperienceDateTime(iso, { month: "short", day: "numeric", year: "numeric" });
 };
 
 const AVATAR_COLORS = [

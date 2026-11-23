@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { experiencesService, type Experience } from "@/services/experiences.service";
+import { formatExperienceDateTime, localDateTimeToUtcIso } from "@/lib/timezone";
 
 /* ─── constants ─────────────────────────────────────────── */
 
@@ -22,11 +23,11 @@ function occurrenceInDateRange(nextOccurrenceAt: string | undefined, dateFrom: s
   const occ = new Date(nextOccurrenceAt).getTime();
   if (Number.isNaN(occ)) return false;
   if (dateFrom) {
-    const start = new Date(`${dateFrom}T00:00:00`);
+    const start = new Date(localDateTimeToUtcIso(`${dateFrom}T00:00`));
     if (occ < start.getTime()) return false;
   }
   if (dateTo) {
-    const end = new Date(`${dateTo}T23:59:59.999`);
+    const end = new Date(localDateTimeToUtcIso(`${dateTo}T23:59:59`));
     if (occ > end.getTime()) return false;
   }
   return true;
@@ -173,7 +174,7 @@ function ExperienceBrowseCard({ exp }: { exp: Experience }) {
         {exp.nextOccurrenceAt && (
           <p className="text-[10px] text-on-surface-variant mb-1 flex items-center gap-1">
             <Calendar className="h-3 w-3 shrink-0 opacity-70" />
-            {new Date(exp.nextOccurrenceAt).toLocaleString(undefined, {
+            {formatExperienceDateTime(exp.nextOccurrenceAt, {
               month: "short",
               day: "numeric",
               year: "numeric",

@@ -9,11 +9,12 @@ import AdminLayout from "@/components/AdminLayout";
 import { adminService, type AdminWithdrawal } from "@/services/admin.service";
 
 /* ─── types ──────────────────────────────────────────────── */
-type PayoutStatus = "pending_transfer" | "paid" | "failed";
+type PayoutStatus = "pending_transfer" | "processing" | "paid" | "failed";
 
 /* ─── status styles ──────────────────────────────────────── */
 const STATUS: Record<PayoutStatus, { pill: string; dot: string; label: string }> = {
   pending_transfer: { pill: "bg-tertiary-fixed text-on-tertiary-fixed",           dot: "bg-on-tertiary-container", label: "Pending"  },
+  processing:       { pill: "bg-blue-100 text-blue-700",                          dot: "bg-blue-600",              label: "Processing" },
   paid:             { pill: "bg-secondary-container text-on-secondary-container", dot: "bg-on-primary-container",  label: "Paid"     },
   failed:           { pill: "bg-error-container text-on-error-container",         dot: "bg-error",                 label: "Failed"   },
 };
@@ -250,7 +251,7 @@ export default function AdminPayouts() {
     .sort(sortHistoryDesc);
 
   const pendingRows = withdrawals
-    .filter(w => w.status === "pending_transfer")
+    .filter(w => w.status === "pending_transfer" || w.status === "processing")
     .filter(w => matchesWithdrawalSearch(w, search))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -259,7 +260,7 @@ export default function AdminPayouts() {
   const historyPaginated = historyRows.slice((historyPage - 1) * PAGE_SIZE, historyPage * PAGE_SIZE);
   const pendingPaginated = pendingRows.slice((pendingPage - 1) * PAGE_SIZE, pendingPage * PAGE_SIZE);
 
-  const pendingItems  = withdrawals.filter(w => w.status === "pending_transfer");
+  const pendingItems  = withdrawals.filter(w => w.status === "pending_transfer" || w.status === "processing");
   const pendingCount  = pendingItems.length;
   const pendingAmount = pendingItems.reduce((s, w) => s + (w.amountCents ?? 0), 0);
   const failedCount   = withdrawals.filter(w => w.status === "failed").length;
@@ -580,6 +581,7 @@ export default function AdminPayouts() {
                         const isPaying =
                           markPaidMutation.isPending &&
                           markPaidMutation.variables?.id === wr._id;
+                        const isProcessing = wr.status === "processing";
                         const bank = bankDetailsForPayout(wr);
                         return (
                           <tr key={wr._id} className="hover:bg-surface-container/30 transition-colors">
@@ -623,16 +625,16 @@ export default function AdminPayouts() {
                                 <button
                                   type="button"
                                   onClick={() => setPaidTarget(wr)}
-                                  disabled={isPaying || markPaidMutation.isPending}
+                                  disabled={isProcessing || isPaying || markPaidMutation.isPending}
                                   className="bg-primary text-white px-3.5 py-1.5 rounded-xl text-[10px] font-bold hover:opacity-90 transition-opacity shadow-sm disabled:opacity-60 flex items-center gap-1.5"
                                 >
                                   {isPaying && <Loader2 className="h-3 w-3 animate-spin" />}
-                                  Mark Paid
+                                  {isProcessing ? "Processing" : "Mark Paid"}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setFailTarget(wr)}
-                                  disabled={markPaidMutation.isPending}
+                                  disabled={isProcessing || markPaidMutation.isPending}
                                   className="border border-error/25 text-error px-3 py-1.5 rounded-xl text-[10px] font-bold hover:bg-error/5 transition-colors disabled:opacity-60"
                                 >
                                   Mark Failed

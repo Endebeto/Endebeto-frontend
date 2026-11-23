@@ -24,6 +24,7 @@ const PAGE_SIZE = 10;
 /* ─── status config ──────────────────────────────────── */
 const statusCfg: Record<string, { label: string; cls: string }> = {
   pending_transfer: { label: "Pending",  cls: "bg-[#ffddb8]/60 text-[#653e00] dark:bg-amber-900/40 dark:text-amber-300" },
+  processing:       { label: "Processing", cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" },
   paid:             { label: "Paid",     cls: "bg-secondary-container text-on-secondary-fixed-variant dark:bg-emerald-900/40 dark:text-emerald-300" },
   failed:           { label: "Failed",   cls: "bg-error-container text-on-error-container dark:bg-red-900/40 dark:text-red-300" },
   canceled:         { label: "Cancelled",cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" },
@@ -524,7 +525,7 @@ export default function HostWallet() {
     );
   };
 
-  const pendingWithdrawals = withdrawals.filter((w) => w.status === "pending_transfer");
+  const pendingWithdrawals = withdrawals.filter((w) => w.status === "pending_transfer" || w.status === "processing");
   const historyWithdrawals = withdrawals.filter(
     (w) => w.status === "paid" || w.status === "failed" || w.status === "canceled"
   );

@@ -7,6 +7,7 @@ import {
 import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
 import { adminService, type AdminExperience } from "@/services/admin.service";
+import { formatExperienceDateTime } from "@/lib/timezone";
 
 type ExpStatus = "pending" | "approved" | "rejected" | "draft";
 type TabKey = "live" | "suspended" | "draft";
@@ -256,7 +257,7 @@ function DetailPanel({
             {
               icon: Calendar,
               label: "Next date",
-              value: exp.nextOccurrenceAt ? new Date(exp.nextOccurrenceAt).toLocaleDateString() : "Not set",
+              value: exp.nextOccurrenceAt ? formatExperienceDateTime(exp.nextOccurrenceAt, { month: "short", day: "numeric", year: "numeric" }) : "Not set",
             },
             { icon: Calendar, label: "Created", value: new Date(exp.createdAt).toLocaleDateString() },
           ].map((s) => (

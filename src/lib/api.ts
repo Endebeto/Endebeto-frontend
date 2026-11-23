@@ -17,6 +17,7 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  config.headers["X-Requested-With"] = "XMLHttpRequest";
   if (config.data instanceof FormData) {
     delete config.headers["Content-Type"];
   }
