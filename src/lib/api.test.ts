@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from "vitest";
 import { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import api from "./api";
 
@@ -33,12 +33,12 @@ function install(handler: Handler) {
 }
 
 describe("api interceptors", () => {
-  let expired: ReturnType<typeof vi.fn>;
+  let expired: Mock<() => void>;
   const onExpired = () => expired();
 
   beforeEach(() => {
     calls = [];
-    expired = vi.fn();
+    expired = vi.fn<() => void>();
     localStorage.setItem("user", JSON.stringify({ _id: "u1" }));
     window.addEventListener("auth:expired", onExpired);
   });

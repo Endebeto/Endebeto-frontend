@@ -8,6 +8,8 @@
 
 [build.environment]
   NPM_FLAGS = "--include=dev"
+  # Vite 8 needs Node >= 20.19 / 22.12; Vitest 5 needs >= 22.12.
+  NODE_VERSION = "22"
 
 # Synthetic HTML + Open Graph for link-preview crawlers (see netlify/edge-functions/experience-link-preview.ts).
 # Path is declared once here only (avoid duplicating export const config in the function body).
