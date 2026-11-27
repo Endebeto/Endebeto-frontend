@@ -563,7 +563,10 @@ export default function HostCreateExperience() {
       galleryFiles.forEach((f) => fd.append("images", f));
 
       const res = await experiencesService.create(fd);
-      const createdExp = (res.data?.data as any)?.data || (res.data as any)?.data || res.data;
+      // Tolerate { data: { data: exp } }, { data: exp } or a bare exp.
+      type MaybeWrappedExp = { _id?: string; id?: string; data?: MaybeWrappedExp };
+      const body = res.data as unknown as MaybeWrappedExp;
+      const createdExp = body?.data?.data || body?.data || body;
       const expId = createdExp?._id || createdExp?.id;
 
       if (expId) {
@@ -609,7 +612,8 @@ export default function HostCreateExperience() {
       ]);
       setSuccess(true);
     } catch (err: unknown) {
-      const backendMsg = (err as any)?.response?.data?.message;
+      const backendMsg = (err as { response?: { data?: { message?: string } } })?.response
+        ?.data?.message;
       toast.error(
         backendMsg ||
         getFriendlyErrorMessage(

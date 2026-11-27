@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { getFriendlyErrorMessage } from "@/lib/errors";
 import {
   Calendar,
   Clock,
@@ -119,8 +120,8 @@ export function HostScheduleManagerModal({
       queryClient.invalidateQueries({ queryKey: ["experience-slots", expId] });
       queryClient.invalidateQueries({ queryKey: ["host", "experiences"] });
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to update session");
+    onError: (err: unknown) => {
+      toast.error(getFriendlyErrorMessage(err, "Failed to update session"));
     },
   });
 
@@ -161,8 +162,8 @@ export function HostScheduleManagerModal({
       queryClient.invalidateQueries({ queryKey: ["experience-slots", expId] });
       queryClient.invalidateQueries({ queryKey: ["host", "experiences"] });
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to create slot");
+    onError: (err: unknown) => {
+      toast.error(getFriendlyErrorMessage(err, "Failed to create slot"));
     },
   });
 
@@ -176,9 +177,9 @@ export function HostScheduleManagerModal({
       queryClient.invalidateQueries({ queryKey: ["experience-slots", expId] });
       queryClient.invalidateQueries({ queryKey: ["host", "experiences"] });
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       toast.error(
-        err?.response?.data?.message || "Failed to generate recurring slots",
+        getFriendlyErrorMessage(err, "Failed to generate recurring slots"),
       );
     },
   });
@@ -194,8 +195,8 @@ export function HostScheduleManagerModal({
       queryClient.invalidateQueries({ queryKey: ["experience-slots", expId] });
       queryClient.invalidateQueries({ queryKey: ["host", "experiences"] });
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to remove slot");
+    onError: (err: unknown) => {
+      toast.error(getFriendlyErrorMessage(err, "Failed to remove slot"));
     },
   });
 

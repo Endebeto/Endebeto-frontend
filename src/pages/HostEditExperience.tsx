@@ -360,7 +360,8 @@ export default function HostEditExperience() {
       ]);
       setSuccess(true);
     } catch (err: unknown) {
-      const backendMsg = (err as any)?.response?.data?.message;
+      const backendMsg = (err as { response?: { data?: { message?: string } } })?.response
+        ?.data?.message;
       toast.error(
         backendMsg ||
         getFriendlyErrorMessage(

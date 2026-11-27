@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import api from "@/lib/api";
 import { slotsService } from "./slots.service";
 
@@ -17,7 +17,7 @@ describe("slotsService", () => {
   });
 
   it("calls GET /experiences/:id/slots with query params", async () => {
-    (api.get as any).mockResolvedValueOnce({
+    (api.get as Mock).mockResolvedValueOnce({
       data: {
         status: "success",
         results: 1,
@@ -47,7 +47,7 @@ describe("slotsService", () => {
   });
 
   it("calls POST /experiences/:id/slots for single slot", async () => {
-    (api.post as any).mockResolvedValueOnce({
+    (api.post as Mock).mockResolvedValueOnce({
       data: {
         status: "success",
         data: {
@@ -74,7 +74,7 @@ describe("slotsService", () => {
   });
 
   it("calls POST /experiences/:id/slots for recurring slots rule", async () => {
-    (api.post as any).mockResolvedValueOnce({
+    (api.post as Mock).mockResolvedValueOnce({
       data: {
         status: "success",
         results: 4,
@@ -108,7 +108,7 @@ describe("slotsService", () => {
   });
 
   it("calls PATCH /experiences/:id/slots/:slotId", async () => {
-    (api.patch as any).mockResolvedValueOnce({
+    (api.patch as Mock).mockResolvedValueOnce({
       data: {
         status: "success",
         data: { slot: { _id: "slot123", maxGuests: 10 } },
@@ -127,7 +127,7 @@ describe("slotsService", () => {
   });
 
   it("calls DELETE /experiences/:id/slots/:slotId", async () => {
-    (api.delete as any).mockResolvedValueOnce({
+    (api.delete as Mock).mockResolvedValueOnce({
       data: { status: "success" },
     });
 
