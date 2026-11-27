@@ -36,6 +36,10 @@ const Login = () => {
       setOauthError(
         "This account has been suspended by an administrator. Please contact support if you believe this is a mistake.",
       );
+    } else if (err === "oauth_email_unverified") {
+      setOauthError(
+        "Your Google account’s email address isn’t verified. Verify it with Google, or sign in with email and password.",
+      );
     } else if (err === "deactivated") {
       setOauthError(
         "This account was deactivated. Please contact support if you need access again.",
