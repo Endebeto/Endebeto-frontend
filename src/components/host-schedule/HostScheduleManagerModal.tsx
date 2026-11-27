@@ -26,6 +26,7 @@ import {
   type UpdateSlotPayload,
 } from "@/services/slots.service";
 import type { Experience } from "@/services/experiences.service";
+import { localDateInputInDays, toLocalDateInput, toLocalDateTimeInput } from "@/lib/localDate";
 
 interface HostScheduleManagerModalProps {
   experience: Experience;
@@ -80,14 +81,10 @@ export function HostScheduleManagerModal({
   const [recurringDays, setRecurringDays] = useState<number[]>([0, 6]); // Default weekends
   const [recurringTime, setRecurringTime] = useState("10:00");
   const [recurringStartDate, setRecurringStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
+    return localDateInputInDays(1);
   });
   const [recurringEndDate, setRecurringEndDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 28); // 4 weeks ahead
-    return d.toISOString().slice(0, 10);
+    return localDateInputInDays(28); // 4 weeks ahead
   });
   const [recurringMaxGuests, setRecurringMaxGuests] = useState(
     experience.maxGuests || 4,
@@ -610,7 +607,7 @@ export function HostScheduleManagerModal({
                   type="datetime-local"
                   required
                   value={singleDate}
-                  min={new Date().toISOString().slice(0, 16)}
+                  min={toLocalDateTimeInput()}
                   onChange={(e) => setSingleDate(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest text-sm focus:border-primary focus:outline-none"
                 />
@@ -767,7 +764,7 @@ export function HostScheduleManagerModal({
                     type="date"
                     required
                     value={recurringStartDate}
-                    min={new Date().toISOString().slice(0, 10)}
+                    min={toLocalDateInput()}
                     onChange={(e) => setRecurringStartDate(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest text-sm focus:border-primary focus:outline-none"
                   />
@@ -781,7 +778,7 @@ export function HostScheduleManagerModal({
                     type="date"
                     required
                     value={recurringEndDate}
-                    min={recurringStartDate || new Date().toISOString().slice(0, 10)}
+                    min={recurringStartDate || toLocalDateInput()}
                     onChange={(e) => setRecurringEndDate(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest text-sm focus:border-primary focus:outline-none"
                   />

@@ -38,6 +38,7 @@ import { getFriendlyErrorMessage } from "@/lib/errors";
 import { HOST_EXPERIENCE_CATEGORY_OPTIONS } from "@/lib/hostExperienceCategories";
 import { EXPERIENCE_DESCRIPTION_FORMAT_HINT } from "@/components/ExperienceDescriptionMarkdown";
 import { HostExperienceDescriptionToolbar } from "@/components/HostExperienceDescriptionToolbar";
+import { localDateInputInDays } from "@/lib/localDate";
 
 /* ─── types ──────────────────────────────────────────── */
 interface FormData {
@@ -178,14 +179,10 @@ export default function HostCreateExperience() {
   const [recurringDays, setRecurringDays] = useState<number[]>([0, 6]); // Default weekends: Sunday (0) & Saturday (6)
   const [recurringTime, setRecurringTime] = useState("10:00");
   const [recurringStartDate, setRecurringStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1); // Tomorrow
-    return d.toISOString().slice(0, 10);
+    return localDateInputInDays(1); // Tomorrow
   });
   const [recurringEndDate, setRecurringEndDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 28); // 4 weeks ahead
-    return d.toISOString().slice(0, 10);
+    return localDateInputInDays(28); // 4 weeks ahead
   });
   const [createdExperienceId, setCreatedExperienceId] = useState<string | null>(null);
   const [generatedSessionsCount, setGeneratedSessionsCount] = useState<number>(0);
@@ -1079,7 +1076,7 @@ export default function HostCreateExperience() {
                         </label>
                         <input
                           type="date"
-                          min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
+                          min={localDateInputInDays(1)}
                           value={recurringStartDate}
                           onChange={(e) => {
                             setRecurringStartDate(e.target.value);

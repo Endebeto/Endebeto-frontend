@@ -8,6 +8,7 @@ import {
   type WithdrawalRequest,
 } from "@/services/wallet.service";
 import { PAGE_SIZE } from "@/components/host-wallet/walletFormatters";
+import { toLocalDateInput } from "@/lib/localDate";
 
 export type HostWalletTab = "earnings" | "withdrawals";
 
@@ -162,7 +163,7 @@ export function useHostWallet() {
     link.setAttribute("href", encodedUri);
     link.setAttribute(
       "download",
-      `Endebeto_Host_Statement_${new Date().toISOString().slice(0, 10)}.csv`,
+      `Endebeto_Host_Statement_${toLocalDateInput()}.csv`,
     );
     document.body.appendChild(link);
     link.click();
