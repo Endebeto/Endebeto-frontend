@@ -25,6 +25,17 @@ export interface RecurringSlotRule {
   timeOfDay: string; // "HH:MM" 24h
   startDate: string; // "YYYY-MM-DD"
   endDate: string; // "YYYY-MM-DD"
+  /** IANA zone `timeOfDay` is in. Defaults to the host's browser zone. */
+  timeZone?: string;
+}
+
+/** The host's browser time zone — the same zone single-slot times are entered in. */
+export function browserTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export interface CreateSingleSlotPayload {
@@ -99,7 +110,13 @@ export const slotsService = {
     experienceId: string,
     payload: CreateRecurringSlotsPayload
   ) =>
-    api.post<BatchSlotsResponse>(`/experiences/${experienceId}/slots`, payload),
+    api.post<BatchSlotsResponse>(`/experiences/${experienceId}/slots`, {
+      ...payload,
+      recurring: {
+        ...payload.recurring,
+        timeZone: payload.recurring.timeZone ?? browserTimeZone(),
+      },
+    }),
 
   updateSlot: (
     experienceId: string,

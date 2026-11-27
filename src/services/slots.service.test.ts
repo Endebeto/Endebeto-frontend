@@ -96,10 +96,13 @@ describe("slotsService", () => {
     };
     const res = await slotsService.createRecurringSlots("exp123", payload);
 
-    expect(api.post).toHaveBeenCalledWith(
-      "/experiences/exp123/slots",
-      payload,
-    );
+    expect(api.post).toHaveBeenCalledWith("/experiences/exp123/slots", {
+      ...payload,
+      recurring: {
+        ...payload.recurring,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+    });
     expect(res.data.results).toBe(4);
     expect(res.data.data.recurringRuleId).toBe("rec-test-123");
   });
