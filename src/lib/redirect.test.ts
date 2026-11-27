@@ -13,6 +13,8 @@ describe("redirect helpers", () => {
     expect(isSafeInternalPath("/host/wallet?x=1")).toBe(true);
     expect(isSafeInternalPath("/" + String.fromCharCode(92) + "evil.com")).toBe(false);
     expect(isSafeInternalPath("/" + String.fromCharCode(92) + "evil.com")).toBe(false);
+    expect(isSafeInternalPath("/\t/evil.com")).toBe(false);
+    expect(isSafeInternalPath("/\n/evil.com")).toBe(false);
     expect(isSafeInternalPath("https://evil.com")).toBe(false);
     expect(isSafeInternalPath("javascript:alert(1)")).toBe(false);
     expect(isSafeInternalPath(undefined)).toBe(false);

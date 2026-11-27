@@ -1,13 +1,17 @@
 const OAUTH_REDIRECT_KEY = "auth:postLoginRedirect";
 
-/** Only allow same-origin absolute paths ("/x"), never "//host" or "/\host". */
+/**
+ * Only allow same-origin absolute paths ("/x"), never "//host" or "/\host".
+ * Tabs and newlines are rejected too: browsers strip them from URLs, so
+ * "/<TAB>/evil.com" would otherwise become "//evil.com".
+ */
 export function isSafeInternalPath(p: unknown): p is string {
   return (
     typeof p === "string" &&
     p.startsWith("/") &&
     !p.startsWith("//") &&
     !p.startsWith("/\\") &&
-    !/[\r\n]/.test(p)
+    !/[\t\r\n]/.test(p)
   );
 }
 
