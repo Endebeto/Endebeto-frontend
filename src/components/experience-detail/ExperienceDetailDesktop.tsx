@@ -186,6 +186,7 @@ export function ExperienceDetailDesktop({ vm }: { vm: ExperienceDetailVM }) {
               </div>
             </div>
             <ContactHostButton
+              experienceId={exp._id}
               host={exp.host}
               experienceTitle={exp.title}
               booked={hasUpcomingBookingHere}

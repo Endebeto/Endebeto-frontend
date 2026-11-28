@@ -268,4 +268,18 @@ export const experiencesService = {
     api.get<ReviewListResponse>(`/experiences/${experienceId}/reviews`, {
       params: { sort: "-createdAt", ...params },
     }),
+
+  /** P1-6: host email/phone — only for guests with a paid booking. */
+  getHostContact: (experienceId: string) =>
+    api.get<{
+      status: string;
+      data: { host: { name?: string; email?: string; phone?: string | null } };
+    }>(`/experiences/${experienceId}/host-contact`),
+
+  /** P1-6: message the host through Endebeto (they reply by email). */
+  contactHost: (experienceId: string, message: string) =>
+    api.post<{ status: string; message: string }>(
+      `/experiences/${experienceId}/contact-host`,
+      { message },
+    ),
 };
