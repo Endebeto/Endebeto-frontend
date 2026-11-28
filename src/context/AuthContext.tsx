@@ -116,6 +116,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("auth:expired", onSessionEnded);
   }, []);
 
+  // P2-20: follow login / logout / account switches made in other tabs.
+  // `storage` only fires in the tabs that did NOT make the change.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== "user" && e.key !== null) return; // null = storage cleared
+      queryClient.clear();
+      if (!e.newValue) {
+        setUser(null);
+        setServerConfirmed(false);
+        return;
+      }
+      try {
+        setUser(JSON.parse(e.newValue) as User);
+        void refreshUser();
+      } catch {
+        setUser(null);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [refreshUser]);
+
   const login = async (email: string, password: string) => {
     const res = await authService.login({ email, password });
     const { data } = res.data;
