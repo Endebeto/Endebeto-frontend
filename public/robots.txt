@@ -1,14 +1,15 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
+# P2-23: public pages are crawlable; account, host and admin areas are not.
+# (Disallow stops crawling, not access — those routes are still auth-gated.)
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /host/
+Disallow: /host-dashboard
+Disallow: /profile
+Disallow: /my-bookings
+Disallow: /oauth-success
+Disallow: /reset-password/
+Disallow: /verify-email/
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
