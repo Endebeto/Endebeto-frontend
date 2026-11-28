@@ -36,7 +36,7 @@ const Signup = () => {
     try {
       await signup(name, email, password, confirm);
       setSubmitted(true);
-      toast.success("Account created! Please check your email to verify.");
+      toast.success("Check your email to finish signing up.");
     } catch (err: unknown) {
       toast.error(
         getFriendlyErrorMessage(err, "Registration failed. Please try again."),
@@ -58,8 +58,9 @@ const Signup = () => {
             Check your email
           </h1>
           <p className="text-on-surface-variant text-sm leading-relaxed">
-            We've sent a verification link to your email address. Click it to
-            activate your account and start exploring.
+            We've sent an email to that address. Follow the link in it to
+            finish signing up. Already have an account? The email will help
+            you log in or reset your password.
           </p>
           <Link
             to="/login"
