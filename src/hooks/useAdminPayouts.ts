@@ -112,7 +112,8 @@ export function useAdminPayouts() {
       paymentReceiptUrl,
     }: {
       id: string;
-      paymentReceiptUrl?: string;
+      /** Required by the API; markWithdrawalPaid trims it. */
+      paymentReceiptUrl: string;
     }) => adminService.markWithdrawalPaid(id, paymentReceiptUrl),
     onSuccess: () => {
       toast.success("Withdrawal marked as paid");

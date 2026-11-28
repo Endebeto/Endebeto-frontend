@@ -208,7 +208,7 @@ export function DashboardChartsGrid({
                       fill="#fff"
                       fontSize={12}
                       fontWeight={700}
-                      formatter={(v: number) => (v > 0 ? String(v) : "")}
+                      formatter={(v) => (typeof v === "number" && v > 0 ? String(v) : "")}
                     />
                   </Pie>
                   <Legend

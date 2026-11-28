@@ -56,8 +56,8 @@ export interface ExperienceDetailVM {
   setReviewPage: Dispatch<SetStateAction<number>>;
   totalReviews: number;
   hasMore: boolean;
-  mobileMapMountRef: RefObject<HTMLDivElement | null>;
-  desktopMapMountRef: RefObject<HTMLDivElement | null>;
+  mobileMapMountRef: RefObject<HTMLDivElement>;
+  desktopMapMountRef: RefObject<HTMLDivElement>;
   loadMapEmbeds: boolean;
   mapsSearchHref: string;
   unbookedApproxMapImageUrl: string | null;

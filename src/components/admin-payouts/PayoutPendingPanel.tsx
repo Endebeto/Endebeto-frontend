@@ -50,7 +50,7 @@ export function PayoutPendingPanel({
   markPaidMutation: UseMutationResult<
     unknown,
     Error,
-    { id: string; paymentReceiptUrl?: string }
+    { id: string; paymentReceiptUrl: string }
   >;
 }) {
   return (
