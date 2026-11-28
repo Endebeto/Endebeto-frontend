@@ -83,6 +83,7 @@ export default function HostDashboard() {
     queryKey: hostQueryKeys.dashboard(),
     queryFn: () =>
       bookingsService.getHostBookings({ dashboard: true, recentLimit: 5 }),
+    staleTime: 30_000, // P2-27: money/booking data
   });
 
   const { data: expData, isLoading: eLoading } = useQuery({

@@ -683,6 +683,8 @@ export default function MyBookings() {
       const pages = lastPage.pages ?? 1;
       return p < pages ? p + 1 : undefined;
     },
+    // P2-27: booking state changes (payment, cancellation) — not 5 min stale.
+    staleTime: 30_000,
   });
 
   const bookings = data?.pages.flatMap((p) => p.data) ?? [];

@@ -64,6 +64,7 @@ export function useProfileContent(
       return res.data;
     },
     enabled: activeTab === "bookings",
+    staleTime: 30_000, // P2-27
   });
 
   const previewList = bookingsPreview?.data ?? [];
