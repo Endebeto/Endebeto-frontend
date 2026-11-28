@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useId } from "react";
 import { createPortal } from "react-dom";
 import { Layers, Loader2 } from "lucide-react";
 import type { AdminUser } from "@/services/admin.service";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 export function SuspendHostListingsDialog({
   user,
@@ -17,17 +18,25 @@ export function SuspendHostListingsDialog({
   const [mounted, setMounted] = useState(false);
   const [reason, setReason] = useState("");
   useEffect(() => setMounted(true), []);
+  const titleId = useId();
+  const dialogRef = useModalA11y<HTMLDivElement>({ onClose, closeDisabled: Boolean(loading), active: mounted });
   if (!mounted) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#2d3133] rounded-2xl w-full max-w-md p-6 shadow-2xl pointer-events-auto">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="bg-white dark:bg-[#2d3133] rounded-2xl w-full max-w-md p-6 shadow-2xl pointer-events-auto outline-none">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
             <Layers className="h-5 w-5 text-amber-700 dark:text-amber-400" />
           </div>
           <div>
-            <h3 className="font-headline font-extrabold text-lg text-primary">
+            <h3 id={titleId} className="font-headline font-extrabold text-lg text-primary">
               Suspend host listings
             </h3>
             <p className="text-xs text-on-surface-variant mt-0.5 truncate">

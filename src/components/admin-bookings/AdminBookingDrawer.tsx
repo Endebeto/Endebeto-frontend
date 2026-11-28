@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useId } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import {
@@ -22,6 +22,7 @@ import {
   fmtCurrency,
   formatBookingDate,
 } from "./adminBookingsUtils";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 interface AdminBookingDrawerProps {
   booking: AdminPlatformBooking;
@@ -39,13 +40,10 @@ export function AdminBookingDrawer({
 
   useEffect(() => {
     setMounted(true);
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, []);
 
+  const titleId = useId();
+  const dialogRef = useModalA11y<HTMLElement>({ onClose, active: mounted });
   if (!mounted) return null;
 
   const copyToClipboard = (text: string, key: string) => {
@@ -76,14 +74,20 @@ export function AdminBookingDrawer({
       />
 
       {/* Drawer */}
-      <aside className="w-full max-w-lg h-full ml-auto relative bg-white dark:bg-[#2d3133] shadow-2xl flex flex-col overflow-y-auto">
+      <aside
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-full max-w-lg h-full ml-auto relative bg-white dark:bg-[#2d3133] shadow-2xl flex flex-col overflow-y-auto outline-none">
         {/* Drawer Header */}
         <div className="flex items-center justify-between p-5 border-b border-outline-variant/10 sticky top-0 bg-white/95 dark:bg-[#2d3133]/95 backdrop-blur-md z-10">
           <div>
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
               Booking Overview
             </span>
-            <h3 className="font-headline font-extrabold text-lg text-primary truncate max-w-[320px]">
+            <h3 id={titleId} className="font-headline font-extrabold text-lg text-primary truncate max-w-[320px]">
               {booking.txRef || booking._id}
             </h3>
           </div>

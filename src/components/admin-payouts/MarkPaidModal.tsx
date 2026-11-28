@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useId } from "react";
 import { X, Loader2, Eye, EyeOff } from "lucide-react";
 import type { AdminWithdrawal } from "@/services/admin.service";
 import {
@@ -6,6 +6,7 @@ import {
   fmtETB,
   isValidHttpUrl,
 } from "./payoutUtils";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 export function MarkPaidModal({
   wr,
@@ -28,16 +29,25 @@ export function MarkPaidModal({
   const bank = bankDetailsForPayout(wr);
   const receiptOk = isValidHttpUrl(receiptUrl);
 
+  const titleId = useId();
+  const dialogRef = useModalA11y<HTMLDivElement>({ onClose, closeDisabled: Boolean(loading) });
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden border border-outline-variant/20 dark:border-zinc-700">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden border border-outline-variant/20 dark:border-zinc-700 outline-none">
         <div className="shrink-0 flex items-start justify-between px-6 pt-6 pb-2">
-          <h3 className="font-headline font-extrabold text-lg text-primary dark:text-emerald-400">
+          <h3 id={titleId} className="font-headline font-extrabold text-lg text-primary dark:text-emerald-400">
             Mark as paid
           </h3>
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close"
             className="p-1 rounded-full hover:bg-surface-container-low dark:hover:bg-zinc-800 text-on-surface-variant"
           >
             <X className="h-4 w-4" />

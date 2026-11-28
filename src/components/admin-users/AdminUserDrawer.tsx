@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useId } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +22,7 @@ import {
 } from "@/components/admin-users/adminUsersUtils";
 import { UserAvatar } from "@/components/UserAvatar";
 import { adminService, type AdminUser } from "@/services/admin.service";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 export function AdminUserDrawer({
   user,
@@ -46,6 +47,8 @@ export function AdminUserDrawer({
     enabled: Boolean(user._id),
   });
 
+  const titleId = useId();
+  const dialogRef = useModalA11y<HTMLElement>({ onClose, active: mounted });
   if (!mounted) return null;
 
   return createPortal(
@@ -56,14 +59,21 @@ export function AdminUserDrawer({
         aria-label="Close user details"
         onClick={onClose}
       />
-      <aside className="w-96 h-full ml-auto relative bg-white dark:bg-[#2d3133] shadow-2xl flex flex-col overflow-y-auto">
+      <aside
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-96 h-full ml-auto relative bg-white dark:bg-[#2d3133] shadow-2xl flex flex-col overflow-y-auto outline-none">
         <div className="flex items-center justify-between p-5 border-b border-outline-variant/10">
-          <h3 className="font-headline font-extrabold text-base text-primary">
+          <h3 id={titleId} className="font-headline font-extrabold text-base text-primary">
             User Details
           </h3>
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close"
             className="p-1.5 rounded-full hover:bg-surface-container text-on-surface-variant transition-colors"
           >
             <X className="h-4 w-4" />

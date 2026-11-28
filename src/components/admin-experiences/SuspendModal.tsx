@@ -1,6 +1,7 @@
 import { Ban, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useId } from "react";
 import type { AdminExperience } from "@/services/admin.service";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 export function SuspendModal({
   exp,
@@ -15,15 +16,23 @@ export function SuspendModal({
 }) {
   const [reason, setReason] = useState("");
 
+  const titleId = useId();
+  const dialogRef = useModalA11y<HTMLDivElement>({ onClose, closeDisabled: isPending });
   return (
     <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/15 dark:border-zinc-700 max-w-md w-full p-6">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-outline-variant/15 dark:border-zinc-700 max-w-md w-full p-6 outline-none">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
             <Ban className="h-5 w-5 text-amber-700 dark:text-amber-400" />
           </div>
           <div>
-            <h3 className="font-headline font-bold text-on-surface dark:text-white">
+            <h3 id={titleId} className="font-headline font-bold text-on-surface dark:text-white">
               Suspend listing
             </h3>
             <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-0.5 line-clamp-1">
