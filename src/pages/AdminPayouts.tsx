@@ -5,6 +5,7 @@ import { PayoutFooterCards } from "@/components/admin-payouts/PayoutFooterCards"
 import { PayoutHistoryPanel } from "@/components/admin-payouts/PayoutHistoryPanel";
 import { PayoutPendingPanel } from "@/components/admin-payouts/PayoutPendingPanel";
 import { PayoutSummaryCards } from "@/components/admin-payouts/PayoutSummaryCards";
+import { RefundsDuePanel } from "@/components/admin-payouts/RefundsDuePanel";
 import { useAdminPayouts } from "@/hooks/useAdminPayouts";
 import { useSyncAdminHeader } from "@/hooks/useSyncAdminHeader";
 
@@ -113,6 +114,8 @@ export default function AdminPayouts() {
             revealingId={revealingId}
             onReveal={handleReveal}
           />
+
+          <RefundsDuePanel />
 
           <PayoutFooterCards />
         </div>

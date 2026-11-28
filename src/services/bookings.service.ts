@@ -41,6 +41,10 @@ export interface Booking {
       };
   status: "upcoming" | "completed" | "paymentExpired" | "cancelled";
   paid: boolean;
+  /** P2-4 cancellation details. */
+  cancelledBy?: "guest" | "host" | "admin";
+  cancellationReason?: string;
+  refundStatus?: "pending" | "refunded";
   attendanceStatus?: "unmarked" | "checked_in" | "no_show";
   checkedInAt?: string;
   /** From GET /bookings/me: whether this user already left a review for this experience. */
@@ -127,6 +131,13 @@ export const bookingsService = {
   cancelBooking: (bookingId: string) =>
     api.patch<{ status: string; message: string; data: { booking: Booking } }>(
       `/bookings/${bookingId}/cancel`,
+    ),
+
+  /** P2-4: host cancels a paid booking; the guest is refunded in full. */
+  hostCancelBooking: (bookingId: string, reason: string) =>
+    api.patch<{ status: string; message: string; data: { booking: Booking } }>(
+      `/bookings/${bookingId}/host-cancel`,
+      { reason },
     ),
 
   updateAttendance: (

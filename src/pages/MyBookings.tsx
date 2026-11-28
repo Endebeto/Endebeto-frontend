@@ -465,8 +465,7 @@ function CancelBookingDialog({
                 <XCircle className="h-4 w-4 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
                   <strong>This can't be undone.</strong> You won't be refunded.
-                  The host is paid for this booking. Your spot may be offered to
-                  someone else.
+                  Your spot will be offered to other guests.
                 </p>
               </div>
             </div>
@@ -613,6 +612,15 @@ function BookingCard({
               >
                 {booking.status}
               </span>
+              {booking.status === "cancelled" &&
+                (booking.cancelledBy === "host" || booking.refundStatus) && (
+                  <span className="text-[10px] font-semibold text-on-surface-variant dark:text-zinc-400 text-right">
+                    {booking.cancelledBy === "host" ? "Cancelled by host · " : ""}
+                    {booking.refundStatus === "refunded"
+                      ? "Refunded"
+                      : "Full refund on its way"}
+                  </span>
+                )}
               <span className="text-xs font-bold text-primary dark:text-green-400">
                 ETB{" "}
                 {typeof booking.price === "number"

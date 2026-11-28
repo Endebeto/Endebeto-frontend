@@ -400,6 +400,27 @@ export interface AdminWithdrawal {
 }
 
 /* ─── API calls ──────────────────────────────────────────── */
+/** Payment the gateway confirmed that needs a refund or manual fix (P2-4). */
+export interface PaymentIncident {
+  _id: string;
+  txRef: string;
+  reason:
+    | "sold_out"
+    | "not_scheduled"
+    | "amount_mismatch"
+    | "experience_unavailable"
+    | "host_cancelled"
+    | "other";
+  message?: string;
+  paidAmount?: number;
+  quantity?: number;
+  status: "open" | "refunded" | "booking_created" | "dismissed";
+  createdAt: string;
+  user?: { _id: string; name?: string; email?: string; phone?: string };
+  experience?: { _id: string; title?: string };
+  booking?: string;
+}
+
 export const adminService = {
   /* Stats */
   getStats: (params?: { compare?: CompareWindow }) =>
@@ -623,6 +644,23 @@ export const adminService = {
       };
       data: { withdrawals: AdminWithdrawal[] };
     }>("/admin/payouts/withdrawals", { params }),
+  listPaymentIncidents: (params: { status?: string; page?: number; limit?: number } = {}) =>
+    api.get<{
+      status: string;
+      total: number;
+      openCount: number;
+      page: number;
+      pages: number;
+      data: { incidents: PaymentIncident[] };
+    }>("/admin/payment-incidents", { params }),
+
+  resolvePaymentIncident: (
+    id: string,
+    resolution: "refunded" | "booking_created" | "dismissed",
+    note: string,
+  ) =>
+    api.patch(`/admin/payment-incidents/${id}/resolve`, { resolution, note }),
+
   markWithdrawalPaid: (id: string, paymentReceiptUrl: string) =>
     api.post(`/admin/payouts/withdrawals/${id}/mark-paid`, {
       paymentReceiptUrl: paymentReceiptUrl.trim(),

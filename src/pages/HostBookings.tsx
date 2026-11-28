@@ -4,6 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { hostQueryKeys } from "@/lib/hostQueryKeys";
 import {
+  HostCancelDialog,
+  canHostCancel,
+} from "@/components/host-bookings/HostCancelDialog";
+import {
   Search,
   Mail,
   Users,
@@ -271,6 +275,7 @@ function GuestRow({
   idx,
   onAttendanceChange,
   onViewInvoice,
+  onCancelRefund,
 }: {
   booking: Booking;
   idx: number;
@@ -279,6 +284,7 @@ function GuestRow({
     status: "unmarked" | "checked_in" | "no_show",
   ) => void;
   onViewInvoice: (bookingId: string) => void;
+  onCancelRefund: (booking: Booking) => void;
 }) {
   const user = booking.user;
   const exp =
@@ -440,6 +446,15 @@ function GuestRow({
               <FileText className="h-3.5 w-3.5 text-primary" /> Receipt
             </button>
           )}
+          {canHostCancel(booking) && (
+            <button
+              type="button"
+              onClick={() => onCancelRefund(booking)}
+              className="text-xs font-semibold text-red-600 dark:text-red-400 hover:underline"
+            >
+              Cancel &amp; refund
+            </button>
+          )}
         </div>
       </td>
     </tr>
@@ -454,6 +469,7 @@ export default function HostBookings() {
   const [page, setPage] = useState(1);
   const [broadcastOpen, setBroadcastOpen] = useState(false);
   const [selectedInvoiceBookingId, setSelectedInvoiceBookingId] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
 
   const { data: experiencesData } = useQuery({
     queryKey: hostQueryKeys.experiences.list(),
@@ -745,6 +761,15 @@ export default function HostBookings() {
                           <FileText className="h-3.5 w-3.5 text-primary" /> Receipt
                         </button>
                       )}
+                      {canHostCancel(b) && (
+                        <button
+                          type="button"
+                          onClick={() => setCancelTarget(b)}
+                          className="text-xs font-semibold text-red-600 dark:text-red-400 hover:underline"
+                        >
+                          Cancel &amp; refund
+                        </button>
+                      )}
                       {mailto && (
                         <a
                           href={mailto}
@@ -878,6 +903,7 @@ export default function HostBookings() {
                     idx={(page - 1) * PAGE_SIZE + i}
                     onAttendanceChange={handleAttendanceChange}
                     onViewInvoice={setSelectedInvoiceBookingId}
+                    onCancelRefund={setCancelTarget}
                   />
                 ))
               )}
@@ -950,6 +976,10 @@ export default function HostBookings() {
         onClose={() => setSelectedInvoiceBookingId(null)}
         viewerContext="host"
       />
+
+      {cancelTarget && (
+        <HostCancelDialog booking={cancelTarget} onClose={() => setCancelTarget(null)} />
+      )}
     </main>
   );
 }
