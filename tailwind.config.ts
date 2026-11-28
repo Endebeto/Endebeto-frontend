@@ -14,10 +14,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        headline: ["Manrope", "system-ui", "sans-serif"],
-        display: ["Manrope", "system-ui", "sans-serif"],
-        body: ["Inter", "system-ui", "sans-serif"],
-        label: ["Inter", "system-ui", "sans-serif"],
+        headline: ["DM Sans", "system-ui", "sans-serif"],
+        display: ["DM Serif Display", "Georgia", "serif"],
+        body: ["DM Sans", "system-ui", "sans-serif"],
+        label: ["DM Sans", "system-ui", "sans-serif"],
       },
       colors: {
         border: "var(--border)",

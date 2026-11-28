@@ -25,7 +25,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <div className="auth-screen grid min-h-screen lg:grid-cols-2">
 
       {/* ── Form side ── */}
       <div className="flex flex-col justify-center px-8 py-12 lg:px-16 bg-background dark:bg-zinc-950">

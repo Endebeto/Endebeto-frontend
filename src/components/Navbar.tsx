@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import type { FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Sun, Moon, Menu, X, LogOut, LayoutDashboard, Compass } from "lucide-react";
+import { Sun, Moon, Menu, X, LogOut, LayoutDashboard, Compass, Search } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -8,16 +9,23 @@ import { UserAvatar } from "@/components/UserAvatar";
 const Navbar = () => {
   const location  = useLocation();
   const navigate  = useNavigate();
-  const isActive  = (path: string) => location.pathname === path;
+  const isActive  = (path: string) => path === "/experiences"
+    ? location.pathname.startsWith(path)
+    : location.pathname === path;
   const { theme, toggle } = useTheme();
   const { user, isAuthenticated, loading, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(location.search).get("location") ?? "");
 
   const isAdmin = user?.role === "admin";
   const isHost  = user?.hostStatus === "approved" || isAdmin;
 
   /* close menu on route change */
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+
+  useEffect(() => {
+    setSearchQuery(new URLSearchParams(location.search).get("location") ?? "");
+  }, [location.search]);
 
   /* lock body scroll when menu is open */
   useEffect(() => {
@@ -28,6 +36,14 @@ const Navbar = () => {
   const handleSignOut = () => {
     logout();
     navigate("/login");
+  };
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) params.set("location", searchQuery.trim());
+    const query = params.toString();
+    navigate(`/experiences${query ? `?${query}` : ""}`);
   };
 
   /* ── nav links change based on role ── */
@@ -41,24 +57,37 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="fixed top-0 w-full z-50 glass-nav shadow-sm shadow-emerald-900/5">
-        <div className="container flex h-12 items-center justify-between">
+      <nav className="site-navbar fixed top-0 z-50 w-full glass-nav">
+        <div className="container flex h-[76px] items-center justify-between gap-5 px-5 sm:px-8">
           {/* Logo */}
-          <Link to="/" className="font-headline text-lg font-black tracking-tighter text-primary">
-            Endebeto
+          <Link to="/" className="brand-mark" aria-label="Endebeto home">
+            <span className="brand-symbol"><Compass className="h-4 w-4" /></span>
+            <span className="font-headline text-lg font-extrabold tracking-tight">Endebeto</span>
           </Link>
 
+          <form className="nav-search-pill" role="search" onSubmit={handleSearch}>
+            <label htmlFor="navbar-experience-search" className="sr-only">Search by destination</label>
+            <input
+              id="navbar-experience-search"
+              className="nav-search-pill__input"
+              type="search"
+              placeholder="Where to?"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+            <button type="submit" className="nav-search-pill__icon" aria-label="Search experiences">
+              <Search className="h-4 w-4" />
+            </button>
+          </form>
+
           {/* Desktop nav links */}
-          <div className="hidden items-center gap-6 md:flex font-headline font-bold text-xs tracking-tight">
+          <div className="hidden items-center gap-7 md:flex font-headline font-semibold text-sm tracking-tight">
             {navLinks.map(({ to, label }) => (
               <Link
                 key={to}
                 to={to}
-                className={`transition-colors ${
-                  isActive(to)
-                    ? "text-primary border-b-2 border-accent pb-0.5"
-                    : "text-on-surface-variant hover:text-primary"
-                }`}
+                aria-current={isActive(to) ? "page" : undefined}
+                className="nav-link"
               >
                 {label}
               </Link>
@@ -70,7 +99,7 @@ const Navbar = () => {
             {/* Theme toggle */}
             <button
               onClick={toggle}
-              className="p-1.5 rounded-full text-on-surface-variant hover:bg-primary/5 transition-colors"
+              className="p-2 rounded-full text-on-surface-variant hover:bg-primary/5 transition-colors"
               aria-label="Toggle dark mode"
             >
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -102,7 +131,7 @@ const Navbar = () => {
                   /* Sign In button */
                   <Link
                     to="/login"
-                    className="px-3 py-1.5 bg-primary text-white font-headline font-bold text-xs rounded-xl hover:opacity-90 transition-opacity shadow-sm shadow-primary/20"
+                    className="rounded-full bg-primary px-4 py-2 text-sm font-headline font-bold text-primary-foreground shadow-sm shadow-primary/15 transition hover:-translate-y-0.5 hover:shadow-md"
                   >
                     Sign In
                   </Link>
@@ -113,7 +142,7 @@ const Navbar = () => {
             {/* Hamburger — mobile only */}
             <button
               onClick={() => setMenuOpen((o) => !o)}
-              className="md:hidden p-1.5 rounded-full text-on-surface-variant hover:bg-primary/5 transition-colors"
+              className="md:hidden p-2 rounded-full text-on-surface-variant hover:bg-primary/5 transition-colors"
               aria-label={menuOpen ? "Close menu" : "Open menu"}
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -134,7 +163,7 @@ const Navbar = () => {
 
         {/* Panel */}
         <div
-          className={`absolute top-12 left-0 right-0 bg-white dark:bg-zinc-900 border-b border-outline-variant/20 shadow-xl transition-transform duration-300 ${
+          className={`absolute top-16 left-0 right-0 bg-card border-b border-outline-variant/50 shadow-xl transition-transform duration-300 ${
             menuOpen ? "translate-y-0" : "-translate-y-4"
           }`}
         >

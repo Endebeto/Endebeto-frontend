@@ -138,10 +138,10 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="account-page min-h-screen bg-background">
       <Navbar />
 
-      <main className="pt-14 pb-16 max-w-6xl mx-auto">
+      <main className="mx-auto max-w-6xl px-4 pb-16 pt-20 sm:px-6">
         <div className="md:hidden">
           {mobileView === "menu" && (
             <div className="px-4 pt-5 pb-10 space-y-4">

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { MapPin, ChevronLeft, ChevronRight, Star, ChevronDown, X, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
@@ -67,7 +67,7 @@ function FilterDropdown({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-headline font-semibold transition-colors ${
+        className={`flex min-h-10 items-center gap-2 rounded-full px-4 py-2 text-xs font-headline font-semibold transition-colors ${
           active
             ? "bg-primary text-white"
             : "bg-surface-container text-on-surface-variant hover:bg-secondary-container hover:text-on-secondary-container"
@@ -78,7 +78,7 @@ function FilterDropdown({
         <ChevronDown className={`h-3 w-3 opacity-70 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-1.5 bg-white dark:bg-[#2d3133] rounded-xl shadow-lg border border-outline-variant/20 p-3 min-w-[200px] z-50">
+        <div className="absolute left-0 top-full z-50 mt-2 min-w-[220px] rounded-2xl border border-border bg-card p-4 shadow-xl">
           {children}
         </div>
       )}
@@ -103,9 +103,9 @@ function ExperienceBrowseCard({ exp }: { exp: Experience }) {
   return (
     <Link
       to={`/experiences/${exp._id}`}
-      className={`group cursor-pointer block ${soldOut ? "opacity-70" : ""}`}
+      className={`market-card group ${soldOut ? "opacity-70" : ""}`}
     >
-      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden mb-2.5 shadow-sm group-hover:shadow-lg transition-all duration-500">
+      <div className="market-card__image relative aspect-[1.08] overflow-hidden">
         <img
           src={exp.imageCover}
           alt={exp.title}
@@ -123,56 +123,44 @@ function ExperienceBrowseCard({ exp }: { exp: Experience }) {
           </div>
         )}
 
+        <span className="market-card__badge">{exp.location}</span>
+        <span className="market-card__rating"><Star className="h-3.5 w-3.5 fill-current" /> {exp.ratingsAverage ? exp.ratingsAverage.toFixed(1) : "New"}</span>
+
         {/* Top-left badge (Top Rated / Popular / few spots left) */}
         {(badge || fewLeft) && (
           <div className="absolute top-3 left-3">
             {badge && (
-              <span className="bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+            <span className="market-card__tag">
                 {badge}
               </span>
             )}
             {fewLeft && (
-              <span className="bg-amber-500 text-white px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+              <span className="market-card__tag market-card__tag--accent">
                 {exp.spotsLeft} spot{exp.spotsLeft === 1 ? "" : "s"} left
               </span>
             )}
           </div>
         )}
 
-        {/* Hover CTA */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-          {soldOut ? (
-            <button
-              disabled
-              className="w-full bg-white/60 text-gray-500 font-headline font-bold py-1.5 text-xs rounded-lg cursor-not-allowed"
-            >
-              Sold Out
-            </button>
-          ) : (
-            <button className="w-full bg-white text-primary font-headline font-bold py-1.5 text-xs rounded-lg transform translate-y-3 group-hover:translate-y-0 transition-transform duration-300">
-              Book Now
-            </button>
-          )}
-        </div>
       </div>
 
-      <div className="px-0.5">
-        <div className="flex justify-between items-start mb-0.5 gap-2">
-          <h3 className="font-headline font-bold text-sm text-primary leading-snug line-clamp-2">
+      <div className="market-card__body">
+        <div className="flex justify-between items-start gap-2">
+          <h3>
             {exp.title}
           </h3>
-          <div className="flex items-center gap-0.5 font-bold shrink-0 text-xs text-on-tertiary-container">
-            <Star className="h-3 w-3 fill-current" />
-            {exp.ratingsAverage.toFixed(1)}
-          </div>
+          <span className="market-card__arrow"><ChevronRight className="h-4 w-4" /></span>
         </div>
-        <p className="text-on-surface-variant text-xs mb-1.5 flex items-center gap-1">
-          <MapPin className="h-3 w-3 shrink-0" />
-          {exp.location} &bull; {exp.duration}
+        <p>
+          <MapPin className="h-3.5 w-3.5 shrink-0" /> {exp.location} <span aria-hidden="true">·</span> {exp.duration}
         </p>
+        <div className="market-card__meta">
+          <span><strong>{exp.price.toLocaleString()} ETB</strong> / guest</span>
+          <span>{exp.ratingsQuantity} reviews</span>
+        </div>
         {exp.nextOccurrenceAt && (
-          <p className="text-[10px] text-on-surface-variant mb-1 flex items-center gap-1">
-            <Calendar className="h-3 w-3 shrink-0 opacity-70" />
+          <p className="market-card__date">
+            <Calendar className="h-3.5 w-3.5 shrink-0" />
             {new Date(exp.nextOccurrenceAt).toLocaleString(undefined, {
               month: "short",
               day: "numeric",
@@ -182,11 +170,11 @@ function ExperienceBrowseCard({ exp }: { exp: Experience }) {
             })}
           </p>
         )}
-        <div className="flex items-center gap-1">
-          <span className={`text-sm font-black font-headline ${soldOut ? "text-on-surface-variant" : "text-primary"}`}>
+        <div className="flex items-end justify-between border-t border-border/80 pt-3">
+          <span className={`font-headline text-base font-extrabold ${soldOut ? "text-on-surface-variant" : "text-primary"}`}>
             {exp.price.toLocaleString()} ETB
           </span>
-          <span className="text-[11px] text-on-surface-variant">/ person</span>
+          <span className="text-[11px] text-on-surface-variant">per person</span>
         </div>
       </div>
     </Link>
@@ -211,18 +199,27 @@ function SkeletonCard() {
 /* ─── page ──────────────────────────────────────────────── */
 
 const Experiences = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchLocation = searchParams.get("location") ?? "";
+  const searchDate = searchParams.get("dateFrom") ?? "";
   const [sortBy, setSortBy]       = useState("Newest First");
   const [sortOpen, setSortOpen]   = useState(false);
-  const [locationQ, setLocationQ] = useState("");
+  const [locationQ, setLocationQ] = useState(searchLocation);
   const [minPrice, setMinPrice]   = useState(0);
   const [maxPriceFilter, setMaxPriceFilter] = useState(0);
   const [minRating, setMinRating] = useState(0);
-  const [dateFrom, setDateFrom]   = useState("");
+  const [dateFrom, setDateFrom]   = useState(searchDate);
   const [dateTo, setDateTo]       = useState("");
   const [page, setPage]           = useState(1);
 
   const sortRef = useRef<HTMLDivElement>(null!);
   useOutsideClick(sortRef, () => setSortOpen(false));
+
+  useEffect(() => {
+    setLocationQ(searchLocation);
+    setDateFrom(searchDate);
+    setPage(1);
+  }, [searchLocation, searchDate]);
 
   /* fetch all experiences (scheduled, up to 200) */
   const { data: queryData, isLoading } = useQuery({
@@ -252,6 +249,7 @@ const Experiences = () => {
   const dateActive     = dateFrom !== "" || dateTo !== "";
 
   const clearAll = () => {
+    setSearchParams({});
     setLocationQ("");
     setMinPrice(0);
     setMaxPriceFilter(MAX_PRICE);
@@ -301,12 +299,13 @@ const Experiences = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="pt-16 pb-16 px-4 max-w-7xl mx-auto">
+      <main className="experience-list-page pt-24 pb-16 px-4 max-w-7xl mx-auto">
 
         {/* ── Editorial header ── */}
-        <header className="mb-8 pt-6">
-          <h1 className="font-headline font-extrabold text-3xl md:text-4xl lg:text-5xl text-primary tracking-tight mb-2">
-            Curated <span className="text-on-tertiary-container">Heritage</span>
+        <header className="experience-list-heading mb-8 pt-8">
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-accent">Experiences across Ethiopia</p>
+          <h1 className="mb-3 font-display text-4xl font-normal tracking-tight text-primary md:text-5xl lg:text-6xl">
+            Find your kind of <span className="text-on-tertiary-container">Ethiopia</span>
           </h1>
           <p className="text-on-surface-variant max-w-xl text-sm leading-relaxed">
             Discover the soul of Ethiopia through authentic coffee ceremonies, ancient
@@ -315,8 +314,8 @@ const Experiences = () => {
         </header>
 
         {/* ── Sticky filter bar ── */}
-        <div className="sticky top-12 z-30 mb-6">
-          <div className="bg-white/92 dark:bg-[#1f2325]/92 backdrop-blur-md rounded-xl px-3 py-2.5 shadow-sm border border-outline-variant/20">
+        <div className="sticky top-16 z-30 mb-7">
+          <div className="rounded-2xl border border-outline-variant/50 bg-card/95 px-3 py-3 shadow-sm backdrop-blur-md sm:px-4">
             <div className="flex items-center gap-2 flex-wrap justify-between">
 
               <div className="flex items-center gap-2 flex-wrap">
@@ -345,7 +344,7 @@ const Experiences = () => {
                 {/* Price filter */}
                 <FilterDropdown
                   label="Price (ETB)"
-                  icon={<span className="text-[10px] font-bold">₿</span>}
+                  icon={<span className="text-[9px] font-extrabold tracking-tight">ETB</span>}
                   active={priceActive}
                 >
                   <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Price range</p>
@@ -472,7 +471,7 @@ const Experiences = () => {
                   <ChevronDown className={`h-3 w-3 transition-transform ${sortOpen ? "rotate-180" : ""}`} />
                 </button>
                 {sortOpen && (
-                  <div className="absolute right-0 top-full mt-1.5 bg-white dark:bg-[#2d3133] rounded-xl shadow-lg border border-outline-variant/20 py-1 min-w-[160px] z-50">
+                  <div className="absolute right-0 top-full z-50 mt-2 min-w-[180px] rounded-2xl border border-border bg-card py-1.5 shadow-xl">
                     {SORT_OPTIONS.map((opt) => (
                       <button
                         key={opt}
