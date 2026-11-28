@@ -23,7 +23,8 @@ function proxyOrigin() {
 const apiOrigin = proxyOrigin();
 let contents;
 if (apiOrigin && /^https:\/\//i.test(apiOrigin)) {
-  contents = `/api/*    ${apiOrigin}/api/:splat    200\n${spaFallback}`;
+  // P2-23: serve the backend sitemap from the site's own origin.
+  contents = `/api/*    ${apiOrigin}/api/:splat    200\n/sitemap.xml    ${apiOrigin}/api/v1/sitemap.xml    200\n${spaFallback}`;
   console.log(`[write-netlify-redirects] /api/* → ${apiOrigin}/api/*`);
 } else {
   if (apiOrigin && !/^https:\/\//i.test(apiOrigin)) {

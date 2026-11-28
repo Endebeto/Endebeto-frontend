@@ -39,7 +39,7 @@ const DEFAULT_PREVIEW_DESC = "Book authentic heritage experiences on Endebeto.";
 const OG_FALLBACK_IMAGE_PATH = "/imgs/hero.jpg";
 
 export const config = {
-  matcher: ["/experiences/:id", "/api/:path*"],
+  matcher: ["/experiences/:id", "/api/:path*", "/sitemap.xml"],
 };
 
 export default async function middleware(request: Request): Promise<Response> {
@@ -52,6 +52,15 @@ export default async function middleware(request: Request): Promise<Response> {
     url.pathname.startsWith("/api/")
   ) {
     return proxyApiToOrigin(request, proxyOrigin);
+  }
+
+  // P2-23: serve the backend sitemap from the site's own origin.
+  if (
+    proxyOrigin &&
+    /^https:\/\//i.test(proxyOrigin) &&
+    url.pathname === "/sitemap.xml"
+  ) {
+    return fetch(`${proxyOrigin}/api/v1/sitemap.xml`);
   }
 
   const ua = request.headers.get("user-agent") ?? "";
