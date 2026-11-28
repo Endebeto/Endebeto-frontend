@@ -39,6 +39,7 @@ export function useProfileContent(
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
 
   const [passwordCurrent, setPasswordCurrent] = useState("");
   const [passwordNew, setPasswordNew] = useState("");
@@ -138,7 +139,7 @@ export function useProfileContent(
   const handleDeactivateAccount = async () => {
     setDeletingAccount(true);
     try {
-      await authService.deleteMe();
+      await authService.deleteMe(deletePassword || undefined);
       toast.success("Your account has been deactivated.");
       logout();
       navigate("/", { replace: true });
@@ -146,7 +147,7 @@ export function useProfileContent(
       toast.error(profileApiErrMessage(e));
     } finally {
       setDeletingAccount(false);
-      setDeleteConfirm(false);
+      setDeletePassword("");
     }
   };
 
@@ -161,6 +162,8 @@ export function useProfileContent(
     savingProfile,
     uploadingPhoto,
     deletingAccount,
+    deletePassword,
+    setDeletePassword,
     passwordCurrent,
     setPasswordCurrent,
     passwordNew,

@@ -72,6 +72,8 @@ export function ProfileContentView({
     setShowNewPass,
     deleteConfirm,
     setDeleteConfirm,
+    deletePassword,
+    setDeletePassword,
   } = c;
 
   return (
@@ -305,6 +307,22 @@ export function ProfileContentView({
                 </button>
               ) : (
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 shrink-0">
+                  <label className="sr-only" htmlFor="deactivate-password">
+                    Current password
+                  </label>
+                  <input
+                    id="deactivate-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    placeholder={
+                      googleLinked
+                        ? "Password (blank if Google-only)"
+                        : "Current password"
+                    }
+                    className="rounded-xl border border-red-200 bg-white dark:bg-transparent px-3 py-2.5 text-sm"
+                  />
                   <button
                     type="button"
                     disabled={deletingAccount}

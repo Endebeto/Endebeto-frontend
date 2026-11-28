@@ -94,7 +94,11 @@ export const authService = {
     ),
 
   /** Soft-delete: sets `active: false`; user cannot log in afterward. */
-  deleteMe: () => api.delete("/users/deleteMe"),
+  /** Password is required by the API when the account has one (P2-12). */
+  deleteMe: (currentPassword?: string) =>
+    api.delete("/users/deleteMe", {
+      data: currentPassword ? { currentPassword } : {},
+    }),
 
   /** Multipart field name must be `photo` (single image, max 5MB). */
   uploadProfilePhoto: (file: File) => {
