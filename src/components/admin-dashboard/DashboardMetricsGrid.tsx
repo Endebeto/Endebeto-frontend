@@ -158,14 +158,14 @@ export function DashboardMetricsGrid({
         </KpiTile>
 
         <KpiTile
-          label="Drafts / Pending"
-          value={`${fmtNum(stats.draftExperiences)} / ${fmtNum(
-            stats.pendingExperiences,
+          label="Pending / Rejected"
+          value={`${fmtNum(stats.pendingExperiences)} / ${fmtNum(
+            stats.rejectedExperiences,
           )}`}
           icon={<FileText className="h-4 w-4" />}
         >
           <p className="text-[11px] text-on-surface-variant">
-            Drafts · awaiting approval
+            Awaiting approval · rejected
           </p>
         </KpiTile>
 

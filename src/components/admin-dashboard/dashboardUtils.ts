@@ -61,7 +61,7 @@ export const EMPTY_STATS: PlatformStats = {
   completedBookings: 0,
   cancelledBookings: 0,
   pendingApplications: 0,
-  draftExperiences: 0,
+  rejectedExperiences: 0,
   pendingExperiences: 0,
   liveExperiences: 0,
   expiredExperiences: 0,

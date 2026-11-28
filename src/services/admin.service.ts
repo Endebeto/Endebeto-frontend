@@ -18,7 +18,7 @@ export interface PlatformStats {
   completedBookings: number;
   cancelledBookings: number;
   pendingApplications: number;
-  draftExperiences: number;
+  rejectedExperiences: number;
   pendingExperiences: number;
   /** Approved, not suspended, next run still in the future (catalog “live”) */
   liveExperiences: number;

@@ -67,7 +67,7 @@ export function useAdminDashboard() {
     { name: "Pending", value: stats.pendingExperiences, color: "#0ea5e9" },
     { name: "Expired", value: stats.expiredExperiences, color: "#78716c" },
     { name: "Suspended", value: stats.suspendedExperiences, color: "#b45309" },
-    { name: "Drafts", value: stats.draftExperiences, color: "#64748b" },
+    { name: "Rejected", value: stats.rejectedExperiences, color: "#64748b" },
   ].filter((d) => d.value > 0);
   const expMixTotal = expMix.reduce((s, d) => s + d.value, 0);
 
