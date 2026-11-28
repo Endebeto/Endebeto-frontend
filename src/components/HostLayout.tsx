@@ -85,8 +85,8 @@ export default function HostLayout({
               to={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${
                 isActive
-                  ? "text-primary dark:text-green-400 font-bold border-r-4 border-primary/70 dark:border-green-400/70 bg-emerald-50/60 dark:bg-emerald-900/20 translate-x-1"
-                  : "text-on-surface-variant dark:text-zinc-400 hover:text-primary dark:hover:text-green-300 hover:bg-surface-container-low dark:hover:bg-zinc-800 hover:translate-x-0.5"
+                  ? "border-l-2 border-accent bg-primary/8 font-bold text-primary"
+                  : "text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
               }`}
             >
               <item.icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? "text-primary dark:text-green-400" : ""}`} />
@@ -117,10 +117,10 @@ export default function HostLayout({
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surface dark:bg-zinc-950 text-on-surface font-body">
+    <div className="portal-shell flex h-screen overflow-hidden bg-background text-foreground font-body">
 
       {/* ── Desktop Fixed Sidebar ── */}
-      <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 bg-[#f7f9fb] dark:bg-zinc-900 border-r border-outline-variant/15 dark:border-zinc-800 flex-col z-50">
+      <aside className="portal-sidebar hidden lg:flex fixed left-0 top-0 z-50 h-screen w-64 flex-col border-r">
         <SidebarContent />
       </aside>
 
@@ -132,13 +132,13 @@ export default function HostLayout({
         onClick={() => setSidebarOpen(false)}
       />
       <aside
-        className={`lg:hidden fixed left-0 top-0 h-screen w-72 bg-[#f7f9fb] dark:bg-zinc-900 border-r border-outline-variant/15 dark:border-zinc-800 flex flex-col z-50 transition-transform duration-300 ${
+        className={`portal-sidebar lg:hidden fixed left-0 top-0 z-50 flex h-screen w-72 flex-col border-r shadow-xl transition-transform duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <button
           onClick={() => setSidebarOpen(false)}
-          className="absolute top-4 right-4 p-1.5 rounded-full bg-surface-container text-on-surface-variant hover:bg-surface-container-low transition-colors"
+          className="absolute right-4 top-4 rounded-full p-1.5 text-on-surface-variant transition-colors hover:bg-surface-container"
         >
           <X className="h-4 w-4" />
         </button>
@@ -149,7 +149,7 @@ export default function HostLayout({
       <div className="lg:ml-64 flex-1 flex flex-col h-screen overflow-hidden min-w-0">
 
         {/* Top bar */}
-        <header className="shrink-0 h-14 md:h-16 flex items-center justify-between px-4 md:px-8 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-outline-variant/10 dark:border-zinc-800 shadow-[0_20px_40px_-10px_rgba(0,53,39,0.04)] z-40">
+        <header className="portal-topbar z-40 flex h-14 shrink-0 items-center justify-between border-b px-4 backdrop-blur-xl md:h-16 md:px-8">
           <div className="flex items-center gap-3">
             {/* Hamburger — mobile only */}
             <button

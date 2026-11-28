@@ -11,9 +11,9 @@ const Footer = () => {
 
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <h3 className="font-headline text-xl font-black text-primary mb-2 md:mb-4">Endebeto</h3>
+            <h3 className="mb-2 font-headline text-xl font-extrabold tracking-tight text-primary md:mb-4">Endebeto</h3>
             <p className="text-xs md:text-sm text-on-surface-variant max-w-xs leading-relaxed">
-              Curating the finest heritage experiences across the Horn of Africa.
+              Locally hosted journeys into the history, culture, and landscapes of Ethiopia.
             </p>
           </div>
 
@@ -75,7 +75,7 @@ const Footer = () => {
       <div className="border-t border-outline-variant/30">
         <div className="container py-4 flex flex-row justify-between items-center gap-3">
           <p className="text-[11px] text-on-surface-variant">
-            © 2024 Endebeto
+            © 2026 Endebeto
           </p>
           <div className="flex gap-4">
             {[Globe, Camera, Radio].map((Icon, i) => (

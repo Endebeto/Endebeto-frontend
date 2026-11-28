@@ -496,9 +496,9 @@ export default function MyBookings() {
   const { upcoming, past } = partitionBookings(bookings);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="account-page min-h-screen bg-background">
       <Navbar />
-      <main className="pt-14 pb-16 max-w-3xl mx-auto px-4">
+      <main className="mx-auto max-w-4xl px-4 pb-16 pt-20 sm:px-6">
         <Link
           to="/profile"
           className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:opacity-80 mt-6 mb-4"
@@ -507,10 +507,10 @@ export default function MyBookings() {
           Back to profile
         </Link>
 
-        <div className="bg-white dark:bg-[#2d3133] rounded-2xl p-6 shadow-sm">
+        <div className="account-surface rounded-3xl border border-border/80 bg-card p-5 shadow-sm sm:p-7">
           <div className="flex items-start justify-between gap-4 mb-6">
             <div>
-              <h1 className="font-headline font-extrabold text-2xl text-primary">My Bookings</h1>
+              <h1 className="font-display text-3xl font-normal text-primary sm:text-4xl">My Bookings</h1>
               <p className="text-on-surface-variant text-sm mt-1">
                 {total === 0
                   ? "You have no bookings yet."

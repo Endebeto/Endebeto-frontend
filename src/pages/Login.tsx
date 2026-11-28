@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Compass, Eye, EyeOff, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import heroCoffee from "@/assets/hero-coffee.jpg";
 import { useAuth } from "@/context/AuthContext";
@@ -25,8 +25,8 @@ const Login = () => {
     if (isAuthenticated) navigate("/", { replace: true });
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!email || !password) return;
     setSubmitting(true);
     try {
@@ -34,103 +34,78 @@ const Login = () => {
       toast.success("Welcome back!");
       navigate("/");
     } catch (err: unknown) {
-      const msg =
+      const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         "Invalid email or password.";
-      toast.error(msg);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <main className="auth-screen auth-screen--marketplace">
+      <Link to="/" className="auth-brand">
+        <span className="brand-symbol"><Compass className="h-4 w-4" /></span>
+        <span>Endebeto</span>
+      </Link>
 
-      {/* ── Form ── */}
-      <div className="flex flex-col justify-center px-8 py-12 lg:px-16 bg-background">
-        <Link to="/" className="font-headline text-xl font-black tracking-tighter text-primary">
-          Endebeto
-        </Link>
-
-        <div className="mt-10 max-w-sm w-full">
-          <h1 className="font-headline font-extrabold text-2xl text-primary mb-1">Welcome back</h1>
-          <p className="text-on-surface-variant text-sm mb-8">
-            Sign in to continue exploring Ethiopia's hidden gems.
-          </p>
+      <div className="auth-layout">
+        <section className="auth-card" aria-labelledby="login-title">
+          <p className="eyebrow"><Sparkles className="h-3.5 w-3.5" /> Your next story is waiting</p>
+          <h1 id="login-title">Welcome back</h1>
+          <p className="auth-card__intro">Sign in to pick up where your Ethiopia journey left off.</p>
 
           {oauthError && (
-            <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
-              {oauthError}
-            </div>
+            <div role="alert" className="auth-error">{oauthError}</div>
           )}
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="email" className="block text-xs font-semibold text-on-surface-variant mb-1.5">
-                Email
-              </label>
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <div className="auth-field">
+              <label htmlFor="email">Email address</label>
               <input
                 id="email"
                 type="email"
+                autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
                 required
-                className="w-full text-sm border border-outline-variant/50 rounded-xl px-3 py-2.5 bg-white dark:bg-[#2d3133] focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
               />
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label htmlFor="password" className="text-xs font-semibold text-on-surface-variant">
-                  Password
-                </label>
-                <Link to="/forgot-password" className="text-xs text-primary hover:underline">
-                  Forgot password?
-                </Link>
+            <div className="auth-field">
+              <div className="auth-field__label-row">
+                <label htmlFor="password">Password</label>
+                <Link to="/forgot-password">Forgot password?</Link>
               </div>
-              <div className="relative">
+              <div className="auth-password">
                 <input
                   id="password"
                   type={showPass ? "text" : "password"}
-                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  placeholder="Enter your password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(event) => setPassword(event.target.value)}
                   required
-                  className="w-full text-sm border border-outline-variant/50 rounded-xl px-3 py-2.5 pr-10 bg-white dark:bg-[#2d3133] focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPass((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors"
-                >
+                <button type="button" onClick={() => setShowPass((value) => !value)} aria-label={showPass ? "Hide password" : "Show password"}>
                   {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-2.5 bg-primary text-white rounded-xl font-headline font-bold text-sm shadow-md shadow-primary/20 hover:scale-[0.99] active:opacity-90 transition-transform mt-1 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
+            <button type="submit" disabled={submitting} className="auth-submit">
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              Sign In
+              Sign in
             </button>
           </form>
 
-          <div className="flex items-center gap-3 my-5">
-            <div className="h-px flex-1 bg-outline-variant/40" />
-            <span className="text-xs text-on-surface-variant">or continue with</span>
-            <div className="h-px flex-1 bg-outline-variant/40" />
-          </div>
+          <div className="auth-divider"><span>or continue with</span></div>
 
-          <div className="space-y-2.5">
-            <a
-              href={`${import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1"}/auth/google`}
-              className="flex items-center justify-center gap-2.5 w-full py-2.5 border border-outline-variant/50 rounded-xl text-sm font-headline font-semibold text-on-surface-variant hover:bg-surface-container transition-colors"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24">
+          <div className="auth-social-list">
+            <a href={`${import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1"}/auth/google`} className="auth-social">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -138,38 +113,29 @@ const Login = () => {
               </svg>
               Continue with Google
             </a>
-            <a
-              href={`${import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1"}/auth/facebook`}
-              className="flex items-center justify-center gap-2.5 w-full py-2.5 border border-outline-variant/50 rounded-xl text-sm font-headline font-semibold text-on-surface-variant hover:bg-surface-container transition-colors"
-            >
-              <svg className="h-4 w-4" fill="#1877F2" viewBox="0 0 24 24">
+            <a href={`${import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1"}/auth/facebook`} className="auth-social">
+              <svg className="h-4 w-4" fill="#1877F2" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
               </svg>
               Continue with Facebook
             </a>
           </div>
 
-          <p className="mt-7 text-center text-xs text-on-surface-variant">
-            Don't have an account?{" "}
-            <Link to="/signup" className="font-bold text-primary hover:underline">
-              Sign up
-            </Link>
-          </p>
-        </div>
-      </div>
+          <p className="auth-signup">New to Endebeto? <Link to="/signup">Create an account</Link></p>
+          <div className="auth-secure"><ShieldCheck className="h-4 w-4" /> Your account and bookings stay protected.</div>
+        </section>
 
-      {/* ── Side image ── */}
-      <div className="hidden lg:block relative">
-        <img src={heroCoffee} alt="Ethiopian experience" className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-primary/50" />
-        <div className="absolute bottom-12 left-10 right-10">
-          <p className="font-headline font-bold text-xl text-white leading-snug">
-            "The best way to experience Ethiopia is through its people."
-          </p>
-          <p className="mt-3 text-sm text-white/70">— Endebeto Community</p>
-        </div>
+        <aside className="auth-story">
+          <img src={heroCoffee} alt="An Ethiopian coffee ceremony shared by local hosts" />
+          <div className="auth-story__shade" />
+          <div className="auth-story__copy">
+            <span><Sparkles className="h-4 w-4" /> Travel closer to the culture</span>
+            <blockquote>“The best way to experience Ethiopia is through its people.”</blockquote>
+            <p>Find a local host, share a moment, and take the story home.</p>
+          </div>
+        </aside>
       </div>
-    </div>
+    </main>
   );
 };
 

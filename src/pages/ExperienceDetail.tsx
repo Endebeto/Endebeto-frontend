@@ -546,7 +546,7 @@ const ExperienceDetail = () => {
   const hostInitial    = exp.host?.name?.charAt(0)?.toUpperCase() ?? "H";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="experience-detail min-h-screen bg-background">
       {lightboxIndex !== null && allGalleryImages.length > 0 && (
         <GalleryLightbox
           images={allGalleryImages}
@@ -560,6 +560,8 @@ const ExperienceDetail = () => {
           MOBILE LAYOUT  (hidden on lg+)
       ══════════════════════════════════════════ */}
       <div className="lg:hidden">
+        <Navbar />
+        <div className="h-16" aria-hidden="true" />
 
         {/* ── Full-bleed hero ── */}
         <div className="relative h-[52vh] w-full overflow-hidden">
@@ -575,20 +577,25 @@ const ExperienceDetail = () => {
           {/* Floating nav buttons */}
           <div className="absolute top-0 left-0 right-0 flex justify-between items-center px-4 pt-12 z-20">
             <button
+              type="button"
               onClick={() => navigate(-1)}
-              className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md"
+              aria-label="Go back"
+              className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-md text-primary"
             >
-              <ChevronLeft className="h-5 w-5 text-on-surface" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
             <div className="flex gap-2">
-              <button className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md">
-                <Share2 className="h-4 w-4 text-on-surface" />
+              <button type="button" aria-label="Share this experience" className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-md text-primary">
+                <Share2 className="h-4 w-4" />
               </button>
               <button
+                type="button"
                 onClick={() => setSaved(s => !s)}
-                className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md"
+                aria-label={saved ? "Remove from saved experiences" : "Save this experience"}
+                aria-pressed={saved}
+                className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-md text-primary"
               >
-                <Heart className={`h-4 w-4 transition-colors ${saved ? "fill-red-500 text-red-500" : "text-on-surface"}`} />
+                <Heart className={`h-4 w-4 transition-colors ${saved ? "fill-red-500 text-red-500" : ""}`} />
               </button>
             </div>
           </div>
@@ -601,17 +608,17 @@ const ExperienceDetail = () => {
         </div>
 
         {/* ── White content card slides up over hero ── */}
-        <div className="relative -mt-8 bg-white dark:bg-zinc-950 rounded-t-3xl shadow-[0_-8px_32px_rgba(0,0,0,0.12)] pb-28">
+        <div className="relative -mt-8 bg-card rounded-t-3xl shadow-[0_-8px_32px_rgba(0,0,0,0.12)] pb-28">
 
           <div className="w-10 h-1 bg-outline-variant/30 rounded-full mx-auto mt-3 mb-4" />
 
           <div className="px-5">
 
-            <h1 className="font-headline font-extrabold text-2xl text-on-surface dark:text-white leading-tight mb-2">
+            <h1 className="font-display font-normal text-3xl text-foreground leading-tight mb-2">
               {exp.title}
             </h1>
 
-            <div className="flex items-center gap-2 text-xs text-on-surface-variant dark:text-zinc-400 flex-wrap">
+            <div className="flex items-center gap-2 text-xs text-on-surface-variant flex-wrap">
               <span className="flex items-center gap-1">
                 <MapPin className="h-3 w-3 text-primary shrink-0" />
                 {exp.location}
@@ -619,20 +626,20 @@ const ExperienceDetail = () => {
               <span className="w-1 h-1 rounded-full bg-outline-variant/40" />
               <span className="flex items-center gap-1">
                 <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                <strong className="text-on-surface dark:text-white">{exp.ratingsAverage.toFixed(1)}</strong>
+                  <strong className="text-foreground">{exp.ratingsAverage.toFixed(1)}</strong>
                 <span>({exp.ratingsQuantity} reviews)</span>
               </span>
             </div>
 
             {/* Host row */}
-            <div className="flex items-center justify-between py-4 mt-3 border-t border-b border-outline-variant/15 dark:border-zinc-800">
+            <div className="flex items-center justify-between py-4 mt-3 border-t border-b border-border">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center font-headline font-bold text-on-secondary-container text-sm shrink-0 ring-2 ring-white dark:ring-zinc-900">
+                <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center font-headline font-bold text-on-secondary-container text-sm shrink-0 ring-2 ring-card">
                   {hostInitial}
                 </div>
                 <div>
-                  <p className="text-[10px] text-on-surface-variant dark:text-zinc-500 uppercase tracking-wider">Hosted by</p>
-                  <p className="font-headline font-bold text-sm text-on-surface dark:text-white">{exp.host?.name}</p>
+                  <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">Hosted by</p>
+                  <p className="font-headline font-bold text-sm text-foreground">{exp.host?.name}</p>
                 </div>
               </div>
               <ContactHostButton
@@ -797,10 +804,10 @@ const ExperienceDetail = () => {
         </div>
 
         {/* ── Mobile sticky bottom bar ── */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-zinc-900 border-t border-outline-variant/20 px-4 py-3 flex items-center justify-between gap-3 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border px-4 py-3 flex items-center justify-between gap-3 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
           <div>
-            <p className="text-[10px] text-on-surface-variant dark:text-zinc-500">Price per guest</p>
-            <p className="font-headline font-extrabold text-lg text-primary dark:text-green-400 leading-tight">
+            <p className="text-[10px] text-on-surface-variant">Price per guest</p>
+            <p className="font-headline font-extrabold text-lg text-primary leading-tight">
               {exp.price.toLocaleString()} ETB
             </p>
           </div>
@@ -816,7 +823,7 @@ const ExperienceDetail = () => {
             {hasUpcomingBookingHere && (
               <Link
                 to="/my-bookings"
-                className="text-center text-[10px] font-bold text-primary dark:text-green-400 hover:underline"
+                className="text-center text-[10px] font-bold text-primary hover:underline"
               >
                 View in My Bookings
               </Link>
@@ -850,7 +857,7 @@ const ExperienceDetail = () => {
                 </span>
               )}
               <h1
-                className="text-white font-headline font-extrabold text-4xl max-w-2xl leading-snug"
+                className="max-w-2xl font-display text-4xl font-normal leading-tight text-white sm:text-5xl"
                 style={{ textShadow: "0 2px 16px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.9)" }}
               >
                 {exp.title}
@@ -1098,7 +1105,7 @@ const ExperienceDetail = () => {
 
           {/* Booking card */}
           <div className="col-span-1">
-            <div className="sticky top-14 bg-white dark:bg-[#2d3133] p-5 rounded-2xl shadow-xl shadow-primary/5 border border-outline-variant/10">
+            <div className="experience-booking-panel sticky top-20 rounded-3xl border border-border bg-card p-6 shadow-xl shadow-primary/8">
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-xs text-on-surface-variant">Price per guest</p>

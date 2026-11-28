@@ -43,8 +43,8 @@ export default function AdminLayout({
     <>
       {/* Brand */}
       <div className="mb-8 px-2 pt-1">
-        <h1 className="font-headline text-xl font-black text-white tracking-tighter">Endebeto</h1>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mt-0.5">Admin Portal</p>
+        <h1 className="font-headline text-xl font-extrabold tracking-tight text-primary">Endebeto</h1>
+        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Admin Portal</p>
       </div>
 
       {/* Nav */}
@@ -58,14 +58,14 @@ export default function AdminLayout({
               key={item.href}
               to={item.href}
               className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-headline font-semibold transition-all duration-200 ${isActive
-                ? "bg-white/15 text-white shadow-inner translate-x-1"
-                : "text-white/55 hover:bg-white/8 hover:text-white/85 hover:translate-x-0.5"
+                ? "border-l-2 border-accent bg-primary/8 text-primary"
+                : "text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
                 }`}
             >
               <item.icon className="h-4 w-4 shrink-0" />
               <span>{item.label}</span>
               {isActive && (
-                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-tertiary-fixed shrink-0" />
+                <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
               )}
             </Link>
           );
@@ -73,14 +73,14 @@ export default function AdminLayout({
       </nav>
 
       {/* Admin chip */}
-      <div className="mt-auto pt-5 border-t border-white/10">
+      <div className="mt-auto border-t border-border pt-5">
         <div className="flex items-center gap-3 px-1">
-          <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center font-headline font-bold text-white text-xs shrink-0">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary-container font-headline text-xs font-bold text-primary">
             AD
           </div>
           <div className="min-w-0">
-            <p className="font-headline font-bold text-white text-sm truncate">Admin</p>
-            <p className="text-[10px] text-white/45">Superuser</p>
+            <p className="truncate font-headline text-sm font-bold text-foreground">Admin</p>
+            <p className="text-[10px] text-on-surface-variant">Superuser</p>
           </div>
         </div>
       </div>
@@ -88,10 +88,10 @@ export default function AdminLayout({
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-on-surface">
+    <div className="portal-shell flex h-screen overflow-hidden bg-background text-on-surface">
 
       {/* ── Desktop Fixed Sidebar ── */}
-      <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-60 bg-primary flex-col p-5 z-50 shadow-[8px_0_32px_-4px_rgba(0,53,39,0.3)]">
+      <aside className="portal-sidebar fixed left-0 top-0 z-50 hidden h-screen w-60 flex-col border-r p-5 lg:flex">
         <SidebarContent />
       </aside>
 
@@ -104,13 +104,13 @@ export default function AdminLayout({
       />
       {/* Drawer panel */}
       <aside
-        className={`lg:hidden fixed left-0 top-0 h-screen w-64 bg-primary flex flex-col p-5 z-50 shadow-[8px_0_32px_-4px_rgba(0,53,39,0.3)] transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        className={`portal-sidebar lg:hidden fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r p-5 shadow-xl transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
       >
         {/* Close button */}
         <button
           onClick={() => setSidebarOpen(false)}
-          className="absolute top-4 right-4 p-1.5 rounded-full bg-white/10 text-white/70 hover:bg-white/20 transition-colors"
+          className="absolute right-4 top-4 rounded-full p-1.5 text-on-surface-variant transition-colors hover:bg-surface-container"
         >
           <X className="h-4 w-4" />
         </button>
@@ -121,7 +121,7 @@ export default function AdminLayout({
       <div className="lg:ml-60 flex-1 flex flex-col h-screen overflow-hidden min-w-0">
 
         {/* Top bar */}
-        <header className="shrink-0 h-14 flex items-center justify-between px-4 md:px-6 bg-white/85 dark:bg-zinc-900/85 backdrop-blur-xl border-b border-outline-variant/10 z-40">
+        <header className="portal-topbar z-40 flex h-14 shrink-0 items-center justify-between border-b px-4 backdrop-blur-xl md:px-6">
           <div className="flex items-center gap-3">
             {/* Hamburger — mobile only */}
             <button
