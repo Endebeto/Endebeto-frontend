@@ -15,6 +15,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RouteMeta } from "@/components/RouteMeta";
 
 const Index = lazy(() => import("./pages/Index"));
 const Experiences = lazy(() => import("./pages/Experiences"));
@@ -245,6 +246,7 @@ const App = () => (
         }}
       >
         <AuthProvider>
+          <RouteMeta />
           <AuthExpiredRedirect />
           <ErrorBoundary scope="Application">
             <Suspense fallback={<RouteFallback />}>
