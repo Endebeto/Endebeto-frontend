@@ -6,9 +6,8 @@
  * whole app.
  *
  * `initProductionLogger()` is called once from `main.tsx` and silences
- * the noisy console methods when `import.meta.env.PROD` is true.  We
- * keep `warn` / `error` available but route them to a no-op so third
- * party libs don't crash.
+ * `log` / `info` / `debug` when `import.meta.env.PROD` is true. `warn` and
+ * `error` are left untouched so genuine failures stay visible.
  */
 
 type ConsoleMethod = "log" | "info" | "debug" | "warn" | "error";
