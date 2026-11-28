@@ -26,6 +26,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { ExperienceSlotSelector } from "@/components/experience-detail/ExperienceSlotSelector";
 import { HostNoteCallout } from "@/components/experience-detail/HostNoteCallout";
 import type { ExperienceDetailVM } from "@/hooks/useExperienceDetail";
+import { CancellationNotice } from "@/components/experience-detail/CancellationNotice";
 
 export function ExperienceDetailDesktop({ vm }: { vm: ExperienceDetailVM }) {
   const {
@@ -497,6 +498,10 @@ export function ExperienceDetailDesktop({ vm }: { vm: ExperienceDetailVM }) {
                 No spots left for the next date.
               </p>
             )}
+            <CancellationNotice
+              policy={exp.cancellationPolicy}
+              sessionStart={selectedSlot?.startTime ?? exp.nextOccurrenceAt}
+            />
             <button
               type="button"
               disabled={checkoutLoading || hasUpcomingBookingHere || maxBookable === 0}

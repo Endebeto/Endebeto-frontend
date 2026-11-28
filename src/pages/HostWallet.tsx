@@ -5,6 +5,7 @@ import {
   FileText,
   TrendingUp,
   Loader2,
+  AlertTriangle,
   Clock,
   ArrowUpFromLine,
   TrendingDown,
@@ -58,6 +59,8 @@ export default function HostWallet() {
     setShowWithdraw,
     availableETB,
     canWithdraw,
+    debtCents,
+    hasDebt,
     cooldownActive,
     nextAvailableAt,
     hasPendingWithdrawal,
@@ -183,6 +186,16 @@ export default function HostWallet() {
               </button>
             </div>
             <div className="relative z-10 mt-3 space-y-1">
+              {hasDebt && (
+                <p className="flex items-start gap-1.5 text-[11px] text-red-200 max-w-md leading-snug">
+                  <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+                  <span>
+                    You owe <span className="font-semibold">ETB {etb(debtCents)}</span> from a
+                    cancellation. It&apos;s taken automatically from your next earnings, and
+                    withdrawals reopen once it&apos;s paid.
+                  </span>
+                </p>
+              )}
               {cooldownActive && nextAvailableAt && (
                 <p className="flex items-center gap-1.5 text-[11px] text-amber-300/90">
                   <Clock className="h-3 w-3 shrink-0" />
@@ -202,7 +215,7 @@ export default function HostWallet() {
                   already in progress
                 </p>
               )}
-              {!cooldownActive && !hasPendingWithdrawal && (
+              {!cooldownActive && !hasPendingWithdrawal && !hasDebt && (
                 <p className="text-white/50 text-[10px] max-w-md leading-snug">
                   You can start a new payout request at most{" "}
                   <span className="text-white/70 font-semibold">

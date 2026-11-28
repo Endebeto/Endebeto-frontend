@@ -10,6 +10,8 @@ export interface Review {
 
 export interface Experience {
   _id: string;
+  /** Refund design: host-chosen free-cancellation window. */
+  cancellationPolicy?: "24h" | "48h" | "7d" | "none";
   id: string;
   title: string;
   slug: string;

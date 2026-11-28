@@ -1,5 +1,19 @@
 import api from "@/lib/api";
 
+/** GET /bookings/:id/cancel-preview (refund design). */
+export interface CancelPreview {
+  by: "guest" | "host";
+  kind: "guest_free" | "guest_late" | "host" | "not_cancellable";
+  paidCents: number;
+  refundCents: number;
+  chapaFeeCents: number;
+  chapaFeeEstimated: boolean;
+  platformFeeCents: number;
+  hostChargeCents: number;
+  cancellationPolicy: "24h" | "48h" | "7d" | "none" | null;
+  freeCancelUntil: string | null;
+}
+
 export interface Booking {
   _id: string;
   experience: {
@@ -45,6 +59,16 @@ export interface Booking {
   cancelledBy?: "guest" | "host" | "admin";
   cancellationReason?: string;
   refundStatus?: "pending" | "refunded";
+  /** Refund design: policy snapshot taken at payment time. */
+  cancellationPolicy?: "24h" | "48h" | "7d" | "none";
+  freeCancelUntil?: string | null;
+  refund?: {
+    status?: "requested" | "queued" | "processing" | "refunded" | "manual";
+    amountCents?: number;
+    method?: "chapa" | "manual";
+  };
+  hostChargeCents?: number;
+  hostDebtCents?: number;
   attendanceStatus?: "unmarked" | "checked_in" | "no_show";
   checkedInAt?: string;
   /** From GET /bookings/me: whether this user already left a review for this experience. */
@@ -131,6 +155,12 @@ export const bookingsService = {
   cancelBooking: (bookingId: string) =>
     api.patch<{ status: string; message: string; data: { booking: Booking } }>(
       `/bookings/${bookingId}/cancel`,
+    ),
+
+  /** Refund design: what cancelling would mean in money, for the caller. */
+  getCancelPreview: (bookingId: string) =>
+    api.get<{ status: string; data: { preview: CancelPreview } }>(
+      `/bookings/${bookingId}/cancel-preview`,
     ),
 
   /** P2-4: host cancels a paid booking; the guest is refunded in full. */

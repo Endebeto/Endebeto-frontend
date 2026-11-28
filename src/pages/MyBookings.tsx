@@ -15,6 +15,7 @@ import {
   CalendarDays,
   History,
   Loader2,
+  ShieldCheck,
   Sparkles,
   Star,
   XCircle,
@@ -33,6 +34,7 @@ import {
   getExperienceId,
 } from "@/lib/reviewEligibility";
 import { useAuth } from "@/context/AuthContext";
+import { cutoffLabel, etb } from "@/lib/cancellationPolicy";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -395,6 +397,16 @@ function ReviewCell({
   );
 }
 
+/** Refund design: what the guest sees about a refund on a cancelled booking. */
+function refundStatusLabel(b: Booking): string {
+  const amount = b.refund?.amountCents ? ` ${etb(b.refund.amountCents)}` : "";
+  if (b.refundStatus === "refunded" || b.refund?.status === "refunded") {
+    return `Refunded${amount}`;
+  }
+  if (b.refund?.status === "manual") return `Refund${amount} being handled by our team`;
+  return `Refund${amount} processing`;
+}
+
 function CancelBookingDialog({
   booking,
   open,
@@ -405,11 +417,18 @@ function CancelBookingDialog({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { data: preview, isLoading: previewLoading } = useQuery({
+    queryKey: ["cancel-preview", booking._id],
+    queryFn: async () =>
+      (await bookingsService.getCancelPreview(booking._id)).data.data.preview,
+    enabled: open,
+    staleTime: 0,
+  });
 
   const mutation = useMutation({
     mutationFn: () => bookingsService.cancelBooking(booking._id),
-    onSuccess: () => {
-      toast.success("Booking cancelled.");
+    onSuccess: (res) => {
+      toast.success(res.data.message || "Booking cancelled.");
       queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
       onClose();
     },
@@ -461,13 +480,32 @@ function CancelBookingDialog({
                   {booking.quantity} guest{booking.quantity > 1 ? "s" : ""}
                 </p>
               </div>
-              <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-800/50 rounded-xl">
-                <XCircle className="h-4 w-4 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
-                  <strong>This can't be undone.</strong> You won't be refunded.
-                  Your spot will be offered to other guests.
-                </p>
-              </div>
+              {previewLoading || !preview ? (
+                <div className="flex items-center gap-2 p-3 text-xs text-on-surface-variant">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Checking your refund…
+                </div>
+              ) : preview.kind === "guest_free" ? (
+                <div className="flex items-start gap-2 p-3 bg-emerald-50 dark:bg-emerald-950/25 border border-emerald-200/80 dark:border-emerald-800/50 rounded-xl">
+                  <ShieldCheck className="h-4 w-4 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-emerald-900 dark:text-emerald-200 leading-relaxed">
+                    <strong>You'll get back {etb(preview.refundCents)}</strong> of the{" "}
+                    {etb(preview.paidCents)} you paid. The {etb(preview.chapaFeeCents)} payment
+                    processing fee{preview.chapaFeeEstimated ? " (estimated)" : ""} isn't
+                    refundable. This can't be undone.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-800/50 rounded-xl">
+                  <XCircle className="h-4 w-4 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+                    <strong>This can't be undone, and you won't be refunded</strong>
+                    {preview.freeCancelUntil
+                      ? ` — free cancellation ended ${new Date(preview.freeCancelUntil).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}.`
+                      : " — this booking has no free cancellation."}{" "}
+                    Your spot will be offered to other guests.
+                  </p>
+                </div>
+              )}
             </div>
           </DialogDescription>
         </DialogHeader>
@@ -616,11 +654,14 @@ function BookingCard({
                 (booking.cancelledBy === "host" || booking.refundStatus) && (
                   <span className="text-[10px] font-semibold text-on-surface-variant dark:text-zinc-400 text-right">
                     {booking.cancelledBy === "host" ? "Cancelled by host · " : ""}
-                    {booking.refundStatus === "refunded"
-                      ? "Refunded"
-                      : "Full refund on its way"}
+                    {refundStatusLabel(booking)}
                   </span>
                 )}
+              {booking.status === "upcoming" && booking.cancellationPolicy && (
+                <span className="text-[10px] text-on-surface-variant dark:text-zinc-400 text-right">
+                  {cutoffLabel(booking.freeCancelUntil ?? null)}
+                </span>
+              )}
               <span className="text-xs font-bold text-primary dark:text-green-400">
                 ETB{" "}
                 {typeof booking.price === "number"

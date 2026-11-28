@@ -101,8 +101,10 @@ export function useHostWallet() {
     : null;
   const cooldownActive = nextAvailableAt ? nextAvailableAt > new Date() : false;
   const hasPendingWithdrawal = pendingWithdrawalsTotal > 0;
+  const debtCents = wallet?.debtCents ?? 0;
+  const hasDebt = debtCents > 0;
   const canWithdraw =
-    availableETB >= 10 && !cooldownActive && !hasPendingWithdrawal;
+    availableETB >= 10 && !cooldownActive && !hasPendingWithdrawal && !hasDebt;
 
   const withdrawalsLoading = pendingWLoading || historyWLoading;
 
@@ -212,6 +214,8 @@ export function useHostWallet() {
     cooldownActive,
     nextAvailableAt,
     hasPendingWithdrawal,
+    debtCents,
+    hasDebt,
     totalWithdrawalsCount,
     withdrawalsLoading,
     legalHostName,

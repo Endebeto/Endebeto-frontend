@@ -11,6 +11,8 @@ export interface Wallet {
   currency:              string;
   totalEarnedCents:      number;
   totalFeesCents:        number;
+  /** Refund design step 3: owed to Endebeto; blocks withdrawals while > 0. */
+  debtCents?:            number;
 }
 
 export interface EarningRow {

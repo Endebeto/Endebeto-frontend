@@ -39,6 +39,7 @@ import { HOST_EXPERIENCE_CATEGORY_OPTIONS } from "@/lib/hostExperienceCategories
 import { EXPERIENCE_DESCRIPTION_FORMAT_HINT } from "@/components/ExperienceDescriptionMarkdown";
 import { HostExperienceDescriptionToolbar } from "@/components/HostExperienceDescriptionToolbar";
 import { localDateInputInDays } from "@/lib/localDate";
+import { CancellationPolicyField } from "@/components/host/CancellationPolicyField";
 
 /* ─── types ──────────────────────────────────────────── */
 interface FormData {
@@ -49,6 +50,7 @@ interface FormData {
   price: string;
   duration: string;
   maxGuests: string;
+  cancellationPolicy: string;
   nextOccurrenceAt: string;
   location: string;
   address: string;
@@ -162,6 +164,7 @@ export default function HostCreateExperience() {
     price: "",
     duration: "",
     maxGuests: "",
+    cancellationPolicy: "24h",
     nextOccurrenceAt: "",
     location: "",
     address: "",
@@ -551,6 +554,7 @@ export default function HostCreateExperience() {
       fd.append("price", form.price);
       fd.append("duration", form.duration);
       fd.append("maxGuests", form.maxGuests);
+      fd.append("cancellationPolicy", form.cancellationPolicy);
       fd.append("nextOccurrenceAt", nextOccIso);
       fd.append("location", form.location.trim());
       if (form.address) fd.append("address", form.address.trim());
@@ -801,6 +805,13 @@ export default function HostCreateExperience() {
                     )}
                   </div>
                 </div>
+
+                <CancellationPolicyField
+                  value={form.cancellationPolicy}
+                  onChange={(next) =>
+                    setForm((p) => ({ ...p, cancellationPolicy: next }))
+                  }
+                />
 
                 <div id="field-description">
                   <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">

@@ -1,11 +1,12 @@
 import { useId, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { bookingsService, type Booking } from "@/services/bookings.service";
 import { hostQueryKeys } from "@/lib/hostQueryKeys";
 import { useModalA11y } from "@/hooks/useModalA11y";
 import { getFriendlyErrorMessage } from "@/lib/errors";
+import { etb } from "@/lib/cancellationPolicy";
 
 /** True when the host may still cancel this booking with a refund (P2-4). */
 export function canHostCancel(b: Booking): boolean {
@@ -28,10 +29,16 @@ export function HostCancelDialog({
   const [reason, setReason] = useState("");
   const titleId = useId();
   const queryClient = useQueryClient();
+  const { data: preview } = useQuery({
+    queryKey: ["cancel-preview", booking._id, "host"],
+    queryFn: async () =>
+      (await bookingsService.getCancelPreview(booking._id)).data.data.preview,
+    staleTime: 0,
+  });
   const mutation = useMutation({
     mutationFn: () => bookingsService.hostCancelBooking(booking._id, reason.trim()),
-    onSuccess: () => {
-      toast.success("Booking cancelled. The guest will get a full refund.");
+    onSuccess: (res) => {
+      toast.success(res.data.message || "Booking cancelled. The guest will get a full refund.");
       queryClient.invalidateQueries({ queryKey: hostQueryKeys.bookings.all() });
       queryClient.invalidateQueries({ queryKey: hostQueryKeys.dashboard() });
       queryClient.invalidateQueries({ queryKey: hostQueryKeys.wallet.summary() });
@@ -72,11 +79,24 @@ export function HostCancelDialog({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <p className="text-xs text-on-surface-variant dark:text-zinc-400 mb-4 leading-relaxed">
-          {guestName}&apos;s booking{title ? ` for ${title}` : ""} will be cancelled and they will
-          receive a <strong>full refund of ETB {(booking.price ?? 0).toLocaleString()}</strong>.
+        <p className="text-xs text-on-surface-variant dark:text-zinc-400 mb-3 leading-relaxed">
+          {guestName}&apos;s booking{title ? ` for ${title}` : ""} will be cancelled and they get a{" "}
+          <strong>full refund of {etb(preview?.refundCents ?? Math.round((booking.price ?? 0) * 100))}</strong>.
           Your earnings for this booking are reversed. This can&apos;t be undone.
         </p>
+        {preview && preview.hostChargeCents > 0 && (
+          <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/25 border border-red-200/80 dark:border-red-800/50 text-xs text-red-900 dark:text-red-200 leading-relaxed">
+            <p>
+              <strong>You&apos;ll be charged {etb(preview.hostChargeCents)}</strong>: the{" "}
+              {etb(preview.chapaFeeCents)} payment processing fee plus Endebeto&apos;s{" "}
+              {etb(preview.platformFeeCents)} platform fee.
+            </p>
+            <p className="mt-1">
+              It comes out of your available balance; anything it doesn&apos;t cover is taken
+              from your next earnings, and withdrawals pause until it&apos;s paid.
+            </p>
+          </div>
+        )}
         <label
           htmlFor={`${titleId}-reason`}
           className="block text-[9px] font-extrabold uppercase tracking-widest text-on-surface-variant mb-2"

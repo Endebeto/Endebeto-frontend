@@ -33,6 +33,7 @@ import { getFriendlyErrorMessage } from "@/lib/errors";
 import { HOST_EXPERIENCE_CATEGORY_OPTIONS } from "@/lib/hostExperienceCategories";
 import { EXPERIENCE_DESCRIPTION_FORMAT_HINT } from "@/components/ExperienceDescriptionMarkdown";
 import { HostExperienceDescriptionToolbar } from "@/components/HostExperienceDescriptionToolbar";
+import { CancellationPolicyField } from "@/components/host/CancellationPolicyField";
 
 /* ─── types ──────────────────────────────────────────── */
 interface FormFields {
@@ -43,6 +44,7 @@ interface FormFields {
   price: string;
   duration: string;
   maxGuests: string;
+  cancellationPolicy: string;
   nextOccurrenceAt: string;
   location: string;
   address: string;
@@ -138,6 +140,7 @@ export default function HostEditExperience() {
     price: "",
     duration: "",
     maxGuests: "",
+    cancellationPolicy: "24h",
     nextOccurrenceAt: "",
     location: "",
     address: "",
@@ -226,6 +229,7 @@ export default function HostEditExperience() {
           price: exp.price != null ? String(exp.price) : "",
           duration: exp.duration ?? "",
           maxGuests: exp.maxGuests != null ? String(exp.maxGuests) : "",
+          cancellationPolicy: exp.cancellationPolicy ?? "24h",
           nextOccurrenceAt: toLocal(exp.nextOccurrenceAt),
           location: exp.location ?? "",
           address: exp.address ?? "",
@@ -322,6 +326,8 @@ export default function HostEditExperience() {
       "Authentic local Ethiopian experience";
     fd.append("summary", summaryToSave);
     fd.append("description", form.description);
+    // Policy applies to new bookings only, so it stays editable when locked.
+    fd.append("cancellationPolicy", form.cancellationPolicy);
     if (!effectiveLocked) {
       fd.append("title", form.title);
       fd.append("category", form.category);
@@ -539,6 +545,13 @@ export default function HostEditExperience() {
                     />
                   </div>
                 </div>
+
+                <CancellationPolicyField
+                  value={form.cancellationPolicy}
+                  onChange={(next) =>
+                    setForm((p) => ({ ...p, cancellationPolicy: next }))
+                  }
+                />
 
                 <div>
                   <label className="block text-sm font-bold text-on-surface dark:text-white mb-2">

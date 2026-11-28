@@ -1,6 +1,7 @@
 import { AlertCircle, Loader2, X } from "lucide-react";
 import { ExperienceSlotSelector } from "@/components/experience-detail/ExperienceSlotSelector";
 import type { ExperienceDetailVM } from "@/hooks/useExperienceDetail";
+import { CancellationNotice } from "@/components/experience-detail/CancellationNotice";
 
 export function ExperienceDetailBookingSheet({ vm }: { vm: ExperienceDetailVM }) {
   const {
@@ -129,6 +130,10 @@ export function ExperienceDetailBookingSheet({ vm }: { vm: ExperienceDetailVM })
             </p>
           </div>
         )}
+        <CancellationNotice
+          policy={exp.cancellationPolicy}
+          sessionStart={selectedSlot?.startTime ?? exp.nextOccurrenceAt}
+        />
         <button
           type="button"
           disabled={checkoutLoading || hasUpcomingBookingHere || maxBookable === 0}
